@@ -1,4 +1,7 @@
+import { Link } from 'react-router-dom'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -18,13 +21,13 @@ const roadmap = [
     phase: 'Phase 2',
     title: 'Database & auth',
     description: 'Supabase schema, sign up / login, $100,000 starting balance.',
-    status: 'next' as const,
+    status: 'done' as const,
   },
   {
     phase: 'Phase 3',
     title: 'Market data & charting',
     description: 'Live and historical OHLCV data rendered as candlesticks.',
-    status: 'planned' as const,
+    status: 'next' as const,
   },
   {
     phase: 'Phase 4',
@@ -67,6 +70,11 @@ export function Home() {
           W.D. Gann&rsquo;s geometric and cyclical methods, then translates the
           result into language a beginner can act on.
         </p>
+        <div className="flex gap-3">
+          <Button asChild>
+            <Link to="/auth">Start with $100,000 virtual</Link>
+          </Button>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

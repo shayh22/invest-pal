@@ -1,0 +1,121 @@
+# Setup
+
+## What you need an account for
+
+| Service | Needed for | Cost | When |
+| --- | --- | --- | --- |
+| [Supabase](https://supabase.com/dashboard) | Accounts, portfolios, trades | Free tier is plenty | **Now (Phase 2)** |
+| A market data API | Live and historical prices | Free tier (e.g. Alpha Vantage) | Phase 3 |
+| [OpenRouter](https://openrouter.ai) | AI mentor explanations | Pay-as-you-go credits | Phase 6 |
+
+Right now you only need **Supabase**. The app runs without it — it just shows
+setup instructions instead of the sign-in form.
+
+## Option A — hosted Supabase (recommended, no Docker)
+
+1. **Create the project.** Sign up at
+   [supabase.com/dashboard](https://supabase.com/dashboard) and create a new
+   project. Any region and the free plan are fine. Save the database password
+   it asks you to set, though the app itself does not use it.
+
+2. **Create the tables.** In the project sidebar open **SQL Editor** → **New
+   query**. Paste the entire contents of
+   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) and
+   press **Run**. It creates the five tables, row level security policies, the
+   new-user trigger and a starter list of eight tickers. Re-running it is
+   harmless.
+
+3. **Turn off email confirmation** (optional, but easiest while developing).
+   **Authentication** → **Sign In / Providers** → **Email** → switch off
+   *Confirm email*. With it on, new accounts have to click a link in their
+   inbox before they can sign in; the app handles both cases and will tell you
+   which one applies.
+
+4. **Copy your keys.** **Project Settings** → **API**. You need:
+   - *Project URL*
+   - *anon* / *public* key — safe to ship in a browser bundle; row level
+     security is what protects the data. Never put the `service_role` key in
+     any `VITE_*` variable.
+
+5. **Wire them up.**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   ```ini
+   VITE_SUPABASE_URL=https://<your-ref>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<your anon key>
+   ```
+
+6. **Run it.**
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+   Open the dev server URL, click **Sign in** → **Create account**. You should
+   land on a dashboard showing **$100,000.00** in virtual cash.
+
+## Option B — local Supabase (needs Docker)
+
+Everything runs on your machine, no account required.
+
+```bash
+npx supabase start     # first run pulls several GB of images
+```
+
+It prints an `API_URL` and `ANON_KEY` — put those in `.env` as above.
+Migrations in `supabase/migrations/` are applied automatically on start, and
+email confirmation is already off in `supabase/config.toml`.
+
+```bash
+npx supabase status    # show the URLs and keys again
+npx supabase stop      # shut it down
+```
+
+## Verifying it worked
+
+In the SQL editor (or `psql` against a local stack):
+
+```sql
+select u.email, p.experience_level, pf.cash_balance
+from auth.users u
+join public.profiles p   on p.id = u.id
+join public.portfolios pf on pf.user_id = u.id;
+```
+
+One row per signup, each with a `cash_balance` of `100000.00`.
+
+## Troubleshooting
+
+**"Connect Supabase to continue"** — `.env` is missing, has a typo, or the dev
+server was not restarted. Vite only reads `.env` at startup.
+
+**"Invalid login credentials" right after signing up** — email confirmation is
+on and the address is not confirmed yet. Confirm via the emailed link, or turn
+the setting off (step 3).
+
+**Signed in but the balance never appears** — the trigger did not run, usually
+because step 2 was only partly applied. Re-run the whole migration, then check:
+
+```sql
+select tgname from pg_trigger where tgname = 'on_auth_user_created';
+```
+
+**"Database error saving new user" on signup** — same cause. The trigger
+inserts into `public.profiles` and `public.portfolios`, so both tables must
+exist before the first signup.
+
+## How the pieces fit
+
+- Supabase owns identity in `auth.users`. `public.profiles` hangs off it 1:1
+  for app-specific fields (display name, experience level).
+- The `on_auth_user_created` trigger runs inside the signup transaction, so a
+  new user always gets both a profile and a portfolio funded with $100,000.
+- Row level security means every table is deny-by-default, and each policy
+  narrows access to `auth.uid()`. A user cannot read or write another user's
+  portfolio or trades even though the browser talks to the database directly.
+- `assets` and `gann_signals` are shared read-only reference data; only the
+  server (service role) writes them.
