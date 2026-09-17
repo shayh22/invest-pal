@@ -1,0 +1,48 @@
+# Keeps the gann_signals cache warm.
+#
+# The engine runs here rather than in a hosted service: the browser only ever
+# reads the cached rows from Supabase, so there is nothing to deploy.
+#
+# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL                 your project URL
+#   SUPABASE_SERVICE_ROLE_KEY    service role key — bypasses RLS, keep it here
+#
+# Until those exist the job skips instead of failing, so a fresh fork does not
+# email you about red builds.
+name: Refresh Gann signals
+
+on:
+  schedule:
+    # 06:20 UTC daily, after the US close and before the next open.
+    - cron: '20 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check credentials
+        id: creds
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "SUPABASE_URL is not set; skipping." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run the engine
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        # The engine has no dependencies, so there is nothing to install.
+        run: python -m gann.refresh --ttl-hours 26

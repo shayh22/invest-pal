@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
+import { GannSignalPanel } from '@/components/market/GannSignalPanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,8 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { useAssets } from '@/hooks/useAssets'
+import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent } from '@/lib/format'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
@@ -55,6 +59,8 @@ export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
   const [symbol, setSymbol] = useState<string | null>(null)
   const [range, setRange] = useState<ChartRange>('6mo')
+  const [showAngles, setShowAngles] = useState(true)
+  const [showLevels, setShowLevels] = useState(true)
 
   // Default to the first asset once the list arrives.
   const activeSymbol = symbol ?? assets[0]?.ticker ?? null
@@ -70,6 +76,9 @@ export function Markets() {
     [assets, activeSymbol],
   )
 
+  // Signals are keyed by asset, not by ticker: the cache lives in the database.
+  const gann = useGannSignal(selectedAsset?.id ?? null)
+
   const activeRangeLabel =
     RANGES.find((option) => option.value === range)?.label ?? range
   const quote = data?.quote ?? null
@@ -81,7 +90,8 @@ export function Markets() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Markets</h1>
         <p className="text-muted-foreground text-sm">
-          Real prices from Yahoo Finance. Gann overlays arrive in Phase 4.
+          Real prices from Yahoo Finance, with Gann geometry from the cached
+          analysis.
         </p>
       </div>
 
@@ -129,16 +139,41 @@ export function Markets() {
           ))}
         </div>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={reload}
-          disabled={loading || !activeSymbol}
-          className="ml-auto"
-        >
-          <RefreshCw className="size-4" />
-          Refresh
-        </Button>
+        <div className="ml-auto flex items-center gap-4">
+          {gann.signal && (
+            <>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-angles"
+                  checked={showAngles}
+                  onCheckedChange={setShowAngles}
+                />
+                <Label htmlFor="show-angles" className="text-xs font-normal">
+                  Gann fan
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-levels"
+                  checked={showLevels}
+                  onCheckedChange={setShowLevels}
+                />
+                <Label htmlFor="show-levels" className="text-xs font-normal">
+                  Sq9 levels
+                </Label>
+              </div>
+            </>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={reload}
+            disabled={loading || !activeSymbol}
+          >
+            <RefreshCw className="size-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -203,6 +238,9 @@ export function Markets() {
             <CandlestickChart
               candles={data.candles}
               priceDecimals={decimals}
+              gann={gann.signal?.payload ?? null}
+              showAngles={showAngles}
+              showLevels={showLevels}
             />
           )}
         </CardContent>
@@ -243,6 +281,14 @@ export function Markets() {
           <StatTile label="Candles loaded" value={String(data?.candles.length ?? 0)} />
         </div>
       )}
+
+      <GannSignalPanel
+        signal={gann.signal}
+        loading={gann.loading}
+        error={gann.error}
+        stale={gann.stale}
+        decimals={decimals}
+      />
     </div>
   )
 }

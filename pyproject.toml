@@ -1,0 +1,15 @@
+[project]
+name = "invest-pal-gann"
+version = "0.1.0"
+description = "Gann angle, Square of Nine and time-cycle engine for invest-pal"
+requires-python = ">=3.10"
+# No runtime dependencies on purpose: the engine and its refresh job use only
+# the standard library, so they run in cron or CI with no install step.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

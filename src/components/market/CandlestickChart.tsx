@@ -2,21 +2,30 @@ import { useEffect, useRef, useState } from 'react'
 import {
   CandlestickSeries,
   CrosshairMode,
+  LineSeries,
+  LineStyle,
   createChart,
   type CandlestickData,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type UTCTimestamp,
 } from 'lightweight-charts'
 
 import { useChartColors } from '@/lib/chart-theme'
+import { angleLine, nearestLevels, selectAngles } from '@/lib/gann-overlay'
 import type { Candle } from '@/types'
+import type { GannPayload } from '@/types/gann'
 
 interface CandlestickChartProps {
   candles: Candle[]
   /** Decimal places for the price scale; crypto needs more than equities. */
   priceDecimals?: number
   height?: number
+  /** Cached Gann analysis to overlay, if one exists for this asset. */
+  gann?: GannPayload | null
+  showAngles?: boolean
+  showLevels?: boolean
 }
 
 /** What the crosshair is currently over, shown as a readout above the chart. */
@@ -42,10 +51,16 @@ export function CandlestickChart({
   candles,
   priceDecimals = 2,
   height = 420,
+  gann = null,
+  showAngles = true,
+  showLevels = true,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  // Overlay handles, tracked so each redraw can remove exactly what it added.
+  const angleSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
+  const priceLinesRef = useRef<IPriceLine[]>([])
   const { colors } = useChartColors()
   const [hover, setHover] = useState<HoverState | null>(null)
 
@@ -97,9 +112,16 @@ export function CandlestickChart({
     })
 
     return () => {
+      // chart.remove() destroys every series it owns, so the overlay handles
+      // are dead the moment this runs. Clearing them matters: on a remount
+      // (StrictMode's double-invoke, or simply navigating away and back) the
+      // overlay effect would otherwise call removeSeries with handles from the
+      // previous chart and throw.
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
+      angleSeriesRef.current = []
+      priceLinesRef.current = []
     }
   }, [])
 
@@ -141,6 +163,66 @@ export function CandlestickChart({
     setHover(null)
   }, [candles, priceDecimals])
 
+  // Gann overlay. Rebuilt whenever the analysis, the candles, the toggles or
+  // the theme change; the candle series itself is left alone.
+  useEffect(() => {
+    const chart = chartRef.current
+    const series = seriesRef.current
+    if (!chart || !series) return
+
+    for (const line of priceLinesRef.current) series.removePriceLine(line)
+    priceLinesRef.current = []
+    for (const overlay of angleSeriesRef.current) chart.removeSeries(overlay)
+    angleSeriesRef.current = []
+
+    if (!gann) return
+
+    if (showAngles) {
+      for (const angle of selectAngles(gann)) {
+        const line = angleLine(angle, gann, candles)
+        if (!line) continue
+
+        const overlay = chart.addSeries(LineSeries, {
+          color: line.isPrimary ? colors.gannPrimary : colors.gannSecondary,
+          lineWidth: 2,
+          lineStyle: line.isPrimary ? LineStyle.Solid : LineStyle.Dashed,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+          // A ray heading off-screen must not drag the price scale with it.
+          autoscaleInfoProvider: () => null,
+        })
+        overlay.setData(
+          line.points.map((point) => ({
+            time: point.time as UTCTimestamp,
+            value: point.value,
+          })),
+        )
+        angleSeriesRef.current.push(overlay)
+      }
+    }
+
+    if (showLevels) {
+      for (const level of nearestLevels(gann)) {
+        priceLinesRef.current.push(
+          series.createPriceLine({
+            price: level.price,
+            color:
+              level.kind === 'SUPPORT'
+                ? colors.levelSupport
+                : colors.levelResistance,
+            lineWidth: 1,
+            lineStyle: LineStyle.Dotted,
+            axisLabelVisible: true,
+            // Labelled with the turn it came from, so the line is never a
+            // bare horizontal rule of unexplained origin.
+            title: `${level.degrees}\u00b0`,
+          }),
+        )
+      }
+    }
+  }, [gann, candles, showAngles, showLevels, colors])
+
   const readout = hover ?? lastCandleAsHover(candles)
   const rising = readout ? readout.close >= readout.open : true
 
@@ -174,8 +256,49 @@ export function CandlestickChart({
           <span>Hover the chart for open, high, low and close.</span>
         )}
       </div>
+      {gann && (showAngles || showLevels) && (
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          {showAngles && (
+            <>
+              <LegendKey color={colors.gannPrimary} label="1x1 balance line" />
+              <LegendKey color={colors.gannSecondary} label="2x1 / 1x2" dashed />
+            </>
+          )}
+          {showLevels && (
+            <>
+              <LegendKey color={colors.levelSupport} label="Sq9 support" dashed />
+              <LegendKey
+                color={colors.levelResistance}
+                label="Sq9 resistance"
+                dashed
+              />
+            </>
+          )}
+        </div>
+      )}
       <div ref={containerRef} style={{ height }} className="w-full" />
     </div>
+  )
+}
+
+function LegendKey({
+  color,
+  label,
+  dashed = false,
+}: {
+  color: string
+  label: string
+  dashed?: boolean
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="inline-block h-0 w-4 border-t-2"
+        style={{ borderColor: color, borderStyle: dashed ? 'dashed' : 'solid' }}
+      />
+      {label}
+    </span>
   )
 }
 

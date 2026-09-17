@@ -5,11 +5,14 @@
 | Service | Needed for | Cost | When |
 | --- | --- | --- | --- |
 | [Supabase](https://supabase.com/dashboard) | Accounts, portfolios, trades | Free tier is plenty | **Now (Phase 2)** |
-| A market data API | Live and historical prices | Free tier (e.g. Alpha Vantage) | Phase 3 |
+| A market data API | Not needed — Yahoo Finance requires no key | free | — |
 | [OpenRouter](https://openrouter.ai) | AI mentor explanations | Pay-as-you-go credits | Phase 6 |
 
 Right now you only need **Supabase**. The app runs without it — it just shows
 setup instructions instead of the sign-in form.
+
+The Gann engine needs no account either: it is plain Python, and it writes to
+the same Supabase project. See "Populating Gann signals" below.
 
 ## Option A — hosted Supabase (recommended, no Docker)
 
@@ -119,3 +122,36 @@ exist before the first signup.
   portfolio or trades even though the browser talks to the database directly.
 - `assets` and `gann_signals` are shared read-only reference data; only the
   server (service role) writes them.
+
+## Populating Gann signals
+
+The Markets page reads Gann analysis from the `gann_signals` table. Nothing
+computes it in the browser, so the table starts empty and the panel tells you
+how to fill it.
+
+```bash
+export SUPABASE_URL=https://<ref>.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=<service role key>
+python -m gann.refresh
+```
+
+Find the service role key under **Project Settings -> API**. It bypasses row
+level security, so keep it out of `.env` and out of anything named `VITE_*` —
+it belongs only in the environment of whatever runs the job.
+
+No dependencies to install: the engine is standard-library Python 3.10+.
+
+To keep it fresh automatically, add `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` as GitHub repository secrets (**Settings -> Secrets
+and variables -> Actions**) and the included daily workflow takes over.
+
+### Troubleshooting
+
+**"No signal cached for this asset yet"** — the job has not run for that ticker.
+Run it, then reload.
+
+**A *Stale* badge on the panel** — the row is past its `expires_at`. It is still
+shown, just flagged. Re-run the job.
+
+**`SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set`** — the
+environment variables are missing from the shell running the job.
