@@ -17,7 +17,7 @@ Everything here is virtual money and educational content — not financial advic
 | Charts | Lightweight Charts (TradingView) |
 | Market data | Yahoo Finance (no key), behind a proxy |
 | Gann engine | Python 3 (standard library only) |
-| AI mentor | OpenRouter — *Phase 6* |
+| AI mentor | OpenRouter (Claude models) |
 
 ## Getting started
 
@@ -80,7 +80,7 @@ The `@/` import alias maps to `src/` (configured in `vite.config.ts` and
 - [x] **Phase 3** — Market data integration and candlestick charting
 - [x] **Phase 4** — Gann engine (angles, Square of Nine, cycle analysis)
 - [x] **Phase 5** — Paper trading engine (long/short, PnL, portfolio dashboard)
-- [ ] **Phase 6** — AI mentor that explains signals in two sentences
+- [x] **Phase 6** — AI mentor that explains signals in two sentences
 
 ## Market data
 
@@ -120,6 +120,7 @@ gann/
   cycles.py           repeating pivot spacings, projected forward
   engine.py           orchestrates the above into one payload
   yahoo.py            OHLCV fetch (no CORS problem server-side)
+  mentor.py           turns an analysis into two plain sentences
   refresh.py          CLI that caches results in Supabase
 ```
 
@@ -244,3 +245,50 @@ psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/trading_engine_test.sql
 `harness.sql` is a small stand-in for the parts of Supabase the migrations
 touch (`auth.users`, `auth.uid()`, the `authenticated` role), so this runs
 against a plain Postgres — which is how it runs in CI on every push.
+
+## The AI mentor
+
+Each cached signal carries a two-sentence, plain-language explanation, shown
+directly above the Buy and Sell buttons.
+
+It runs **inside the refresh job**, not in the browser and not in an edge
+function. The analysis is already in hand at that point, the API key sits
+alongside the service role key rather than in a second place, and the result is
+cached in `gann_signals.ai_summary` — so it costs one model call per asset per
+refresh instead of one per page view. At eight assets on a daily schedule that
+is a few cents a month.
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...
+python -m gann.refresh              # now writes summaries too
+python -m gann.refresh --no-ai      # skip them
+```
+
+Without a key the signals are still computed and cached, just without the
+summary, and the panel says how to get one.
+
+### Model
+
+Defaults to `anthropic/claude-opus-5`. Note these are OpenRouter's slugs, not
+Anthropic's — `anthropic/claude-opus-5`, not `claude-opus-5`. Override with
+`OPENROUTER_MODEL`; a smaller model is a reasonable trade here, since the task
+is rephrasing numbers rather than reasoning about them.
+
+If you would rather call Anthropic directly and skip OpenRouter's margin,
+`_request` in `gann/mentor.py` is the only function that needs replacing.
+
+### What the model is and is not asked to do
+
+The prompt hands over a deliberately narrow set of numbers — the balance line
+and which side price is on, the nearest level each way, the next cycle date,
+and any caveat the engine flagged. Giving it all sixteen levels and seven rays
+produces a summary that lists them rather than one that explains them.
+
+The system prompt forbids predictions and advice outright, including the words
+"should", "will", "recommend", "expect" and "predict". The rendered note says
+it is an explanation and not a recommendation, because an AI paragraph beside a
+Buy button will otherwise be read as a tip.
+
+A failed summary never costs the signal, and it drops the previous one rather
+than keeping it: the prices that note described have just been replaced, and a
+note contradicting the levels on screen is worse than no note.

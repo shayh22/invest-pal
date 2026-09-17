@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { MentorNote } from '@/components/market/MentorNote'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,10 @@ interface TradePanelProps {
   asset: Asset | null
   price: number | null
   decimals: number
+  /** The cached AI mentor note for this asset's latest signal. */
+  mentorSummary?: string | null
+  mentorLoading?: boolean
+  hasSignal?: boolean
   /** Called after a successful trade so balances and lists refresh. */
   onTraded: () => void
 }
@@ -31,6 +36,9 @@ export function TradePanel({
   asset,
   price,
   decimals,
+  mentorSummary = null,
+  mentorLoading = false,
+  hasSignal = false,
   onTraded,
 }: TradePanelProps) {
   const { portfolio, refreshAccount } = useAuth()
@@ -129,6 +137,12 @@ export function TradePanel({
             available.
           </p>
         )}
+
+        <MentorNote
+          summary={mentorSummary}
+          loading={mentorLoading}
+          hasSignal={hasSignal}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           <Button

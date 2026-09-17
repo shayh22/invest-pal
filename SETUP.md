@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | [Supabase](https://supabase.com/dashboard) | Accounts, portfolios, trades | Free tier is plenty | **Now (Phase 2)** |
 | A market data API | Not needed — Yahoo Finance requires no key | free | — |
-| [OpenRouter](https://openrouter.ai) | AI mentor explanations | Pay-as-you-go credits | Phase 6 |
+| [OpenRouter](https://openrouter.ai) | AI mentor explanations | Pay-as-you-go, a few cents a month here | Optional |
 
 Right now you only need **Supabase**. The app runs without it — it just shows
 setup instructions instead of the sign-in form.
@@ -145,6 +145,21 @@ export SUPABASE_URL=https://<ref>.supabase.co
 export SUPABASE_SERVICE_ROLE_KEY=<service role key>
 python -m gann.refresh
 ```
+
+To include the AI mentor's plain-language summaries, add an OpenRouter key:
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...
+python -m gann.refresh
+```
+
+Get one at [openrouter.ai/keys](https://openrouter.ai/keys) after adding
+credits. It is optional — without it everything works except the summary, and
+the app tells you so. One call per asset per refresh, so eight assets on a
+daily schedule costs a few cents a month.
+
+Like the service role key, this is server-side only. Never give it a `VITE_`
+prefix: anything `VITE_*` is compiled into the JavaScript your users download.
 
 Find the service role key under **Project Settings -> API**. It bypasses row
 level security, so keep it out of `.env` and out of anything named `VITE_*` —

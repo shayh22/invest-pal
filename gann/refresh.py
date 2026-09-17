@@ -7,11 +7,16 @@ by hand.
 
     SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... python -m gann.refresh
 
+Set OPENROUTER_API_KEY as well to have the AI mentor write a plain-language
+summary for each signal. Without it the signals are still computed and cached,
+just without the summary.
+
 Options:
     --timeframe 1d      candle interval to analyse
     --range 2y          how much history to fetch
     --ttl-hours 6       how long the written signal stays fresh
     --symbol AAPL       limit to one ticker (repeatable)
+    --no-ai             skip the mentor even if a key is set
     --dry-run           compute and print, write nothing
 """
 
@@ -19,10 +24,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 
 from gann.engine import analyze, to_payload
+from gann.mentor import MentorError, summarise
 from gann.supabase_io import SupabaseError, SupabaseRest
 from gann.yahoo import MarketDataError, fetch_candles
 
@@ -42,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="only this ticker (repeatable)",
     )
     parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="skip the AI mentor summary even when a key is available",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="compute and print without writing to the database",
@@ -55,6 +67,7 @@ def refresh(
     range_: str = "2y",
     ttl_hours: float = 6.0,
     symbols: list[str] | None = None,
+    no_ai: bool = False,
     dry_run: bool = False,
 ) -> int:
     """Returns a process exit code: 0 if every asset succeeded."""
@@ -71,6 +84,10 @@ def refresh(
     expires_at = datetime.now(timezone.utc) + timedelta(hours=ttl_hours)
     failures = 0
 
+    want_summary = not no_ai and bool(os.environ.get("OPENROUTER_API_KEY"))
+    if not want_summary and not no_ai:
+        print("  (OPENROUTER_API_KEY not set — skipping mentor summaries)")
+
     for asset in sorted(assets, key=lambda a: a["ticker"]):
         ticker = asset["ticker"]
         try:
@@ -83,16 +100,32 @@ def refresh(
             failures += 1
             continue
 
+        # A failed summary must not cost us the signal: the analysis is the
+        # valuable part, and the panel renders fine without a mentor note.
+        #
+        # Note this drops any summary the previous run wrote. That is deliberate
+        # — the prices it described have just been replaced, and a note that
+        # contradicts the levels on screen is worse than no note at all.
+        ai_summary: str | None = None
+        if want_summary:
+            try:
+                ai_summary = summarise(analysis)
+            except MentorError as error:
+                print(f"  {ticker}: no summary — {error}", file=sys.stderr)
+
         summary = (
             f"{len(candles)} candles, "
             f"{len(analysis.angles)} angles, "
             f"{len(analysis.square_of_nine)} levels, "
             f"{len(analysis.cycles)} cycles"
+            f"{', summarised' if ai_summary else ''}"
         )
 
         if dry_run:
             print(f"  {ticker}: {summary} (dry run)")
-            print(json.dumps(payload, indent=2)[:600])
+            if ai_summary:
+                print(f"    mentor: {ai_summary}")
+            print(json.dumps(payload, indent=2)[:400])
             continue
 
         try:
@@ -104,6 +137,7 @@ def refresh(
                     "asset_id": asset["id"],
                     "timeframe": timeframe,
                     "payload": payload,
+                    "ai_summary": ai_summary,
                     "expires_at": expires_at.isoformat(),
                 }
             )
@@ -127,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
             range_=args.range_,
             ttl_hours=args.ttl_hours,
             symbols=args.symbols,
+            no_ai=args.no_ai,
             dry_run=args.dry_run,
         )
     except SupabaseError as error:

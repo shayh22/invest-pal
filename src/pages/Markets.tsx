@@ -300,6 +300,9 @@ export function Markets() {
           asset={selectedAsset}
           price={quote?.price ?? null}
           decimals={decimals}
+          mentorSummary={gann.signal?.aiSummary ?? null}
+          mentorLoading={gann.loading}
+          hasSignal={gann.signal !== null}
           onTraded={positions.reload}
         />
       </div>

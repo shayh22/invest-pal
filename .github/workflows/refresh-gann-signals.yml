@@ -7,6 +7,10 @@
 #   SUPABASE_URL                 your project URL
 #   SUPABASE_SERVICE_ROLE_KEY    service role key — bypasses RLS, keep it here
 #
+# Optionally also:
+#   OPENROUTER_API_KEY           enables the AI mentor summaries
+#   OPENROUTER_MODEL             override the default model slug
+#
 # Until those exist the job skips instead of failing, so a fresh fork does not
 # email you about red builds.
 name: Refresh Gann signals
@@ -44,5 +48,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Absent is fine: the run then skips the mentor summaries.
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
         # The engine has no dependencies, so there is nothing to install.
         run: python -m gann.refresh --ttl-hours 26
