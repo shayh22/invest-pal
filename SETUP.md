@@ -184,9 +184,18 @@ environment variables are missing from the shell running the job.
 
 ## Deploying to Vercel
 
-The repo carries everything Vercel needs: `vercel.json` (framework, build, SPA
-rewrites, cache headers) and `api/market/chart.ts`, an Edge Function that
-proxies market data. Because that function answers on `/api/market/chart` —
+The repo carries everything Vercel needs: `vercel.json` and
+`api/market/chart.ts`, an Edge Function that proxies market data.
+
+`vercel.json` does three things, and since its schema rejects unknown keys
+(including `comment`), the reasoning is here instead:
+
+- **Rewrites** `/((?!api/).*)` to `/index.html`. React Router owns every path,
+  so without this a refresh on `/markets` returns 404. Rewrites run after the
+  filesystem check, so hashed assets and `/api` routes are unaffected.
+- **Caches `/assets/*` forever** — Vite fingerprints those filenames.
+- **Never caches `index.html`**, or a deploy would keep serving stale asset
+  links. Because that function answers on `/api/market/chart` —
 the path the client already defaults to — **a Vercel deploy needs no market
 data configuration at all**. Do not set `VITE_MARKET_PROXY_URL`.
 
@@ -213,7 +222,12 @@ Preview and Development:
 | `VITE_SUPABASE_ANON_KEY` | the project's anon / publishable key |
 
 Vite inlines `VITE_*` at **build** time, so changing either one needs a
-redeploy, not just a restart. Never add `SUPABASE_SERVICE_ROLE_KEY` or
+redeploy, not just a restart.
+
+`.vercelignore` keeps local `.env` files off the builder. Without it, deploying
+from a machine that has one bakes those values into the production bundle — a
+local `http://127.0.0.1:54321` ends up pointing every visitor's browser at
+their own machine. Never add `SUPABASE_SERVICE_ROLE_KEY` or
 `OPENROUTER_API_KEY` here — anything `VITE_*` ships to the browser, and Vercel
 env vars are available to the build regardless. Those two belong only in
 whatever runs `python -m gann.refresh`.

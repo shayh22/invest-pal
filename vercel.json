@@ -3,23 +3,15 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "comment": "Client-side routing: React Router owns every path, so anything that is not a real file or an API route must serve the app shell. Without this, refreshing on /markets returns a 404. Rewrites run after the filesystem check, so hashed assets and /api routes are unaffected.",
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
-  ],
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
   "headers": [
     {
-      "comment": "Vite fingerprints these filenames, so they can be cached forever.",
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "comment": "The shell must never be cached, or a deploy serves stale asset links.",
       "source": "/index.html",
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     }
