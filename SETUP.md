@@ -181,3 +181,72 @@ shown, just flagged. Re-run the job.
 
 **`SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set`** — the
 environment variables are missing from the shell running the job.
+
+## Deploying to Vercel
+
+The repo carries everything Vercel needs: `vercel.json` (framework, build, SPA
+rewrites, cache headers) and `api/market/chart.ts`, an Edge Function that
+proxies market data. Because that function answers on `/api/market/chart` —
+the path the client already defaults to — **a Vercel deploy needs no market
+data configuration at all**. Do not set `VITE_MARKET_PROXY_URL`.
+
+### 1. A hosted Supabase project
+
+A deployed frontend cannot reach a local `npx supabase start`. Follow **Option
+A** above to create a hosted project and run both migrations, if you have not
+already.
+
+### 2. Import the repo
+
+At [vercel.com/new](https://vercel.com/new), import `shayh22/invest-pal`.
+Framework, build command and output directory are read from `vercel.json`;
+leave them as detected.
+
+### 3. Environment variables
+
+Add these two under **Settings → Environment Variables**, for Production,
+Preview and Development:
+
+| Name | Value |
+| --- | --- |
+| `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | the project's anon / publishable key |
+
+Vite inlines `VITE_*` at **build** time, so changing either one needs a
+redeploy, not just a restart. Never add `SUPABASE_SERVICE_ROLE_KEY` or
+`OPENROUTER_API_KEY` here — anything `VITE_*` ships to the browser, and Vercel
+env vars are available to the build regardless. Those two belong only in
+whatever runs `python -m gann.refresh`.
+
+If the variables are missing the site still builds and deploys; it just shows
+the setup screen instead of the sign-in form.
+
+### 4. Redirect URLs
+
+In Supabase, **Authentication → URL Configuration**, set the Site URL to your
+Vercel domain and add `https://<your-app>.vercel.app/**` to the redirect
+allow-list. Without this, email confirmation links point at localhost.
+
+### 5. Gann signals
+
+The refresh job is not part of the deployment — it writes to Supabase, which
+the site reads. Run it locally once after deploying, or add
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and optionally
+`OPENROUTER_API_KEY` as **GitHub** repository secrets and let the included
+daily workflow do it.
+
+### Checking the deploy
+
+```bash
+curl -s "https://<your-app>.vercel.app/api/market/chart?symbol=AAPL&range=1mo&interval=1d" | head -c 120
+```
+
+That should return Yahoo's JSON. Then load `/markets` directly in a browser —
+it must render the app, not a 404. If it 404s, `vercel.json` was not picked up.
+
+### Other hosts
+
+Any static host works. Two things have to be arranged that Vercel does for
+free here: rewrite unmatched paths to `index.html`, and provide the market data
+proxy — deploy `supabase/functions/market-data` and point
+`VITE_MARKET_PROXY_URL` at it.

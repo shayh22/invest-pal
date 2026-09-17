@@ -183,6 +183,14 @@ python -m venv .venv && .venv/bin/pip install pytest
 ratios and ordering, pivot edge cases, cycle clustering and projection — plus
 the payload contract shared with `src/types/gann.ts`.
 
+## Deploying
+
+`vercel.json` and `api/market/chart.ts` make a Vercel import work with only two
+environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) — the
+Edge Function answers on the same `/api/market` path the client already
+defaults to, so market data needs no configuration. Step by step, including
+the Supabase redirect URLs, in [SETUP.md](SETUP.md#deploying-to-vercel).
+
 ## The trading engine
 
 Opening and closing a position each move cash **and** write a row. Those two
