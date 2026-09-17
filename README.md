@@ -42,7 +42,7 @@ the sign-in form.
 | `npm run preview` | Preview the production build |
 | `npx supabase start` | Run the whole backend locally (needs Docker) |
 | `python -m gann.refresh` | Compute Gann signals and cache them |
-| `pytest -q` | Run the engine's test suite |
+| `pytest -q` | Run the Gann engine's test suite |
 
 ## Project structure
 
@@ -62,7 +62,8 @@ src/
 
 supabase/
   functions/     Edge Functions (market-data price proxy)
-  migrations/    SQL schema, RLS policies, new-user trigger
+  migrations/    SQL schema, RLS policies, trigger, trading functions
+  tests/         SQL suite for the trading engine
   config.toml    Local-stack config for `npx supabase start`
 
 gann/            Python Gann engine (see "The Gann engine" below)
@@ -78,7 +79,7 @@ The `@/` import alias maps to `src/` (configured in `vite.config.ts` and
 - [x] **Phase 2** — Supabase schema, auth, $100,000 starting virtual balance
 - [x] **Phase 3** — Market data integration and candlestick charting
 - [x] **Phase 4** — Gann engine (angles, Square of Nine, cycle analysis)
-- [ ] **Phase 5** — Paper trading engine (long/short, PnL, portfolio dashboard)
+- [x] **Phase 5** — Paper trading engine (long/short, PnL, portfolio dashboard)
 - [ ] **Phase 6** — AI mentor that explains signals in two sentences
 
 ## Market data
@@ -180,3 +181,66 @@ python -m venv .venv && .venv/bin/pip install pytest
 68 tests cover the maths directly — the Square of Nine's defining identity, fan
 ratios and ordering, pivot edge cases, cycle clustering and projection — plus
 the payload contract shared with `src/types/gann.ts`.
+
+## The trading engine
+
+Opening and closing a position each move cash **and** write a row. Those two
+effects have to commit together, so they are Postgres functions
+(`supabase/migrations/0002_trading_engine.sql`) rather than client-side writes:
+
+```
+open_position(asset_id, direction, quantity, price) -> transactions
+close_position(transaction_id, price)               -> transactions
+```
+
+Both are `SECURITY DEFINER`, resolve the caller's portfolio from `auth.uid()`,
+and take `SELECT ... FOR UPDATE` on the rows they touch. The locking is the
+point: without it, two requests arriving together both read the same balance,
+both pass the funds check, and the same cash is spent twice.
+
+Migration 0002 also **removes the client's write paths**, which 0001 had left
+open. They were holes: a browser that can `INSERT` into `transactions` can open
+a position without paying for it, and a browser that can `UPDATE portfolios`
+can simply set its own balance. Only `SELECT` remains, so these two functions
+are the only way money moves.
+
+### How a position is priced
+
+Both directions reserve the notional (`quantity * price`) when opened. Closing
+returns that collateral plus the result:
+
+| | Profit | Cash returned on close |
+| --- | --- | --- |
+| Long | `qty * (exit - entry)` | `qty * exit` |
+| Short | `qty * (entry - exit)` | `qty * (2*entry - exit)` |
+
+`src/lib/trading.ts` mirrors this so the UI can show unrealised profit before a
+position is closed. The database remains the authority — it settles every trade
+— but if one changes, so must the other.
+
+### A short can lose more than it reserved
+
+0001 required `cash_balance >= 0`. That is wrong for shorts: if price more than
+doubles, closing costs more than the collateral taken at open, and the
+constraint would block the close and **strand the position** — the worst
+outcome available. The constraint is dropped; opening is still gated on
+available cash, so a negative balance can only result from a trade that ran
+against the user. The portfolio page says so plainly when it happens, and new
+positions are refused until the balance recovers.
+
+### Tests
+
+19 checks covering the accounting, both directions, the rejected-input paths,
+double settlement, cross-account access and every removed write path:
+
+```bash
+npx supabase start   # or any Postgres
+psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/harness.sql
+psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql
+psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/0002_trading_engine.sql
+psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/trading_engine_test.sql
+```
+
+`harness.sql` is a small stand-in for the parts of Supabase the migrations
+touch (`auth.users`, `auth.uid()`, the `authenticated` role), so this runs
+against a plain Postgres — which is how it runs in CI on every push.

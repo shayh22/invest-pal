@@ -3,6 +3,7 @@ import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
 import { GannSignalPanel } from '@/components/market/GannSignalPanel'
+import { TradePanel } from '@/components/market/TradePanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,8 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useAssets } from '@/hooks/useAssets'
+import { usePositions } from '@/hooks/usePositions'
+import { useAuth } from '@/hooks/useAuth'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent } from '@/lib/format'
@@ -78,6 +81,9 @@ export function Markets() {
 
   // Signals are keyed by asset, not by ticker: the cache lives in the database.
   const gann = useGannSignal(selectedAsset?.id ?? null)
+
+  const { portfolio } = useAuth()
+  const positions = usePositions(portfolio?.id ?? null)
 
   const activeRangeLabel =
     RANGES.find((option) => option.value === range)?.label ?? range
@@ -282,13 +288,21 @@ export function Markets() {
         </div>
       )}
 
-      <GannSignalPanel
-        signal={gann.signal}
-        loading={gann.loading}
-        error={gann.error}
-        stale={gann.stale}
-        decimals={decimals}
-      />
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <GannSignalPanel
+          signal={gann.signal}
+          loading={gann.loading}
+          error={gann.error}
+          stale={gann.stale}
+          decimals={decimals}
+        />
+        <TradePanel
+          asset={selectedAsset}
+          price={quote?.price ?? null}
+          decimals={decimals}
+          onTraded={positions.reload}
+        />
+      </div>
     </div>
   )
 }

@@ -110,7 +110,26 @@ export interface Database {
       }
     }
     Views: Record<never, never>
-    Functions: Record<never, never>
+    Functions: {
+      /**
+       * Opens a position atomically: reserves the cash and writes the trade in
+       * one transaction. See supabase/migrations/0002_trading_engine.sql.
+       */
+      open_position: {
+        Args: {
+          p_asset_id: string
+          p_direction: TradeDirection
+          p_quantity: number
+          p_price: number
+        }
+        Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /** Settles a position and returns the collateral plus the result. */
+      close_position: {
+        Args: { p_transaction_id: string; p_price: number }
+        Returns: Database['public']['Tables']['transactions']['Row']
+      }
+    }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>
   }

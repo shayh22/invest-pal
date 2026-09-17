@@ -123,6 +123,17 @@ exist before the first signup.
 - `assets` and `gann_signals` are shared read-only reference data; only the
   server (service role) writes them.
 
+## Trading
+
+Nothing extra to configure — the trade buttons appear on the Markets page once
+you are signed in, and the migration in step 2 installs the two Postgres
+functions that settle trades.
+
+If you created your project before Phase 5, run
+`supabase/migrations/0002_trading_engine.sql` in the SQL editor as well. It is
+idempotent, and it also closes two write paths that the first migration left
+open (a client could otherwise edit its own balance).
+
 ## Populating Gann signals
 
 The Markets page reads Gann analysis from the `gann_signals` table. Nothing

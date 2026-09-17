@@ -18,6 +18,37 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    env:
+      # The migrations run against a plain Postgres with a small stand-in for
+      # the parts of Supabase they touch (see supabase/tests/harness.sql), so
+      # the money logic is covered without the whole stack.
+      PGPASSWORD: postgres
+      DB: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply schema
+        run: |
+          for f in supabase/tests/harness.sql \
+                   supabase/migrations/0001_init.sql \
+                   supabase/migrations/0002_trading_engine.sql; do
+            psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Trading engine tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/trading_engine_test.sql
+
   engine:
     runs-on: ubuntu-latest
     steps:
