@@ -14,6 +14,8 @@ Everything here is virtual money and educational content — not financial advic
 | Styling | Tailwind CSS v4, shadcn/ui (radix / nova preset) |
 | Routing | React Router |
 | Backend & data | Supabase (Postgres, Auth, Row Level Security) |
+| Charts | Lightweight Charts (TradingView) |
+| Market data | Yahoo Finance (no key), behind a proxy |
 | Gann engine | Python — *Phase 4* |
 | AI mentor | OpenRouter — *Phase 6* |
 
@@ -46,15 +48,18 @@ the sign-in form.
 src/
   components/
     layout/      App shell, shared page scaffolding
+    market/      Candlestick chart
     ui/          shadcn/ui primitives (generated — edit with care)
   pages/         Route-level screens
   services/      API clients (Supabase, market data, Gann, OpenRouter)
+    marketData/  Provider interface + Yahoo implementation
   hooks/         Reusable React hooks
   contexts/      React context providers (auth)
   lib/           Framework-agnostic helpers (env, formatting, cn)
   types/         Shared domain types
 
 supabase/
+  functions/     Edge Functions (market-data price proxy)
   migrations/    SQL schema, RLS policies, new-user trigger
   config.toml    Local-stack config for `npx supabase start`
 ```
@@ -66,7 +71,32 @@ The `@/` import alias maps to `src/` (configured in `vite.config.ts` and
 
 - [x] **Phase 1** — Project setup: Vite + React + TypeScript, Tailwind, shadcn/ui
 - [x] **Phase 2** — Supabase schema, auth, $100,000 starting virtual balance
-- [ ] **Phase 3** — Market data integration and candlestick charting
+- [x] **Phase 3** — Market data integration and candlestick charting
 - [ ] **Phase 4** — Gann engine (angles, Square of Nine, cycle analysis)
 - [ ] **Phase 5** — Paper trading engine (long/short, PnL, portfolio dashboard)
 - [ ] **Phase 6** — AI mentor that explains signals in two sentences
+
+## Market data
+
+Prices come from Yahoo Finance, which needs no API key. It sends no CORS
+headers, so the browser never calls it directly — requests go through a proxy
+that both environments serve at the same URL shape
+(`/chart?symbol=&range=&interval=`):
+
+- **Development** — the Vite dev server proxies it (see `vite.config.ts`). No
+  setup, no key.
+- **Production** — deploy the Edge Function and point the app at it:
+
+  ```bash
+  npx supabase functions deploy market-data --no-verify-jwt
+  # then set VITE_MARKET_PROXY_URL to the function's URL
+  ```
+
+Both sides validate the ticker before forwarding, since the symbol is
+interpolated into the upstream URL.
+
+Yahoo is unofficial and rate-limited, and is here because it gets real candles
+on screen with zero signup friction. Swapping to a supported provider means
+adding one file that satisfies `MarketDataProvider`
+(`src/services/marketData/types.ts`) and changing the single export in
+`src/services/marketData/index.ts` — no UI changes.

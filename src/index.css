@@ -128,3 +128,18 @@
     @apply font-sans;
     }
 }
+/*
+ * Price direction colours, kept in sync with src/lib/chart-theme.ts (which
+ * feeds the same values to the canvas chart). Teal/red rather than green/red:
+ * the pair is validated for colour-vision deficiency, and each mode has its
+ * own selected step rather than an automatic flip.
+ */
+:root {
+    --chart-up: #26a69a;
+    --chart-down: #ef5350;
+}
+
+.dark {
+    --chart-up: #0ea5a0;
+    --chart-down: #ef4f4f;
+}

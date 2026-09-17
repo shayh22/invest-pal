@@ -28,5 +28,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Supabase Edge Functions run on Deno, not in the Vite build.
+  "exclude": ["supabase/functions"]
 }
