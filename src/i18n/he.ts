@@ -179,6 +179,9 @@ export const he: Record<TranslationKey, string> = {
   'trade.title': 'עסקת תרגול',
   'trade.subtitleReady': 'כסף וירטואלי בלבד. הביצוע במחיר האחרון שמוצג למעלה.',
   'trade.subtitleEmpty': 'בחרו נכס למסחר.',
+  'trade.estimatedFill': 'מחיר ביצוע משוער',
+  'trade.spreadCost': 'מרווח',
+  'trade.commission': 'עמלה',
   'trade.cashRequired': 'מזומן נדרש',
   'trade.balanceAfter': 'יתרה לאחר מכן',
   'trade.buy': 'קנייה (לונג)',
@@ -191,6 +194,8 @@ export const he: Record<TranslationKey, string> = {
   'trade.failed': 'לא ניתן לבצע את העסקה.',
   'trade.boughtToast': 'נקנו {quantity} {ticker} במחיר {price}',
   'trade.shortedToast': 'נפתח שורט על {quantity} {ticker} במחיר {price}',
+  'trade.costsNote':
+    'קונים במחיר המבוקש ומוכרים במחיר המוצע, ומשלמים עמלה על שני הביצועים — ולכן סיבוב שלם ללא שינוי במחיר מפסיד כסף. כך זה אצל כל ברוקר אמיתי.',
   'trade.shortWarningTitle': 'שורט עלול להפסיד יותר ממה שהוא עולה',
   'trade.shortWarningBody':
     'לונג יכול לרדת לכל היותר לאפס. שורט מפסיד ככל שהמחיר עולה, ולמחיר אין תקרה — ולכן שורט עלול לעלות יותר מהמזומן שהוקצה לו, והיתרה עלולה להפוך לשלילית.',
@@ -218,6 +223,9 @@ export const he: Record<TranslationKey, string> = {
   'portfolio.emptyClosed': 'עדיין לא נסגרה אף פוזיציה.',
   'portfolio.mark': 'שערוך',
   'portfolio.pnl': 'רווח/הפסד',
+  'portfolio.fees': 'עמלות',
+  'portfolio.costsPaid': 'עלויות ששולמו',
+  'portfolio.costsPaidHint': 'מרווח ועמלות על כל העסקאות שנסגרו.',
   'portfolio.noMark': 'עדיין אין מחיר עדכני לפוזיציה הזו.',
   'portfolio.closedToastProfit': 'נסגרה ב-{price} ברווח של {amount}',
   'portfolio.closedToastLoss': 'נסגרה ב-{price} בהפסד של {amount}',

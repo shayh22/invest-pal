@@ -1,5 +1,5 @@
 import type { InvestPalClient } from '@/services/supabase'
-import type { Transaction, TradeDirection } from '@/types'
+import type { AssetType, TradeDirection, TradingCosts, Transaction } from '@/types'
 
 /**
  * Trading goes through two Postgres functions, never through direct table
@@ -17,6 +17,10 @@ interface TransactionRow {
   quantity: number
   entry_price: number
   exit_price: number | null
+  entry_mid: number | null
+  exit_mid: number | null
+  open_fee: number
+  close_fee: number
   status: 'OPEN' | 'CLOSED'
   opened_at: string
   closed_at: string | null
@@ -31,6 +35,10 @@ function toTransaction(row: TransactionRow): Transaction {
     quantity: Number(row.quantity),
     entryPrice: Number(row.entry_price),
     exitPrice: row.exit_price === null ? null : Number(row.exit_price),
+    entryMid: row.entry_mid === null ? null : Number(row.entry_mid),
+    exitMid: row.exit_mid === null ? null : Number(row.exit_mid),
+    openFee: Number(row.open_fee ?? 0),
+    closeFee: Number(row.close_fee ?? 0),
     status: row.status,
     openedAt: row.opened_at,
     closedAt: row.closed_at,
@@ -87,12 +95,38 @@ export async function fetchPositions(
 ): Promise<Transaction[]> {
   const { data, error } = await client
     .from('transactions')
+    // One string literal on purpose: supabase-js infers the row type from the
+    // literal, and a concatenated expression defeats that.
     .select(
-      'id, portfolio_id, asset_id, direction, quantity, entry_price, exit_price, status, opened_at, closed_at',
+      'id, portfolio_id, asset_id, direction, quantity, entry_price, exit_price, entry_mid, exit_mid, open_fee, close_fee, status, opened_at, closed_at',
     )
     .eq('portfolio_id', portfolioId)
     .order('opened_at', { ascending: false })
 
   if (error) throw error
   return (data ?? []).map((row) => toTransaction(row as TransactionRow))
+}
+
+/**
+ * The spread and commission the engine will charge for this asset type.
+ *
+ * Read from the database rather than duplicated here: a quote that disagrees
+ * with what is actually charged is worse than no quote.
+ */
+export async function fetchTradingCosts(
+  client: InvestPalClient,
+  assetType: AssetType,
+): Promise<TradingCosts | null> {
+  const { data, error } = await client.rpc('trading_costs', {
+    p_asset_type: assetType,
+  })
+  if (error) throw error
+
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return null
+  return {
+    spreadBps: Number(row.spread_bps),
+    commissionBps: Number(row.commission_bps),
+    minCommission: Number(row.min_commission),
+  }
 }

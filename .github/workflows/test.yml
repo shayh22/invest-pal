@@ -43,11 +43,16 @@ jobs:
         run: |
           for f in supabase/tests/harness.sql \
                    supabase/migrations/0001_init.sql \
-                   supabase/migrations/0002_trading_engine.sql; do
+                   supabase/migrations/0002_trading_engine.sql \
+                   supabase/migrations/0003_mentor_languages.sql \
+                   supabase/migrations/0004_execution_costs.sql; do
             psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Trading engine tests
         run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/trading_engine_test.sql
+
+      - name: Execution cost tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/execution_costs_test.sql
 
   engine:
     runs-on: ubuntu-latest

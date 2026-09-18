@@ -109,6 +109,8 @@ export function Portfolio() {
           ))
     )
   }, 0)
+  // Realised profit is net of what the trades cost to execute — showing the
+  // gross figure would repeat the lie that trading is free.
   const realisedPnl = positions.closed.reduce((total, position) => {
     if (position.exitPrice === null) return total
     return (
@@ -118,9 +120,15 @@ export function Portfolio() {
         position.quantity,
         position.entryPrice,
         position.exitPrice,
-      )
+      ) -
+      position.openFee -
+      position.closeFee
     )
   }, 0)
+  const costsPaid = positions.closed.reduce(
+    (total, position) => total + position.openFee + position.closeFee,
+    0,
+  )
 
   async function handleClose(position: Transaction) {
     const mark = markFor(position)
@@ -182,7 +190,7 @@ export function Portfolio() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader>
             <CardDescription>{t('portfolio.accountValue')}</CardDescription>
@@ -227,6 +235,18 @@ export function Portfolio() {
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
             {t('portfolio.closedCount', { count: positions.closed.length })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('portfolio.costsPaid')}</CardDescription>
+            <CardTitle className="text-2xl tabular-nums">
+              {formatUsd(costsPaid)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground text-xs">
+            {t('portfolio.costsPaidHint')}
           </CardContent>
         </Card>
       </div>
@@ -382,6 +402,7 @@ export function Portfolio() {
                       <TableHead className="text-end">{t('common.quantity')}</TableHead>
                       <TableHead className="text-end">{t('common.entry')}</TableHead>
                       <TableHead className="text-end">{t('common.exit')}</TableHead>
+                      <TableHead className="text-end">{t('portfolio.fees')}</TableHead>
                       <TableHead className="text-end">{t('portfolio.pnl')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -390,12 +411,15 @@ export function Portfolio() {
                       const asset = assetById.get(position.assetId)
                       const decimals = decimalsFor(position.entryPrice)
                       const exit = position.exitPrice ?? position.entryPrice
-                      const pnl = positionPnl(
-                        position.direction,
-                        position.quantity,
-                        position.entryPrice,
-                        exit,
-                      )
+                      const fees = position.openFee + position.closeFee
+                      // Net of costs, matching the Realised tile.
+                      const pnl =
+                        positionPnl(
+                          position.direction,
+                          position.quantity,
+                          position.entryPrice,
+                          exit,
+                        ) - fees
                       return (
                         <TableRow key={position.id}>
                           <TableCell className="font-medium">
@@ -418,6 +442,9 @@ export function Portfolio() {
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
                             {exit.toFixed(decimals)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-end tabular-nums">
+                            {formatUsd(fees)}
                           </TableCell>
                           <TableCell className="text-end">
                             <SignedValue value={pnl} decimals={2} />

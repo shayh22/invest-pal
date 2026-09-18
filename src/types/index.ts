@@ -42,8 +42,15 @@ export interface Transaction {
   assetId: string
   direction: TradeDirection
   quantity: number
+  /** The price actually filled at, after crossing the spread. */
   entryPrice: number
   exitPrice: number | null
+  /** The mid price the trade was requested at, before the spread. */
+  entryMid: number | null
+  exitMid: number | null
+  /** Commission charged on each fill. */
+  openFee: number
+  closeFee: number
   status: TransactionStatus
   openedAt: string
   closedAt: string | null
@@ -57,4 +64,12 @@ export interface Candle {
   low: number
   close: number
   volume: number
+}
+
+/** What a fill costs, as the database will charge it. */
+export interface TradingCosts {
+  /** Half is paid entering, half leaving. 100 bps = 1%. */
+  spreadBps: number
+  commissionBps: number
+  minCommission: number
 }

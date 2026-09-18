@@ -65,8 +65,14 @@ export interface Database {
           asset_id: string
           direction: TradeDirection
           quantity: number
+          /** The price actually filled at, after crossing the spread. */
           entry_price: number
           exit_price: number | null
+          /** The mid the trade was requested at, before the spread. */
+          entry_mid: number | null
+          exit_mid: number | null
+          open_fee: number
+          close_fee: number
           status: TransactionStatus
           opened_at: string
           closed_at: string | null
@@ -133,6 +139,18 @@ export interface Database {
       close_position: {
         Args: { p_transaction_id: string; p_price: number }
         Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /**
+       * Spread and commission for an asset type, so the UI quotes exactly what
+       * the trade engine will charge rather than keeping its own copy.
+       */
+      trading_costs: {
+        Args: { p_asset_type: AssetType }
+        Returns: {
+          spread_bps: number
+          commission_bps: number
+          min_commission: number
+        }[]
       }
     }
     Enums: Record<never, never>

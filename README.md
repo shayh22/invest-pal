@@ -282,6 +282,25 @@ returns that collateral plus the result:
 position is closed. The database remains the authority — it settles every trade
 — but if one changes, so must the other.
 
+### Trading is not free
+
+Until migration `0004` a round trip at an unchanged price cost exactly nothing,
+which taught the opposite of the truth. Two costs are now charged by the
+database, so a client cannot talk its way out of them:
+
+| | |
+| --- | --- |
+| **Spread** | You buy at the ask and sell at the bid, never at the mid. Half the spread on the way in, half on the way out. 5 bps on equities, 20 bps on crypto — crypto genuinely is wider. |
+| **Commission** | 2 bps of notional with a $0.50 floor, charged per fill, so a round trip pays it twice. |
+
+`trading_costs(asset_type)` exposes the rates so the trade panel quotes exactly
+what the engine will charge, rather than keeping its own copy that could drift.
+`transactions` records `entry_mid` / `exit_mid` alongside the fill prices, so a
+learner can see what they asked for and what they got.
+
+Affordability now includes the commission. A trade whose notional fits but
+whose commission does not is refused — the old code let it through.
+
 ### A short can lose more than it reserved
 
 0001 required `cash_balance >= 0`. That is wrong for shorts: if price more than
@@ -294,8 +313,14 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-19 checks covering the accounting, both directions, the rejected-input paths,
-double settlement, cross-account access and every removed write path:
+Two suites. `trading_engine_test.sql` covers the accounting identity, both
+directions, rejected inputs, double settlement, cross-account access and every
+removed write path; `execution_costs_test.sql` owns the exact arithmetic of
+spread and commission.
+
+The first asserts relationships rather than literal amounts — a rate change
+moves every figure, and a test that hardcodes them fails without anything being
+wrong.
 
 ```bash
 npx supabase start   # or any Postgres

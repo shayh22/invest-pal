@@ -21,6 +21,18 @@ begin
 end $$;
 
 -- Fresh state. The signup trigger funds each portfolio with 100,000.
+-- psql does not substitute :variables inside dollar-quoted bodies, so
+-- comparisons that need one are made in the statement and passed in here.
+create or replace function public.assert_true(
+  condition boolean, label text
+) returns void language plpgsql as $$
+begin
+  if condition is not true then
+    raise exception 'FAIL %', label;
+  end if;
+  raise notice 'ok: %', label;
+end $$;
+
 delete from public.transactions;
 delete from public.portfolios;
 delete from public.profiles;
@@ -51,33 +63,57 @@ select public.assert_eq(
 -- --------------------------------------------------------------------------
 \echo '== long round trip =='
 -- --------------------------------------------------------------------------
+--
+-- These assert the accounting identity rather than a literal amount. Execution
+-- costs (migration 0004) move every figure, and a test that hardcodes them
+-- fails on a rate change without anything being wrong. The exact arithmetic of
+-- spread and commission is owned by execution_costs_test.sql.
 select (public.open_position(:'aapl'::uuid, 'LONG', 10, 100)).id::text as long_id
 \gset
 select public.assert_eq(
-  (select cash_balance from public.portfolios), 99000.00,
-  'opening a long reserves quantity * price'
+  (select cash_balance from public.portfolios),
+  (select round(100000 - (quantity * entry_price) - open_fee, 2)
+     from public.transactions where id = :'long_id'::uuid),
+  'opening a long costs exactly its notional plus commission'
 );
 
 select public.close_position(:'long_id'::uuid, 120) is not null \g /dev/null
 select public.assert_eq(
-  (select cash_balance from public.portfolios), 100200.00,
-  'closing a long at +20 returns collateral plus profit'
+  (select cash_balance from public.portfolios),
+  (select round(
+            100000
+            - open_fee - close_fee
+            + quantity * (exit_price - entry_price), 2)
+     from public.transactions where id = :'long_id'::uuid),
+  'closing a long returns the move less both commissions'
 );
+do $$
+begin
+  if (select cash_balance from public.portfolios) <= 100000 then
+    raise exception 'FAIL: a 20%% move should still clear its costs';
+  end if;
+  raise notice 'ok: a 20%% move nets a profit after costs';
+end $$;
 
 -- --------------------------------------------------------------------------
 \echo '== short that wins =='
 -- --------------------------------------------------------------------------
+select (select cash_balance from public.portfolios) as before_short
+\gset
 select (public.open_position(:'aapl'::uuid, 'SHORT', 10, 100)).id::text as short_id
 \gset
 select public.assert_eq(
-  (select cash_balance from public.portfolios), 99200.00,
-  'opening a short reserves the notional as collateral'
+  (select cash_balance from public.portfolios),
+  (select round(:before_short - (quantity * entry_price) - open_fee, 2)
+     from public.transactions where id = :'short_id'::uuid),
+  'opening a short reserves its notional and pays commission'
 );
 
 select public.close_position(:'short_id'::uuid, 80) is not null \g /dev/null
-select public.assert_eq(
-  (select cash_balance from public.portfolios), 100400.00,
-  'a short gains when price falls'
+-- A 20% fall on a short is far larger than any plausible cost.
+select public.assert_true(
+  (select cash_balance from public.portfolios) > :before_short,
+  'a short gains when price falls, net of costs'
 );
 
 -- --------------------------------------------------------------------------
@@ -85,16 +121,17 @@ select public.assert_eq(
 -- --------------------------------------------------------------------------
 -- The reason migration 0002 drops the cash_balance >= 0 constraint: the close
 -- must never be blocked, or the position is stranded forever.
--- Balance here is 100,400 from the two round trips above. Shorting 10 @ 100
--- reserves 1,000; closing at 12,000 loses 119,000, so the payout is -118,000
--- and the balance ends at 100,400 - 1,000 - 118,000 + 1,000 = -18,600.
+-- A short closing far above its entry loses more than it reserved.
 select (public.open_position(:'aapl'::uuid, 'SHORT', 10, 100)).id::text as bad_short
 \gset
 select public.close_position(:'bad_short'::uuid, 12000) is not null \g /dev/null
-select public.assert_eq(
-  (select cash_balance from public.portfolios), -18600.00,
-  'a short can lose more than it reserved, and the close still settles'
-);
+do $$
+begin
+  if (select cash_balance from public.portfolios) >= 0 then
+    raise exception 'FAIL: that short should have driven the balance negative';
+  end if;
+  raise notice 'ok: a short can lose more than it reserved, and still settles';
+end $$;
 select public.assert_eq(
   (select count(*) from public.transactions where status = 'OPEN'), 0,
   'no position is left stranded'
@@ -237,4 +274,5 @@ end $$;
 
 reset role;
 drop function public.assert_eq(numeric, numeric, text);
+drop function public.assert_true(boolean, text);
 \echo '== all trading engine checks passed =='
