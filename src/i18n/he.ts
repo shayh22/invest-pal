@@ -141,6 +141,10 @@ export const he: Record<TranslationKey, string> = {
   'markets.title': 'שווקים',
   'markets.subtitle':
     'מחירים אמיתיים מ-Yahoo Finance, עם גאומטריית גאן מתוך הניתוח השמור.',
+  'markets.groupStocks': 'מניות וקרנות',
+  'markets.groupCrypto': 'קריפטו',
+  'markets.searchAssets': 'חיפוש לפי סימול או שם…',
+  'markets.noAssets': 'אין התאמות.',
   'markets.selectAsset': 'בחרו נכס',
   'markets.range': 'טווח',
   'markets.assetsError': 'לא ניתן לטעון את רשימת הנכסים',
@@ -275,6 +279,36 @@ export const he: Record<TranslationKey, string> = {
   'reset.action': 'התחילו מחדש עם {amount}',
   'reset.doneToast': 'החשבון אופס. אין אחזקות ואין חובות.',
   'reset.error': 'לא ניתן לאפס את החשבון.',
+
+  // ----- עמלות ברוקר -----
+  'rates.title': 'כמה המסחר עולה לכם',
+  'rates.subtitle':
+    'ברוקרים גובים בצורות שונות, והצורה משנה אילו עסקאות בכלל הגיוניות.',
+  'rates.label': 'פרופיל עלויות',
+  'rates.spread': 'מרווח',
+  'rates.spreadValue': '{stock} מניות · {crypto} קריפטו',
+  'rates.minimum': 'מינימום לביצוע',
+  'rates.perUnitValue': '${amount} למניה',
+  'rates.none': 'אין',
+  'rates.changedToast': 'מעכשיו נסחרים לפי עמלות {name}',
+  'rates.error': 'לא ניתן לשנות את העמלות.',
+  'rates.disclaimer':
+    'אלה צורות גבייה נפוצות בשוק, לא המחירון המפורסם של ברוקר מסוים, והן לא מתעדכנות לפי אף אחד. ההשפעה היא רק על ביצועים עתידיים: פוזיציה שכבר פתוחה שומרת על המחיר והעמלה שבהם בוצעה.',
+  'rates.standard.name': 'ברירת המחדל',
+  'rates.standard.body':
+    'מרווח צנוע ואחוז קטן עם רצפה. הנקודה היא שהעלות אינה אפס, לא לחקות ברוקר מסוים.',
+  'rates.commission_free.name': 'ללא עמלה',
+  'rates.commission_free.body':
+    'אפס עמלה — ובמקומה מרווח רחב יותר. שם הברוקר ה״חינמי״ באמת מרוויח, ובסיבוב שלם זה עלול לעלות יותר מעמלה רגילה.',
+  'rates.per_share.name': 'לפי מניה',
+  'rates.per_share.body':
+    'שבריר סנט לכל מניה, עם רצפה. אדיש למחיר: אלף מניות עולות אותו דבר בין אם הן ב־$10 או ב־$90, מה שמתאים לפקודות גדולות במניה זולה ומעניש פקודות קטנות.',
+  'rates.percentage.name': 'לפי אחוז',
+  'rates.percentage.body':
+    'עשירית האחוז מהיקף העסקה, עם רצפה נמוכה. גדל עם גודל העסקה, ולכן לעולם לא מפתיע בעסקה גדולה.',
+  'rates.bank.name': 'בנק קמעונאי',
+  'rates.bank.body':
+    'כמה עשיריות האחוז עם מינימום גבוה. נסו עסקה של $100 כאן: המינימום לבדו לוקח 15% ממנה, ולכן עסקאות קטנות דרך בנק כמעט אף פעם לא משתלמות.',
 
   // ----- תיק השקעות -----
   'portfolio.title': 'תיק השקעות',

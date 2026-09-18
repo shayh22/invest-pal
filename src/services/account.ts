@@ -35,7 +35,7 @@ export async function fetchPortfolio(
 ): Promise<Portfolio | null> {
   const { data, error } = await client
     .from('portfolios')
-    .select('id, user_id, cash_balance, starting_balance, short_selling_enabled, created_at')
+    .select('id, user_id, cash_balance, starting_balance, short_selling_enabled, commission_profile, created_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -48,6 +48,7 @@ export async function fetchPortfolio(
     cashBalance: Number(data.cash_balance),
     startingBalance: Number(data.starting_balance ?? 100000),
     shortSellingEnabled: data.short_selling_enabled === true,
+    commissionProfile: data.commission_profile ?? 'standard',
     createdAt: data.created_at,
   }
 }

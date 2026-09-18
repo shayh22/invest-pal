@@ -140,6 +140,10 @@ export const en = {
   'markets.title': 'Markets',
   'markets.subtitle':
     'Real prices from Yahoo Finance, with Gann geometry from the cached analysis.',
+  'markets.groupStocks': 'Shares and funds',
+  'markets.groupCrypto': 'Crypto',
+  'markets.searchAssets': 'Search by ticker or name…',
+  'markets.noAssets': 'Nothing matches that.',
   'markets.selectAsset': 'Select an asset',
   'markets.range': 'Range',
   'markets.assetsError': 'Could not load assets',
@@ -276,6 +280,36 @@ export const en = {
   'reset.action': 'Start over with {amount}',
   'reset.doneToast': 'Account reset. Nothing held, nothing owed.',
   'reset.error': 'Could not reset the account.',
+
+  // ----- broker rates -----
+  'rates.title': 'What trading costs you',
+  'rates.subtitle':
+    'Brokers charge in different shapes, and the shape changes which trades make sense.',
+  'rates.label': 'Cost profile',
+  'rates.spread': 'Spread',
+  'rates.spreadValue': '{stock} shares · {crypto} crypto',
+  'rates.minimum': 'Minimum per fill',
+  'rates.perUnitValue': '${amount} per share',
+  'rates.none': 'none',
+  'rates.changedToast': 'Now trading on {name} rates',
+  'rates.error': 'Could not change the rates.',
+  'rates.disclaimer':
+    'These are shapes that are common in the market, not any particular broker’s published rates, and they are not kept current with anyone’s. Only future fills are affected: a position already open keeps the price and fee it filled at.',
+  'rates.standard.name': 'House default',
+  'rates.standard.body':
+    'A modest spread and a small percentage with a floor. The point is that cost is not zero, not to model any particular broker.',
+  'rates.commission_free.name': 'Commission-free',
+  'rates.commission_free.body':
+    'No commission at all — and a wider spread instead. This is where a free broker is actually paid, and on a round trip it can cost more than a commission would have.',
+  'rates.per_share.name': 'Per share',
+  'rates.per_share.body':
+    'A fraction of a cent per share with a floor. Indifferent to price: a thousand shares cost the same whether they are $10 or $90, which suits large orders in cheap stock and punishes small ones.',
+  'rates.percentage.name': 'Percentage',
+  'rates.percentage.body':
+    'A tenth of a percent of what you trade, with a small floor. Scales with the size of the trade, so it never surprises you on a large one.',
+  'rates.bank.name': 'Retail bank',
+  'rates.bank.body':
+    'Several tenths of a percent with a high minimum. Try a $100 trade on this: the minimum alone takes 15% of it, which is why small trades through a bank rarely make sense.',
 
   // ----- portfolio -----
   'portfolio.title': 'Portfolio',

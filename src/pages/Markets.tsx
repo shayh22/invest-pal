@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
+import { AssetPicker } from '@/components/market/AssetPicker'
 import { GannSignalPanel } from '@/components/market/GannSignalPanel'
 import { MentorNote } from '@/components/market/MentorNote'
 import { TradePanel } from '@/components/market/TradePanel'
@@ -15,13 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -131,26 +125,12 @@ export function Markets() {
 
       {/* Filters in one row above the chart. */}
       <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={activeSymbol ?? undefined}
-          onValueChange={setSymbol}
+        <AssetPicker
+          assets={assets}
+          value={activeSymbol}
           disabled={assetsLoading || assets.length === 0}
-        >
-          <SelectTrigger className="w-64" aria-label={t('common.asset')}>
-            <SelectValue placeholder={t('markets.selectAsset')}>
-              {selectedAsset
-                ? `${selectedAsset.ticker} — ${selectedAsset.name}`
-                : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {assets.map((asset) => (
-              <SelectItem key={asset.id} value={asset.ticker}>
-                {asset.ticker} — {asset.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={setSymbol}
+        />
 
         <div
           className="flex items-center gap-1"
