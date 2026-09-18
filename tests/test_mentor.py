@@ -100,3 +100,14 @@ def test_prompt_language_is_explicit_in_the_system_prompt():
 
     english = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["en"])
     assert "Write in English" in english
+
+
+def test_empty_completion_is_a_retryable_error_type():
+    # An empty completion is transient: the same prompt returns a good answer
+    # on a retry, so it must not be indistinguishable from a bad request.
+    from gann.mentor import EmptyCompletion, MentorError, _normalise
+
+    with pytest.raises(EmptyCompletion):
+        _normalise("  ")
+    # Still a MentorError, so existing callers keep working.
+    assert issubclass(EmptyCompletion, MentorError)

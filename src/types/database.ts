@@ -95,6 +95,7 @@ export interface Database {
           timeframe: string
           payload: unknown
           ai_summary: string | null
+          ai_summaries: Record<string, string> | null
           calculated_at: string
           expires_at: string
         }
@@ -103,9 +104,13 @@ export interface Database {
           timeframe?: string
           payload: unknown
           ai_summary?: string | null
+          ai_summaries?: Record<string, string>
           expires_at?: string
         }
-        Update: { ai_summary?: string | null }
+        Update: {
+          ai_summary?: string | null
+          ai_summaries?: Record<string, string>
+        }
         Relationships: []
       }
     }

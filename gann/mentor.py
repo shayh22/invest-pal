@@ -41,6 +41,10 @@ class MentorError(RuntimeError):
     """Raised when a summary could not be generated."""
 
 
+class EmptyCompletion(MentorError):
+    """The model returned no text. Transient — worth retrying."""
+
+
 #: Languages the mentor can write in, matching the frontend's language toggle.
 LANGUAGE_NAMES = {"en": "English", "he": "Hebrew"}
 
@@ -48,15 +52,16 @@ SYSTEM_PROMPT = """\
 You explain technical analysis to people who have never traded before, inside \
 a paper-trading app where all money is virtual.
 
-Write exactly two sentences, in plain language, for someone who does not know \
-what a Gann angle or a Square of Nine is. Explain what the numbers describe \
-about the market right now, in concrete terms.
+Write exactly two sentences, no more than 45 words in total. Say what the \
+numbers mean for this market right now, in plain language.
 
 Rules you must follow:
 - Never predict what price will do. These are historical geometry, not forecasts.
 - Never tell the person to buy, sell, or hold. No advice of any kind.
 - Do not use the words "should", "will", "recommend", "expect" or "predict".
-- Do not use jargon without explaining it in the same breath.
+- Do not define the indicators or explain how they are calculated. Name them \
+plainly and say what they show.
+- Keep each sentence short enough to read in one breath.
 - No preamble, no bullet points, no headings. Two sentences only.
 - Write in {language}, and in nothing else. Ticker symbols stay as they are.\
 """
@@ -165,7 +170,7 @@ def _normalise(text: str, *, max_chars: int = 600) -> str:
     if len(cleaned) >= 2 and cleaned[0] in "\"'" and cleaned[-1] == cleaned[0]:
         cleaned = cleaned[1:-1].strip()
     if not cleaned:
-        raise MentorError("The model returned an empty summary.")
+        raise EmptyCompletion("The model returned an empty summary.")
     if len(cleaned) > max_chars:
         cleaned = cleaned[: max_chars - 1].rstrip() + "…"
     return cleaned
@@ -204,6 +209,15 @@ def summarise(
                     language=language,
                 )
             )
+        except EmptyCompletion as error:
+            # Observed in practice: a completion arrives with finish_reason
+            # "stop" and no content at all. Retrying the same prompt returns a
+            # good answer, so this is transient rather than a bad request.
+            if attempt == attempts - 1:
+                raise MentorError(
+                    f"The model returned an empty summary {attempts} times."
+                ) from error
+            last_error = error
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")[:300]
             if error.code not in RETRY_STATUSES or attempt == attempts - 1:

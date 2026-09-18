@@ -157,8 +157,27 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     })
     check('RLS blocks minting money', money(await balance()) === money(before), money(await balance()))
 
-    const signals = await (await rest('gann_signals?select=timeframe&limit=20')).json()
+    const signals = await (
+      await rest('gann_signals?select=timeframe,ai_summaries&limit=20')
+    ).json()
     check('gann signals cached', Array.isArray(signals) && signals.length > 0, `${signals.length ?? 0} rows`)
+
+    // The mentor note sits beside the Buy button, so a Hebrew page must not be
+    // left showing an English paragraph.
+    const withEnglish = signals.filter((s) => s.ai_summaries?.en).length
+    const withHebrew = signals.filter((s) => s.ai_summaries?.he).length
+    check('mentor summaries in English', withEnglish === signals.length, `${withEnglish}/${signals.length}`)
+    check('mentor summaries in Hebrew', withHebrew === signals.length, `${withHebrew}/${signals.length}`)
+
+    // The prompt forbids advice and prediction; a slip belongs in a failure,
+    // not on screen next to a trade button.
+    const banned = ['should', 'recommend', 'expect', 'predict']
+    const offenders = signals.flatMap((s) =>
+      Object.entries(s.ai_summaries ?? {})
+        .filter(([, text]) => banned.some((w) => String(text).toLowerCase().includes(w)))
+        .map(([lang]) => lang),
+    )
+    check('no advice language in summaries', offenders.length === 0, offenders.join(', '))
   })
 }
 
