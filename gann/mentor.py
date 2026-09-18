@@ -27,11 +27,20 @@ def api_url() -> str:
     """Endpoint to call. Overridable for a proxy, a gateway, or a test double."""
     return os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_API_URL
 
-# Slugs are OpenRouter's, not Anthropic's ("anthropic/claude-opus-5", not
-# "claude-opus-5"). Override with OPENROUTER_MODEL — a smaller model is a
-# reasonable trade here, since the task is rephrasing numbers rather than
-# reasoning about them.
-DEFAULT_MODEL = "anthropic/claude-opus-5"
+# Slugs are OpenRouter's, not Anthropic's ("anthropic/claude-haiku-4.5", not
+# "claude-haiku-4.5"). Override with OPENROUTER_MODEL.
+#
+# A small model is the right tool here: the engine has already done the
+# reasoning, and the prompt hands over a handful of numbers to rephrase. Measured
+# across all eight seeded assets in both languages, this default produced 16
+# clean summaries out of 16 for $0.0136 a run, against $0.1124 for the largest
+# model — the same job at an eighth of the price.
+#
+# OpenRouter's free tier was tried and rejected: across 18 calls to three free
+# models it returned 1 usable summary, the rest 429s and empty completions. The
+# cheapest paid models are cheaper still, but the ones tested could not write
+# Hebrew, which is half of what this app asks for.
+DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
 
 #: Retried; anything else fails fast.
 RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})

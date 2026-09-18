@@ -7,6 +7,7 @@ money and needs a key.
 
 import pytest
 
+from gann import mentor
 from gann.engine import analyze
 from gann.mentor import MentorError, _normalise, build_user_prompt, summarise
 from tests.conftest import make_candles
@@ -111,3 +112,33 @@ def test_empty_completion_is_a_retryable_error_type():
         _normalise("  ")
     # Still a MentorError, so existing callers keep working.
     assert issubclass(EmptyCompletion, MentorError)
+
+
+def test_model_is_chosen_explicit_then_env_then_default(monkeypatch):
+    """Precedence matters: a CI variable must not override an explicit --model,
+    and an unset variable must land on the cheap default rather than nothing."""
+    seen: list[str] = []
+
+    def record(prompt, *, api_key, model, timeout, language):
+        seen.append(model)
+        return "First sentence. Second sentence."
+
+    monkeypatch.setattr(mentor, "_request", record)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    summarise(analysis())
+
+    monkeypatch.setenv("OPENROUTER_MODEL", "vendor/from-env")
+    summarise(analysis())
+
+    summarise(analysis(), model="vendor/explicit")
+
+    assert seen == [mentor.DEFAULT_MODEL, "vendor/from-env", "vendor/explicit"]
+
+
+def test_the_default_model_is_a_small_one():
+    """The engine has already done the reasoning; the model only rephrases
+    numbers. Reaching for a frontier model here costs about eight times as much
+    for the same two sentences, so a change of default should be deliberate."""
+    assert mentor.DEFAULT_MODEL == "anthropic/claude-haiku-4.5"
