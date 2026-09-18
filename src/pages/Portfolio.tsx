@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { ConfirmTradeDialog } from '@/components/trade/ConfirmTradeDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -79,6 +80,11 @@ export function Portfolio() {
   const { t, tCount } = useTranslation()
   const positions = usePositions(portfolio?.id ?? null)
   const [closing, setClosing] = useState<string | null>(null)
+  // The position awaiting confirmation. Closing settles immediately and
+  // cannot be undone, so it is never one tap away.
+  const [confirmingClose, setConfirmingClose] = useState<Transaction | null>(
+    null,
+  )
 
   const assetById = new Map<string, Asset>(
     assets.map((asset) => [asset.id, asset]),
@@ -150,6 +156,7 @@ export function Portfolio() {
       toast.error(t('portfolio.noMark'))
       return
     }
+    setConfirmingClose(null)
     setClosing(position.id)
     try {
       const client = requireSupabase()
@@ -397,7 +404,7 @@ export function Portfolio() {
                               size="sm"
                               variant="outline"
                               disabled={mark === null || closing !== null}
-                              onClick={() => void handleClose(position)}
+                              onClick={() => setConfirmingClose(position)}
                             >
                               {closing === position.id
                                 ? t('common.closing')
@@ -487,6 +494,53 @@ export function Portfolio() {
           )}
         </TabsContent>
       </Tabs>
+
+      {confirmingClose &&
+        (() => {
+          const position = confirmingClose
+          const asset = assetById.get(position.assetId)
+          const mark = markFor(position)
+          if (mark === null) return null
+          const decimals = decimalsFor(position.entryPrice)
+          const pnl = positionPnl(
+            position.direction,
+            position.quantity,
+            position.entryPrice,
+            mark,
+          )
+          return (
+            <ConfirmTradeDialog
+              open
+              onOpenChange={(next) => {
+                if (!next) setConfirmingClose(null)
+              }}
+              title={t('confirm.closeTitle')}
+              description={t('confirm.closeBody', {
+                quantity: position.quantity,
+                ticker: asset?.ticker ?? '—',
+                direction: t(
+                  position.direction === 'LONG' ? 'common.long' : 'common.short',
+                ),
+              })}
+              lines={[
+                {
+                  label: t('common.entry'),
+                  value: position.entryPrice.toFixed(decimals),
+                },
+                { label: t('common.price'), value: mark.toFixed(decimals) },
+                {
+                  label: t('confirm.resultSoFar'),
+                  value: `${pnl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pnl))}`,
+                  emphasis: true,
+                },
+              ]}
+              warning={t('confirm.closeCosts')}
+              confirmLabel={t('confirm.closeAction')}
+              destructive
+              onConfirm={() => void handleClose(position)}
+            />
+          )
+        })()}
     </div>
   )
 }
