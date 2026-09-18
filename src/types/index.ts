@@ -38,6 +38,42 @@ export interface Portfolio {
 /** Which way an order goes. A side acts on a holding; a direction describes one. */
 export type TradeSide = 'BUY' | 'SELL'
 
+/**
+ * What a resting order waits for.
+ *
+ *   LIMIT  a better price than now — a buy waits for a fall, a sell for a rise
+ *   STOP   a worse price than now — a sell waiting for a fall is a stop-loss
+ *   TIME   a moment, then fills at whatever the market is
+ */
+export type TriggerType = 'LIMIT' | 'STOP' | 'TIME'
+
+export type OrderStatus =
+  | 'PENDING'
+  | 'FILLED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'REJECTED'
+
+export interface PendingOrder {
+  id: string
+  assetId: string
+  side: TradeSide
+  quantity: number
+  triggerType: TriggerType
+  /** The level, for LIMIT and STOP. */
+  triggerPrice: number | null
+  /** The moment, for TIME. */
+  triggerAt: string | null
+  /** Past this it expires unfilled. */
+  goodTil: string | null
+  status: OrderStatus
+  /** Why a triggered order did not become a trade. */
+  rejectReason: string | null
+  transactionId: string | null
+  createdAt: string
+  resolvedAt: string | null
+}
+
 /** Amounts a new account may be funded with. Mirrors starting_balance_options(). */
 export const STARTING_BALANCES = [100, 1000, 10000, 100000] as const
 export type StartingBalance = (typeof STARTING_BALANCES)[number]

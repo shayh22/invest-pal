@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { CommissionPicker } from '@/components/trade/CommissionPicker'
+import {
+  PendingOrderList,
+  ResolvedOrderList,
+} from '@/components/trade/PendingOrderList'
 import { ConfirmTradeDialog } from '@/components/trade/ConfirmTradeDialog'
 import { ResetAccountDialog } from '@/components/trade/ResetAccountDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -27,6 +31,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
+import { usePendingOrders } from '@/hooks/usePendingOrders'
 import { usePositions } from '@/hooks/usePositions'
 import { useQuotes } from '@/hooks/useQuotes'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -37,8 +42,9 @@ import {
   positionCollateral,
   positionPnl,
 } from '@/lib/trading'
+import { expireOrders } from '@/services/orders'
 import { closePosition, resetPortfolio } from '@/services/trading'
-import { requireSupabase } from '@/services/supabase'
+import { requireSupabase, supabase } from '@/services/supabase'
 import type { Asset, StartingBalance, Transaction } from '@/types'
 
 function decimalsFor(price: number): number {
@@ -81,6 +87,21 @@ export function Portfolio() {
   const { assets } = useAssets()
   const { t, tCount } = useTranslation()
   const positions = usePositions(portfolio?.id ?? null)
+  const orders = usePendingOrders(portfolio?.id ?? null)
+
+  // Settlement only runs for the asset on screen, so a price order on a ticker
+  // nobody has opened would rest past its own deadline for ever. Sweeping here
+  // is what stops the waiting list filling with orders that can never fill.
+  useEffect(() => {
+    if (!supabase || !portfolio) return
+    expireOrders(supabase)
+      .then((count) => {
+        if (count > 0) orders.reload()
+      })
+      .catch(() => {})
+    // Once per visit, keyed on the account rather than on the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portfolio?.id])
   const [closing, setClosing] = useState<string | null>(null)
   // The position awaiting confirmation. Closing settles immediately and
   // cannot be undone, so it is never one tap away.
@@ -333,12 +354,17 @@ export function Portfolio() {
       )}
 
       <Tabs defaultValue="open">
-        <TabsList>
+        {/* Three tabs with counts do not fit a narrow phone on one line, and
+            a tab strip that overflows hides the tab on the end. */}
+        <TabsList className="group-data-horizontal/tabs:h-auto flex-wrap">
           <TabsTrigger value="open">
             {t('portfolio.tabOpen', { count: positions.open.length })}
           </TabsTrigger>
           <TabsTrigger value="closed">
             {t('portfolio.tabClosed', { count: positions.closed.length })}
+          </TabsTrigger>
+          <TabsTrigger value="orders">
+            {t('orders.tab', { count: orders.waiting.length })}
           </TabsTrigger>
         </TabsList>
 
@@ -673,6 +699,44 @@ export function Portfolio() {
                 </Table>
               </CardContent>
               </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="orders" className="mt-4 flex flex-col gap-6">
+          {orders.loading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : (
+            <>
+              {orders.waiting.length === 0 ? (
+                <EmptyState message={t('orders.emptyWaiting')} />
+              ) : (
+                <PendingOrderList
+                  orders={orders.waiting}
+                  assetById={assetById}
+                  onChanged={() => {
+                    orders.reload()
+                    positions.reload()
+                    void refreshAccount()
+                  }}
+                />
+              )}
+
+              {orders.resolved.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <h2 className="text-sm font-medium">
+                    {t('orders.historyTitle')}
+                  </h2>
+                  <ResolvedOrderList
+                    orders={orders.resolved}
+                    assetById={assetById}
+                  />
+                </div>
+              )}
+
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t('orders.settlementNote')}
+              </p>
             </>
           )}
         </TabsContent>

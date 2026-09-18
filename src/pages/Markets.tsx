@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
@@ -26,7 +26,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent } from '@/lib/format'
+import { toast } from 'sonner'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
+import { settleOrders } from '@/services/orders'
+import { supabase } from '@/services/supabase'
 
 const RANGES: { value: ChartRange; label: string }[] = [
   { value: '1d', label: '1D' },
@@ -65,7 +68,7 @@ function formatPrice(value: number, currency: string, decimals: number): string 
 
 export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
-  const { t, language } = useTranslation()
+  const { t, tCount, language } = useTranslation()
   const [symbol, setSymbol] = useState<string | null>(null)
   const [range, setRange] = useState<ChartRange>('6mo')
   const [showAngles, setShowAngles] = useState(true)
@@ -88,7 +91,7 @@ export function Markets() {
   // Signals are keyed by asset, not by ticker: the cache lives in the database.
   const gann = useGannSignal(selectedAsset?.id ?? null)
 
-  const { portfolio } = useAuth()
+  const { portfolio, refreshAccount } = useAuth()
   const positions = usePositions(portfolio?.id ?? null)
 
   // Prefer the active language; fall back to English, then to the
@@ -98,6 +101,37 @@ export function Markets() {
     gann.signal?.aiSummaries?.en ??
     gann.signal?.aiSummary ??
     null
+
+  // Nothing watches prices between visits, so a fresh quote is the moment a
+  // resting order can be resolved. Each price is handed over once — keyed on
+  // asset and price, so re-renders do not re-settle the same number.
+  const settledKey = useRef<string | null>(null)
+  useEffect(() => {
+    const client = supabase
+    const assetId = selectedAsset?.id
+    const livePrice = data?.quote?.price
+    if (!client || !portfolio || !assetId || !livePrice) return
+
+    const key = `${assetId}|${livePrice}`
+    if (settledKey.current === key) return
+    settledKey.current = key
+
+    settleOrders(client, assetId, livePrice)
+      .then((outcome) => {
+        if (outcome.filled + outcome.rejected + outcome.expired === 0) return
+        if (outcome.filled > 0) {
+          toast.success(tCount('orders.filledToast', outcome.filled))
+        }
+        if (outcome.rejected > 0) {
+          toast.error(tCount('orders.rejectedToast', outcome.rejected))
+        }
+        positions.reload()
+        void refreshAccount()
+      })
+      // Quiet on purpose: this runs off a price update, and the next price
+      // will try again. An error here is not worth interrupting anyone with.
+      .catch(() => {})
+  }, [selectedAsset?.id, data?.quote?.price, portfolio, tCount, positions, refreshAccount])
 
   const activeRangeLabel =
     RANGES.find((option) => option.value === range)?.label ?? range
