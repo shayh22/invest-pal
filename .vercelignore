@@ -1,0 +1,20 @@
+# Vercel uploads the working directory, and .gitignore alone did not stop a
+# local .env reaching the builder — Vite then baked http://127.0.0.1:54321 into
+# the production bundle, pointing every visitor's browser at their own machine.
+# Environment variables for a deployment belong in the Vercel dashboard.
+.env
+.env.*
+!.env.example
+
+# Nothing below is part of the frontend build. api/ is deliberately absent from
+# this list: those functions are deployed.
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+gann/
+tests/
+pyproject.toml
+supabase/
+.github/
+dist/
