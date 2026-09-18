@@ -3,6 +3,7 @@ import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
 import { GannSignalPanel } from '@/components/market/GannSignalPanel'
+import { MentorNote } from '@/components/market/MentorNote'
 import { TradePanel } from '@/components/market/TradePanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -95,6 +96,14 @@ export function Markets() {
 
   const { portfolio } = useAuth()
   const positions = usePositions(portfolio?.id ?? null)
+
+  // Prefer the active language; fall back to English, then to the
+  // deprecated single-language column.
+  const mentorSummary =
+    gann.signal?.aiSummaries?.[language] ??
+    gann.signal?.aiSummaries?.en ??
+    gann.signal?.aiSummary ??
+    null
 
   const activeRangeLabel =
     RANGES.find((option) => option.value === range)?.label ?? range
@@ -268,6 +277,12 @@ export function Markets() {
         </CardContent>
       </Card>
 
+      <MentorNote
+        summary={mentorSummary}
+        loading={gann.loading}
+        hasSignal={gann.signal !== null}
+      />
+
       {quote && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatTile
@@ -319,16 +334,6 @@ export function Markets() {
           asset={selectedAsset}
           price={quote?.price ?? null}
           decimals={decimals}
-          mentorSummary={
-            // Prefer the active language; fall back to English, then to the
-            // deprecated single-language column.
-            gann.signal?.aiSummaries?.[language] ??
-            gann.signal?.aiSummaries?.en ??
-            gann.signal?.aiSummary ??
-            null
-          }
-          mentorLoading={gann.loading}
-          hasSignal={gann.signal !== null}
           onTraded={positions.reload}
         />
       </div>

@@ -229,8 +229,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     ).json()
     check('gann signals cached', Array.isArray(signals) && signals.length > 0, `${signals.length ?? 0} rows`)
 
-    // The mentor note sits beside the Buy button, so a Hebrew page must not be
-    // left showing an English paragraph.
+    // The mentor card sits directly under the chart, so a Hebrew page must not
+    // be left showing an English paragraph.
     const withEnglish = signals.filter((s) => s.ai_summaries?.en).length
     const withHebrew = signals.filter((s) => s.ai_summaries?.he).length
     check('mentor summaries in English', withEnglish === signals.length, `${withEnglish}/${signals.length}`)

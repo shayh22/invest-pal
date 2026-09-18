@@ -1,5 +1,12 @@
 import { Sparkles } from 'lucide-react'
 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/hooks/useTranslation'
 
@@ -11,44 +18,67 @@ interface MentorNoteProps {
 }
 
 /**
- * The AI mentor's reading, shown directly above the trade buttons.
+ * The AI mentor's reading of the current Gann signal.
+ *
+ * It sits directly under the chart rather than down beside the trade buttons.
+ * On a phone the analysis panel and the Square of Nine table push that spot
+ * more than three screens down, and a beginner reading the chart is exactly
+ * who this paragraph is for — so it goes where the chart is.
  *
  * The text is generated once per signal by the refresh job and cached in
- * gann_signals.ai_summary, so this renders a stored string — no model call
+ * gann_signals.ai_summaries, so this renders a stored string; no model call
  * happens in the browser. When there is no summary the component renders
- * nothing rather than a placeholder: an empty box next to Buy and Sell invites
- * the reader to imagine what it would have said.
+ * nothing rather than an empty card that invites the reader to imagine what
+ * it would have said.
  */
 export function MentorNote({ summary, loading, hasSignal }: MentorNoteProps) {
   const { t } = useTranslation()
 
   if (loading) {
     return (
-      <div className="bg-muted/50 flex flex-col gap-2 rounded-lg p-3">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-4/5" />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="size-4" aria-hidden />
+            {t('mentor.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+        </CardContent>
+      </Card>
     )
   }
 
   if (!summary) {
     if (!hasSignal) return null
     return (
-      <p className="text-muted-foreground text-xs">{t('mentor.missing')}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="size-4" aria-hidden />
+            {t('mentor.title')}
+          </CardTitle>
+          <CardDescription>{t('mentor.missing')}</CardDescription>
+        </CardHeader>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-muted/50 flex flex-col gap-1.5 rounded-lg p-3">
-      <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-        <Sparkles className="size-3.5" aria-hidden />
-        {t('mentor.heading')}
-      </span>
-      <p className="text-sm leading-relaxed">{summary}</p>
-      <p className="text-muted-foreground text-xs">
-        {t('mentor.disclaimer')}
-      </p>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Sparkles className="size-4" aria-hidden />
+          {t('mentor.title')}
+        </CardTitle>
+        <CardDescription>{t('mentor.heading')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <p className="text-sm leading-relaxed">{summary}</p>
+        <p className="text-muted-foreground text-xs">{t('mentor.disclaimer')}</p>
+      </CardContent>
+    </Card>
   )
 }

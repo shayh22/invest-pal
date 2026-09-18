@@ -172,9 +172,10 @@ export const he: Record<TranslationKey, string> = {
   'gann.support': 'תמיכה',
 
   // ----- מנטור -----
+  'mentor.title': 'מנטור AI',
   'mentor.heading': 'מה זה אומר',
   'mentor.disclaimer':
-    'נכתב על ידי בינה מלאכותית מתוך נתוני גאן שלמעלה. הסבר, לא המלצה.',
+    'נכתב על ידי בינה מלאכותית מתוך נתוני גאן שבדף הזה. הסבר, לא המלצה.',
   'mentor.missing':
     'אין הערת מנטור לאיתות הזה. הגדירו OPENROUTER_API_KEY והריצו שוב את python -m gann.refresh.',
 
