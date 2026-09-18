@@ -178,6 +178,9 @@ export const en = {
   'trade.title': 'Practice trade',
   'trade.subtitleReady': 'Virtual money only. Filled at the last price shown above.',
   'trade.subtitleEmpty': 'Select an asset to trade.',
+  'trade.estimatedFill': 'Estimated fill',
+  'trade.spreadCost': 'Spread',
+  'trade.commission': 'Commission',
   'trade.cashRequired': 'Cash required',
   'trade.balanceAfter': 'Balance after',
   'trade.buy': 'Buy (Long)',
@@ -191,6 +194,8 @@ export const en = {
   'trade.failed': 'Could not place the trade.',
   'trade.boughtToast': 'Bought {quantity} {ticker} at {price}',
   'trade.shortedToast': 'Shorted {quantity} {ticker} at {price}',
+  'trade.costsNote':
+    'You buy at the ask and sell at the bid, and pay commission on both fills — so a round trip at an unchanged price loses money. That is true of every real broker.',
   'trade.shortWarningTitle': 'Shorting can lose more than it costs',
   'trade.shortWarningBody':
     'A long can only fall to zero. A short loses as price rises, and price has no ceiling — so a short can end up costing more than the cash it reserved, and the balance can go negative.',
@@ -218,6 +223,9 @@ export const en = {
   'portfolio.emptyClosed': 'Nothing closed yet.',
   'portfolio.mark': 'Mark',
   'portfolio.pnl': 'P&L',
+  'portfolio.fees': 'Fees',
+  'portfolio.costsPaid': 'Costs paid',
+  'portfolio.costsPaidHint': 'Spread and commission across all closed trades.',
   'portfolio.noMark': 'No current price available for this position yet.',
   'portfolio.closedToastProfit': 'Closed at {price} for a profit of {amount}',
   'portfolio.closedToastLoss': 'Closed at {price} for a loss of {amount}',

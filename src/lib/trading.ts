@@ -1,4 +1,4 @@
-import type { TradeDirection } from '@/types'
+import type { TradeDirection, TradingCosts } from '@/types'
 
 /**
  * Position maths, mirroring supabase/migrations/0002_trading_engine.sql.
@@ -77,4 +77,41 @@ export function accountEquity(
           ))
     )
   }, cashBalance)
+}
+
+/**
+ * What a fill will actually execute at.
+ *
+ * Mirrors open_position / close_position in
+ * supabase/migrations/0004_execution_costs.sql. The spread always works
+ * against the trader: buying pays the ask, selling receives the bid.
+ */
+export function fillPrice(
+  midPrice: number,
+  side: 'BUY' | 'SELL',
+  spreadBps: number,
+): number {
+  const half = spreadBps / 20000
+  return side === 'BUY' ? midPrice * (1 + half) : midPrice * (1 - half)
+}
+
+/** Commission on a fill: a percentage of notional, with a floor. */
+export function commissionFor(notional: number, costs: TradingCosts): number {
+  return Math.max(
+    Math.round(notional * (costs.commissionBps / 10000) * 100) / 100,
+    costs.minCommission,
+  )
+}
+
+/** Opening a position takes the notional and the commission together. */
+export function openingCost(
+  quantity: number,
+  midPrice: number,
+  direction: TradeDirection,
+  costs: TradingCosts,
+): { fill: number; notional: number; commission: number; total: number } {
+  const fill = fillPrice(midPrice, direction === 'LONG' ? 'BUY' : 'SELL', costs.spreadBps)
+  const notional = quantity * fill
+  const commission = commissionFor(notional, costs)
+  return { fill, notional, commission, total: notional + commission }
 }

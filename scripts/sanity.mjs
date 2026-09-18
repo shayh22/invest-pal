@@ -115,6 +115,12 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
     check('portfolio provisioned at 100,000', money(await balance()) === '100000.00', money(await balance()))
 
+    const costs = (await (await rest('rpc/trading_costs', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_type: 'STOCK' }),
+    })).json())[0]
+    check('trading costs are quotable', Number(costs?.spread_bps) > 0, JSON.stringify(costs))
+
     const profile = (await (await rest('profiles?select=display_name,experience_level')).json())[0]
     check('profile created by trigger', profile?.display_name === 'Sanity', JSON.stringify(profile))
 
@@ -131,7 +137,15 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       })
     ).json()
     check('open_position writes a trade', opened?.status === 'OPEN', JSON.stringify(opened).slice(0, 80))
-    check('opening reserves the notional', money(await balance()) === '99000.00', money(await balance()))
+
+    // The fill must be worse than the mid, and the commission real.
+    check('a long fills above the mid', Number(opened.entry_price) > Number(opened.entry_mid), `${opened.entry_price} vs mid ${opened.entry_mid}`)
+    check('commission charged on the fill', Number(opened.open_fee) > 0, String(opened.open_fee))
+
+    const expectedAfterOpen = money(
+      100000 - Number(opened.quantity) * Number(opened.entry_price) - Number(opened.open_fee),
+    )
+    check('opening costs notional plus commission', money(await balance()) === expectedAfterOpen, money(await balance()))
 
     const closed = await (
       await rest('rpc/close_position', {
@@ -140,7 +154,23 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       })
     ).json()
     check('close_position settles', closed?.status === 'CLOSED', JSON.stringify(closed).slice(0, 80))
-    check('closing returns collateral plus profit', money(await balance()) === '100200.00', money(await balance()))
+    check('close fills below the mid', Number(closed.exit_price) < Number(closed.exit_mid), `${closed.exit_price} vs mid ${closed.exit_mid}`)
+
+    // The lesson the costs exist to teach: a round trip is never free.
+    const roundTripAtSamePrice = await (
+      await rest('rpc/open_position', {
+        method: 'POST',
+        body: JSON.stringify({ p_asset_id: assetId, p_direction: 'LONG', p_quantity: 10, p_price: 100 }),
+      })
+    ).json()
+    const beforeFlatClose = await balance()
+    await rest('rpc/close_position', {
+      method: 'POST',
+      body: JSON.stringify({ p_transaction_id: roundTripAtSamePrice.id, p_price: 100 }),
+    })
+    const afterFlatClose = await balance()
+    const netted = afterFlatClose - beforeFlatClose - Number(roundTripAtSamePrice.quantity) * Number(roundTripAtSamePrice.entry_price)
+    check('a flat round trip loses money', netted < 0, `net ${netted.toFixed(2)}`)
 
     // Settling the same position twice would pay out twice.
     const again = await rest('rpc/close_position', {

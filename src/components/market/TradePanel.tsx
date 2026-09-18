@@ -15,8 +15,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
+import { useTradingCosts } from '@/hooks/useTradingCosts'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatUsd } from '@/lib/format'
+import { openingCost } from '@/lib/trading'
 import { openPosition } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
 import type { Asset, TradeDirection } from '@/types'
@@ -44,13 +46,22 @@ export function TradePanel({
 }: TradePanelProps) {
   const { portfolio, refreshAccount } = useAuth()
   const { t } = useTranslation()
+  const costs = useTradingCosts(asset?.type ?? null)
   const [quantityText, setQuantityText] = useState('1')
   const [pending, setPending] = useState<TradeDirection | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [direction, setDirection] = useState<TradeDirection>('LONG')
   const quantity = Number(quantityText)
   const quantityValid = Number.isFinite(quantity) && quantity > 0
-  const cost = quantityValid && price ? quantity * price : 0
+
+  // Quoted from the database's own rates. Without them, fall back to the mid
+  // rather than inventing a spread.
+  const estimate =
+    quantityValid && price && costs
+      ? openingCost(quantity, price, direction, costs)
+      : null
+  const cost = estimate?.total ?? (quantityValid && price ? quantity * price : 0)
   const balance = portfolio?.cashBalance ?? 0
   // The database enforces this too; checking here just avoids a pointless
   // round trip and lets the button explain itself.
@@ -59,6 +70,7 @@ export function TradePanel({
 
   async function trade(direction: TradeDirection) {
     if (!asset || !price) return
+    setDirection(direction)
     setError(null)
     setPending(direction)
     try {
@@ -116,6 +128,26 @@ export function TradePanel({
               {price ? price.toFixed(decimals) : '—'}
             </dd>
           </div>
+          {estimate && (
+            <>
+              <div className="flex items-center justify-between py-1">
+                <dt className="text-muted-foreground">
+                  {t('trade.estimatedFill')}
+                </dt>
+                <dd className="tabular-nums">{estimate.fill.toFixed(decimals)}</dd>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <dt className="text-muted-foreground">{t('trade.spreadCost')}</dt>
+                <dd className="tabular-nums">
+                  {formatUsd(Math.abs(estimate.notional - quantity * (price ?? 0)))}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <dt className="text-muted-foreground">{t('trade.commission')}</dt>
+                <dd className="tabular-nums">{formatUsd(estimate.commission)}</dd>
+              </div>
+            </>
+          )}
           <div className="flex items-center justify-between py-1">
             <dt className="text-muted-foreground">{t('trade.cashRequired')}</dt>
             <dd className="tabular-nums">{cost ? formatUsd(cost) : '—'}</dd>
@@ -141,6 +173,8 @@ export function TradePanel({
             })}
           </p>
         )}
+
+        <p className="text-muted-foreground text-xs">{t('trade.costsNote')}</p>
 
         <MentorNote
           summary={mentorSummary}
