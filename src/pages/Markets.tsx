@@ -123,8 +123,11 @@ export function Markets() {
         </Alert>
       )}
 
-      {/* Filters in one row above the chart. */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Filters above the chart. Every group here wraps: a row that cannot
+          wrap sets a floor on the page width, and with the text scaled up —
+          which plenty of people do — that floor exceeds a phone screen and
+          pushes the whole layout sideways. */}
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-3">
         <AssetPicker
           assets={assets}
           value={activeSymbol}
@@ -133,7 +136,7 @@ export function Markets() {
         />
 
         <div
-          className="flex items-center gap-1"
+          className="flex flex-wrap items-center gap-1"
           role="group"
           aria-label={t('markets.range')}
         >
@@ -150,7 +153,7 @@ export function Markets() {
           ))}
         </div>
 
-        <div className="ms-auto flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:ms-auto">
           {gann.signal && (
             <>
               <div className="flex items-center gap-2">

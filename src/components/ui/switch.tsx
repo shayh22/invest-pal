@@ -2,6 +2,17 @@ import * as React from "react"
 import { cn } from "cn"
 import { Switch as SwitchPrimitive } from "radix-ui"
 
+/**
+ * Two fixes to the generated component, both found by measuring it:
+ *
+ * The thumb was sized in rem while the track is in pixels, so anyone reading
+ * with scaled-up text grew the thumb out of its own track.
+ *
+ * The checked translation was physical rather than direction-aware. In RTL the
+ * thumb already starts at the right, so translating it right again put it 13px
+ * outside the track — which is why every switch in Hebrew rendered as a solid
+ * pill, with "off" looking like "on".
+ */
 function Switch({
   className,
   size = "default",
@@ -21,7 +32,7 @@ function Switch({
     >
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
-        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
+        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-[16px] group-data-[size=sm]/switch:size-[12px] group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] rtl:group-data-[size=default]/switch:data-checked:translate-x-[calc(-100%+2px)] rtl:group-data-[size=sm]/switch:data-checked:translate-x-[calc(-100%+2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
       />
     </SwitchPrimitive.Root>
   )
