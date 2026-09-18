@@ -45,7 +45,8 @@ jobs:
                    supabase/migrations/0001_init.sql \
                    supabase/migrations/0002_trading_engine.sql \
                    supabase/migrations/0003_mentor_languages.sql \
-                   supabase/migrations/0004_execution_costs.sql; do
+                   supabase/migrations/0004_execution_costs.sql \
+                   supabase/migrations/0005_starting_balance.sql; do
             psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Trading engine tests
@@ -53,6 +54,9 @@ jobs:
 
       - name: Execution cost tests
         run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/execution_costs_test.sql
+
+      - name: Starting balance tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/starting_balance_test.sql
 
   engine:
     runs-on: ubuntu-latest

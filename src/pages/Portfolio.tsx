@@ -43,7 +43,15 @@ function decimalsFor(price: number): number {
 }
 
 /** Signed value with an explicit sign, so direction never rests on colour. */
-function SignedValue({ value, decimals }: { value: number; decimals: number }) {
+function SignedValue({
+  value,
+  decimals,
+  suffix = '',
+}: {
+  value: number
+  decimals: number
+  suffix?: string
+}) {
   // Rounds to zero at the displayed precision, so "+0.00" is not painted as a
   // gain — flat is flat, and it reads as neutral text.
   const rounded = Number(value.toFixed(decimals))
@@ -60,6 +68,7 @@ function SignedValue({ value, decimals }: { value: number; decimals: number }) {
     >
       {flat ? '' : rounded > 0 ? '+' : '−'}
       {Math.abs(rounded).toFixed(decimals)}
+      {suffix}
     </span>
   )
 }
@@ -129,6 +138,11 @@ export function Portfolio() {
     (total, position) => total + position.openFee + position.closeFee,
     0,
   )
+  // Return against what the account was actually funded with — the number is
+  // meaningless without it, which is why starting_balance is recorded.
+  const startingBalance = portfolio?.startingBalance ?? 0
+  const totalReturnPct =
+    startingBalance > 0 ? ((equity - startingBalance) / startingBalance) * 100 : 0
 
   async function handleClose(position: Transaction) {
     const mark = markFor(position)
@@ -190,7 +204,7 @@ export function Portfolio() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader>
             <CardDescription>{t('portfolio.accountValue')}</CardDescription>
@@ -235,6 +249,20 @@ export function Portfolio() {
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
             {t('portfolio.closedCount', { count: positions.closed.length })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>{t('portfolio.totalReturn')}</CardDescription>
+            <CardTitle className="text-2xl">
+              <SignedValue value={totalReturnPct} decimals={2} suffix="%" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground text-xs">
+            {portfolio
+              ? t('portfolio.startedWith', { amount: formatUsd(startingBalance) })
+              : ''}
           </CardContent>
         </Card>
 

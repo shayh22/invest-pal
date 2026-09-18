@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           display_name: input.displayName ?? '',
           experience_level: input.experienceLevel ?? 'beginner',
+          starting_balance: String(input.startingBalance ?? 100000),
         },
       },
     })
