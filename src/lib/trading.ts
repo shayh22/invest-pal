@@ -95,10 +95,25 @@ export function fillPrice(
   return side === 'BUY' ? midPrice * (1 + half) : midPrice * (1 - half)
 }
 
-/** Commission on a fill: a percentage of notional, with a floor. */
-export function commissionFor(notional: number, costs: TradingCosts): number {
+/**
+ * Commission on a fill: a percentage of notional plus a charge per unit, then
+ * floored.
+ *
+ * A profile sets one or the other in practice — a percentage broker charges no
+ * per-share fee and a per-share broker charges no percentage — but nothing here
+ * assumes that, and neither does the database.
+ */
+export function commissionFor(
+  notional: number,
+  costs: TradingCosts,
+  quantity = 0,
+): number {
   return Math.max(
-    Math.round(notional * (costs.commissionBps / 10000) * 100) / 100,
+    Math.round(
+      (notional * (costs.commissionBps / 10000) +
+        quantity * costs.commissionPerUnit) *
+        100,
+    ) / 100,
     costs.minCommission,
   )
 }
@@ -112,6 +127,6 @@ export function openingCost(
 ): { fill: number; notional: number; commission: number; total: number } {
   const fill = fillPrice(midPrice, direction === 'LONG' ? 'BUY' : 'SELL', costs.spreadBps)
   const notional = quantity * fill
-  const commission = commissionFor(notional, costs)
+  const commission = commissionFor(notional, costs, quantity)
   return { fill, notional, commission, total: notional + commission }
 }

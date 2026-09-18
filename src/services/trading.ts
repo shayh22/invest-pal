@@ -1,6 +1,7 @@
 import type { InvestPalClient } from '@/services/supabase'
 import type {
   AssetType,
+  CommissionProfile,
   TradeDirection,
   TradeSide,
   TradingCosts,
@@ -186,5 +187,44 @@ export async function fetchTradingCosts(
     spreadBps: Number(row.spread_bps),
     commissionBps: Number(row.commission_bps),
     minCommission: Number(row.min_commission),
+    commissionPerUnit: Number(row.commission_per_unit ?? 0),
   }
+}
+
+/** Every cost profile on offer, cheapest-looking first by the seeded order. */
+export async function fetchCommissionProfiles(
+  client: InvestPalClient,
+): Promise<CommissionProfile[]> {
+  const { data, error } = await client
+    .from('commission_profiles')
+    .select(
+      'key, stock_spread_bps, crypto_spread_bps, commission_bps, min_commission, commission_per_unit, sort_order',
+    )
+    .order('sort_order', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    key: row.key,
+    stockSpreadBps: Number(row.stock_spread_bps),
+    cryptoSpreadBps: Number(row.crypto_spread_bps),
+    commissionBps: Number(row.commission_bps),
+    minCommission: Number(row.min_commission),
+    commissionPerUnit: Number(row.commission_per_unit),
+  }))
+}
+
+/**
+ * Trade under a different set of rates from now on.
+ *
+ * Only what the next fill costs changes: an open position keeps the price and
+ * the fee it was actually filled at.
+ */
+export async function setCommissionProfile(
+  client: InvestPalClient,
+  profile: string,
+): Promise<void> {
+  const { error } = await client.rpc('set_commission_profile', {
+    p_profile: profile,
+  })
+  if (error) throw tradingError(error.message, 'Could not change the rates.')
 }

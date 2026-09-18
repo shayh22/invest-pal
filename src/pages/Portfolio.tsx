@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { CommissionPicker } from '@/components/trade/CommissionPicker'
 import { ConfirmTradeDialog } from '@/components/trade/ConfirmTradeDialog'
 import { ResetAccountDialog } from '@/components/trade/ResetAccountDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -525,6 +526,8 @@ export function Portfolio() {
           )}
         </TabsContent>
       </Tabs>
+
+      <CommissionPicker />
 
       {portfolio && (
         <ResetAccountDialog

@@ -72,6 +72,14 @@ await section('Site', async () => {
       !bundle.includes('home.phaseLabel') && !bundle.includes('Phase {number}'),
     )
     check(
+      'cost profiles shipped',
+      bundle.includes('What trading costs you') && bundle.includes('כמה המסחר עולה לכם'),
+    )
+    check(
+      'asset search shipped',
+      bundle.includes('Search by ticker or name') && bundle.includes('חיפוש לפי סימול'),
+    )
+    check(
       'holdings-aware trading shipped',
       bundle.includes('You do not own any') && bundle.includes('אין בבעלותכם'),
     )
@@ -143,7 +151,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     const rest = (path, init) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: h, ...init })
     const balance = async () => Number((await (await rest('portfolios?select=cash_balance')).json())[0]?.cash_balance)
     const portfolioRow = async () =>
-      (await (await rest('portfolios?select=cash_balance,starting_balance,short_selling_enabled')).json())[0] ?? {}
+      (await (await rest('portfolios?select=cash_balance,starting_balance,short_selling_enabled,commission_profile')).json())[0] ?? {}
 
     check('portfolio provisioned at 100,000', money(await balance()) === '100000.00', money(await balance()))
 
@@ -158,6 +166,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
     const assets = await (await rest('assets?select=id,ticker&ticker=eq.AAPL')).json()
     check('assets readable', assets.length === 1, `${assets.length} rows`)
+    const allAssets = await (await rest('assets?select=ticker,type')).json()
+    check('there is a market to trade', allAssets.length >= 60, `${allAssets.length} assets`)
+    check('including crypto', allAssets.filter((a) => a.type === 'CRYPTO').length >= 15,
+      `${allAssets.filter((a) => a.type === 'CRYPTO').length} crypto`)
     const assetId = assets[0]?.id
     if (!assetId) return
 
@@ -210,6 +222,43 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ p_transaction_id: opened.id, p_price: 120 }),
     })
     check('refuses a double settlement', again.status >= 400, `HTTP ${again.status}`)
+
+    // What a trade costs is a choice, and the quote must follow the account.
+    const profiles = await (await rest('commission_profiles?select=key,min_commission,commission_per_unit&order=sort_order')).json()
+    check('commission profiles are offered', Array.isArray(profiles) && profiles.length >= 5, `${profiles.length ?? 0} profiles`)
+    check('the account starts on the house default', (await portfolioRow()).commission_profile === 'standard')
+
+    const quoteFor = async () => (await (await rest('rpc/trading_costs', {
+      method: 'POST', body: JSON.stringify({ p_asset_type: 'STOCK' }),
+    })).json())[0]
+    const houseQuote = await quoteFor()
+    check('the quote carries a per-unit rate', houseQuote?.commission_per_unit !== undefined, JSON.stringify(houseQuote))
+
+    const switched = await rest('rpc/set_commission_profile', {
+      method: 'POST', body: JSON.stringify({ p_profile: 'bank' }),
+    })
+    check('the rates can be switched', switched.status < 400, `HTTP ${switched.status}`)
+    const bankQuote = await quoteFor()
+    check('and the quote follows the account',
+      Number(bankQuote.min_commission) > Number(houseQuote.min_commission),
+      `${houseQuote.min_commission} -> ${bankQuote.min_commission}`)
+
+    const badProfile = await rest('rpc/set_commission_profile', {
+      method: 'POST', body: JSON.stringify({ p_profile: 'not a broker' }),
+    })
+    check('an unknown profile is refused', badProfile.status >= 400, `HTTP ${badProfile.status}`)
+
+    // Rates are the database's to set, not the client's.
+    const tamper = await rest('commission_profiles?key=eq.bank', {
+      method: 'PATCH', body: JSON.stringify({ min_commission: 0 }),
+    })
+    const stillBank = await (await rest('commission_profiles?select=min_commission&key=eq.bank')).json()
+    check('rates are not client-writable',
+      Number(stillBank[0]?.min_commission) > 0, `HTTP ${tamper.status}, min ${stillBank[0]?.min_commission}`)
+
+    await rest('rpc/set_commission_profile', {
+      method: 'POST', body: JSON.stringify({ p_profile: 'standard' }),
+    })
 
     // You cannot sell what you do not hold. This is the rule that makes the
     // account behave like an account, so it is checked on the live system.

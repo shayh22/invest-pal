@@ -1,0 +1,116 @@
+import { useState } from 'react'
+import { Check, ChevronsUpDown } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { useTranslation } from '@/hooks/useTranslation'
+import { cn } from 'cn'
+import type { Asset } from '@/types'
+
+interface AssetPickerProps {
+  assets: Asset[]
+  value: string | null
+  disabled?: boolean
+  onChange: (ticker: string) => void
+}
+
+/**
+ * Choosing among several dozen assets.
+ *
+ * A plain dropdown was fine for eight and is not for seventy: the list is
+ * longer than the screen and there is nothing to type into. This filters on
+ * ticker and on name, so "apple" finds AAPL and "gold" finds GLD, and groups
+ * shares and funds apart from crypto.
+ */
+export function AssetPicker({
+  assets,
+  value,
+  disabled = false,
+  onChange,
+}: AssetPickerProps) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+
+  const selected = assets.find((asset) => asset.ticker === value) ?? null
+  const groups = [
+    { type: 'STOCK' as const, label: t('markets.groupStocks') },
+    { type: 'CRYPTO' as const, label: t('markets.groupCrypto') },
+  ]
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label={t('common.asset')}
+          disabled={disabled}
+          className="w-full justify-between font-normal sm:w-72"
+        >
+          <span className="truncate">
+            {selected
+              ? `${selected.ticker} — ${selected.name}`
+              : t('markets.selectAsset')}
+          </span>
+          <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] p-0" align="start">
+        <Command
+          // Ticker and name both, so either way of thinking about an asset
+          // finds it.
+          filter={(itemValue, search) =>
+            itemValue.toLowerCase().includes(search.toLowerCase().trim()) ? 1 : 0
+          }
+        >
+          <CommandInput placeholder={t('markets.searchAssets')} />
+          <CommandList>
+            <CommandEmpty>{t('markets.noAssets')}</CommandEmpty>
+            {groups.map((group) => {
+              const rows = assets.filter((asset) => asset.type === group.type)
+              if (rows.length === 0) return null
+              return (
+                <CommandGroup key={group.type} heading={group.label}>
+                  {rows.map((asset) => (
+                    <CommandItem
+                      key={asset.id}
+                      value={`${asset.ticker} ${asset.name}`}
+                      onSelect={() => {
+                        onChange(asset.ticker)
+                        setOpen(false)
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'size-4',
+                          asset.ticker === value ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                      <span className="font-medium">{asset.ticker}</span>
+                      <span className="text-muted-foreground truncate">
+                        {asset.name}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )
+            })}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}

@@ -43,6 +43,7 @@ export interface Database {
           cash_balance: number
           starting_balance: number
           short_selling_enabled: boolean
+          commission_profile: string
           created_at: string
         }
         Insert: {
@@ -50,8 +51,23 @@ export interface Database {
           cash_balance?: number
           starting_balance?: number
           short_selling_enabled?: boolean
+          commission_profile?: string
         }
         Update: { cash_balance?: number }
+        Relationships: []
+      }
+      commission_profiles: {
+        Row: {
+          key: string
+          stock_spread_bps: number
+          crypto_spread_bps: number
+          commission_bps: number
+          min_commission: number
+          commission_per_unit: number
+          sort_order: number
+        }
+        Insert: never
+        Update: never
         Relationships: []
       }
       assets: {
@@ -188,7 +204,13 @@ export interface Database {
           spread_bps: number
           commission_bps: number
           min_commission: number
+          commission_per_unit: number
         }[]
+      }
+      /** Pick which broker-like rates this account trades under. */
+      set_commission_profile: {
+        Args: { p_profile: string }
+        Returns: Database['public']['Tables']['portfolios']['Row']
       }
     }
     Enums: Record<never, never>

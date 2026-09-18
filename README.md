@@ -342,6 +342,57 @@ returns that collateral plus the result:
 position is closed. The database remains the authority — it settles every trade
 — but if one changes, so must the other.
 
+### What trading costs is a choice
+
+One hardcoded rate for everybody is a reasonable default and a poor teacher.
+What a trade costs is the biggest difference between brokers and the thing a
+beginner is least likely to check, so migration `0007` puts the rates in a
+table and lets the account pick one:
+
+| Profile | Spread (shares) | Commission | Minimum |
+| --- | --- | --- | --- |
+| House default | 0.05% | 0.02% | $0.50 |
+| Commission-free | 0.12% | none | none |
+| Per share | 0.05% | $0.005/share | $1.00 |
+| Percentage | 0.05% | 0.10% | $5.00 |
+| Retail bank | 0.08% | 0.40% | $15.00 |
+
+These are **shapes that are common in the market, not any particular broker's
+published rates**, and they are not kept current with anyone's. The app says so
+next to the picker.
+
+The shapes teach different things. Commission-free is not free — the money is in
+the wider spread, and a round trip can cost more than a commission would have. A
+per-share charge is indifferent to price, so a thousand shares cost the same at
+$10 or $90. A retail bank's minimum takes 15% of a $100 trade, which is why
+small trades through a bank rarely make sense. The tests assert each of those.
+
+Because a per-unit charge is genuinely not a percentage, the commission gained a
+per-unit term rather than being approximated in basis points:
+
+```
+fee = max(notional * commission_bps / 10000 + quantity * per_unit, minimum)
+```
+
+`trading_costs()` keeps its name and now returns the **caller's** rates, so the
+panel still quotes exactly what the engine will charge. Switching profile only
+affects future fills: a position already open keeps the price and fee it filled
+at, and there is a test for that.
+
+### Something to trade
+
+Eight assets was a demo. There are now 74: large US companies across several
+sectors, index and sector funds, and two dozen crypto pairs. The asset picker
+became a searchable combobox at that size — a plain dropdown longer than the
+screen with nothing to type into is not a picker — and it filters on ticker *and*
+name, so "gold" finds GLD.
+
+Every ticker was checked against the live price proxy for real bars and a
+plausible price before being seeded, which caught two that would have shipped
+broken: `MATIC-USD` returns no history at all now, and `UNI-USD` is a token
+called UNICORN trading four orders of magnitude away from Uniswap. Uniswap is
+`UNI7083-USD`.
+
 ### Choosing how much to start with
 
 A new account picks from $100, $1,000, $10,000 or $100,000 (migration `0005`).
@@ -388,12 +439,14 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Four suites, 92 checks. `trading_engine_test.sql` covers the accounting
+Five suites, 118 checks. `trading_engine_test.sql` covers the accounting
 identity, both directions, rejected inputs, double settlement, cross-account
 access and every removed write path; `execution_costs_test.sql` owns the exact
 arithmetic of spread and commission; `starting_balance_test.sql` covers
-provisioning and its validation; `netting_test.sql` covers the holding rules,
-the opt-in short switch, resetting, and the migration that nets legacy rows.
+provisioning and its validation; `commission_profiles_test.sql` covers the cost
+profiles, including that the quote matches the charge and that switching does
+not rewrite an open position; `netting_test.sql` covers the holding rules, the
+opt-in short switch, resetting, and the migration that nets legacy rows.
 
 The first asserts relationships rather than literal amounts — a rate change
 moves every figure, and a test that hardcodes them fails without anything being
@@ -405,7 +458,8 @@ psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/harness.sql
 for m in supabase/migrations/*.sql; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
 done
-for t in trading_engine execution_costs starting_balance netting; do
+for t in trading_engine execution_costs starting_balance \
+         commission_profiles netting; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
 done
 ```

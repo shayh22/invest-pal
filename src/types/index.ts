@@ -30,6 +30,8 @@ export interface Portfolio {
   startingBalance: number
   /** Whether this account may sell an asset it does not hold. */
   shortSellingEnabled: boolean
+  /** Which cost profile this account trades under. */
+  commissionProfile: string
   createdAt: string
 }
 
@@ -83,4 +85,16 @@ export interface TradingCosts {
   spreadBps: number
   commissionBps: number
   minCommission: number
+  /** Charged per share or coin, indifferent to price. */
+  commissionPerUnit: number
+}
+
+/** A named set of broker-like rates. Mirrors public.commission_profiles. */
+export interface CommissionProfile {
+  key: string
+  stockSpreadBps: number
+  cryptoSpreadBps: number
+  commissionBps: number
+  minCommission: number
+  commissionPerUnit: number
 }
