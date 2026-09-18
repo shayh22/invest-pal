@@ -50,7 +50,9 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        {/* The name falls back to the email address, which is one long
+            unbreakable word. Without this it sets the page width. */}
+        <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
           {t('dashboard.greeting', { name: greetingName })}
         </h1>
         <p className="text-muted-foreground text-sm">
