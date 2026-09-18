@@ -4,33 +4,33 @@ import { LANGUAGES, type Language } from '@/i18n'
 
 /**
  * The flag switch. Shows the language you would switch *to*, not the one you
- * are in — a control labelled with the current state gives no clue what
+ * are in — a control labelled with its current state gives no clue what
  * pressing it does.
  *
- * The flag alone is not the label: emoji render inconsistently and some
- * platforms show nothing at all, so the language name sits beside it and the
- * accessible name spells the action out.
+ * Flag only, no visible text: with the language name beside it the button was
+ * 80–88px, which pushed a signed-in header past a phone viewport and made the
+ * whole page scroll sideways. The meaning is carried by the accessible name and
+ * the tooltip instead, so nothing is lost for screen readers or on hover.
  */
 export function LanguageToggle() {
   const { language, setLanguage, t } = useTranslation()
   const next: Language = language === 'en' ? 'he' : 'en'
   const target = LANGUAGES[next]
+  const label =
+    next === 'he' ? t('common.switchToHebrew') : t('common.switchToEnglish')
 
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={() => setLanguage(next)}
-      aria-label={
-        next === 'he' ? t('common.switchToHebrew') : t('common.switchToEnglish')
-      }
-      title={t('common.language')}
-      className="gap-1.5"
+      aria-label={label}
+      title={label}
+      className="size-8 shrink-0"
     >
       <span aria-hidden className="text-base leading-none">
         {target.flag}
       </span>
-      <span className="text-xs">{target.label}</span>
     </Button>
   )
 }
