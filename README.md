@@ -342,6 +342,45 @@ returns that collateral plus the result:
 position is closed. The database remains the authority — it settles every trade
 — but if one changes, so must the other.
 
+### Orders that wait
+
+Everything filled instantly at whatever the screen showed. Real brokers are
+mostly *not* that — a market order is the exception, and the orders that matter
+are the ones you leave sitting. Migration `0008` adds three (`pending_orders`):
+
+| Type | A buy waits for | A sell waits for |
+| --- | --- | --- |
+| **Limit** | price to fall to the level | price to rise to the level |
+| **Stop** | price to rise to the level | price to fall to the level — a stop-loss |
+| **Scheduled** | a moment, then fills at market | a moment, then fills at market |
+
+Plus an optional expiry and a cancel. Getting a limit and a stop the wrong way
+round would be silent, so `order_is_triggered()` is asserted directly for all
+four price cases rather than inferred from a fill.
+
+**A resting order is not a reservation.** Cash is checked and taken when it
+fills, exactly as for an immediate trade, so a triggered order can still be
+refused for want of funds. The refusal is written onto the order with the reason
+the engine gave, because "why didn't my order fill" is the question this table
+exists to answer. Filling goes through `trade()`, so every rule an immediate
+order obeys applies: the funds check, the holding check, the refusal to cross
+through zero.
+
+**Settlement is opportunistic, and the app says so.** There is no always-on
+process watching prices. Whenever a page has just fetched a fresh price, it hands
+that price to `settle_pending_orders()`, which resolves whatever that price
+reaches. An order therefore fills when someone looks, not the instant the market
+crosses it — the orders tab states this plainly rather than implying a precision
+the app does not have. `expire_pending_orders()` sweeps deadlines on assets
+nobody has opened, so a forgotten order cannot rest past its own expiry for ever.
+
+On trust: `settle_pending_orders()` is handed the price to fill at, the same way
+`trade()` always has been. A hostile client could name any price. That is the
+trust model the immediate path already had and the money is imaginary, but it is
+a deliberate choice rather than an oversight — moving it server-side means giving
+a Vercel function the service role key, and the note sits in the migration so the
+trade-off is visible.
+
 ### What trading costs is a choice
 
 One hardcoded rate for everybody is a reasonable default and a poor teacher.
@@ -439,14 +478,16 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Five suites, 118 checks. `trading_engine_test.sql` covers the accounting
+Six suites, 166 checks. `trading_engine_test.sql` covers the accounting
 identity, both directions, rejected inputs, double settlement, cross-account
 access and every removed write path; `execution_costs_test.sql` owns the exact
 arithmetic of spread and commission; `starting_balance_test.sql` covers
 provisioning and its validation; `commission_profiles_test.sql` covers the cost
 profiles, including that the quote matches the charge and that switching does
-not rewrite an open position; `netting_test.sql` covers the holding rules, the
-opt-in short switch, resetting, and the migration that nets legacy rows.
+not rewrite an open position; `pending_orders_test.sql` covers all four trigger
+directions, expiry, rejection with a reason, and that orders are private;
+`netting_test.sql` covers the holding rules, the opt-in short switch, resetting,
+and the migration that nets legacy rows.
 
 The first asserts relationships rather than literal amounts — a rate change
 moves every figure, and a test that hardcodes them fails without anything being
@@ -459,7 +500,7 @@ for m in supabase/migrations/*.sql; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
 done
 for t in trading_engine execution_costs starting_balance \
-         commission_profiles netting; do
+         commission_profiles pending_orders netting; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
 done
 ```

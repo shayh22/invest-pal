@@ -16,6 +16,8 @@ export const en = {
   'common.tryAgain': 'Try again',
   'common.close': 'Close',
   'common.closing': 'Closing…',
+  'common.buy': 'Buy',
+  'common.sell': 'Sell',
   'common.quantity': 'Quantity',
   'common.cash': 'Cash',
   'common.price': 'Price',
@@ -310,6 +312,51 @@ export const en = {
   'rates.bank.name': 'Retail bank',
   'rates.bank.body':
     'Several tenths of a percent with a high minimum. Try a $100 trade on this: the minimum alone takes 15% of it, which is why small trades through a bank rarely make sense.',
+
+  // ----- resting orders -----
+  'orders.typeLabel': 'Order type',
+  'orders.typeNow': 'Market — fill now',
+  'orders.typeLimit': 'Limit — wait for a better price',
+  'orders.typeStop': 'Stop — wait for a worse price',
+  'orders.typeTime': 'Scheduled — wait for a time',
+  'orders.hintNow': 'Fills immediately at the price above.',
+  'orders.hintLimit':
+    'A buy waits for the price to fall to your level; a sell waits for it to rise. You never pay worse than the level you named.',
+  'orders.hintStop':
+    'A sell waits for the price to fall to your level — a stop-loss, the order that decides in advance how much you are willing to lose. A buy waits for it to rise.',
+  'orders.hintTime':
+    'Fills at whatever the market is when the moment arrives. No promise about the price.',
+  'orders.priceLabel': 'Trigger price',
+  'orders.whenLabel': 'Run at',
+  'orders.expiryLabel': 'Expires',
+  'orders.expiryHint': 'Optional. Leave empty and the order waits indefinitely.',
+  'orders.noExpiry': 'never',
+  'orders.restBuy': 'Place buy order',
+  'orders.restSell': 'Place sell order',
+  'orders.cancel': 'Cancel order',
+  'orders.tab': 'Waiting ({count})',
+  'orders.emptyWaiting': 'No orders waiting. Place one from the Markets page.',
+  'orders.historyTitle': 'Orders that are done',
+  'orders.confirmTitle': 'Place this order?',
+  'orders.confirmBody':
+    'This rests an order for {quantity} {ticker}. Nothing is bought or sold, and no cash is set aside, until it triggers.',
+  'orders.confirmWarning':
+    'Cash is not reserved. If the balance is short when the order triggers, it is refused rather than filled — and the refusal will say so.',
+  'orders.confirmAction': 'Place the order',
+  'orders.placedToast': 'Order placed for {quantity} {ticker}',
+  'orders.cancelledToast': 'Order cancelled',
+  'orders.cancelError': 'Could not cancel the order.',
+  'orders.filledToast_one': '{count} waiting order filled',
+  'orders.filledToast_other': '{count} waiting orders filled',
+  'orders.rejectedToast_one': '{count} order could not fill',
+  'orders.rejectedToast_other': '{count} orders could not fill',
+  'orders.statusFILLED': 'Filled',
+  'orders.statusCANCELLED': 'Cancelled',
+  'orders.statusEXPIRED': 'Expired',
+  'orders.statusREJECTED': 'Refused',
+  'orders.statusPENDING': 'Waiting',
+  'orders.settlementNote':
+    'Nothing watches prices while the app is closed. A waiting order is checked whenever you open the chart for that asset, so it fills when you look rather than the instant the market crosses it.',
 
   // ----- portfolio -----
   'portfolio.title': 'Portfolio',

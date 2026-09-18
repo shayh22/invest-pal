@@ -13,6 +13,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,9 +27,10 @@ import { useTradingCosts } from '@/hooks/useTradingCosts'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatUsd } from '@/lib/format'
 import { openingCost, positionPnl } from '@/lib/trading'
-import { setShortSelling, trade as placeOrder } from '@/services/trading'
+import { placeOrder as restOrder } from '@/services/orders'
+import { setShortSelling, trade as fillNow } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
-import type { Asset, TradeSide, Transaction } from '@/types'
+import type { Asset, TradeSide, Transaction, TriggerType } from '@/types'
 
 interface TradePanelProps {
   asset: Asset | null
@@ -42,7 +50,7 @@ export function TradePanel({
   onTraded,
 }: TradePanelProps) {
   const { portfolio, refreshAccount } = useAuth()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const costs = useTradingCosts(asset?.type ?? null)
   const [quantityText, setQuantityText] = useState('1')
   const [pending, setPending] = useState<TradeSide | null>(null)
@@ -50,9 +58,23 @@ export function TradePanel({
   const [confirming, setConfirming] = useState<TradeSide | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [switching, setSwitching] = useState(false)
+  // 'NOW' is a market order: the only one that fills the instant you press it.
+  const [orderType, setOrderType] = useState<'NOW' | TriggerType>('NOW')
+  const [triggerText, setTriggerText] = useState('')
+  const [whenText, setWhenText] = useState('')
+  const [expiryText, setExpiryText] = useState('')
 
   const quantity = Number(quantityText)
   const quantityValid = Number.isFinite(quantity) && quantity > 0
+  const resting = orderType !== 'NOW'
+  const triggerPrice = Number(triggerText)
+  const triggerValid =
+    orderType === 'LIMIT' || orderType === 'STOP'
+      ? Number.isFinite(triggerPrice) && triggerPrice > 0
+      : orderType === 'TIME'
+        ? whenText !== '' && !Number.isNaN(Date.parse(whenText))
+        : true
+
   const balance = portfolio?.cashBalance ?? 0
   const shortingOn = portfolio?.shortSellingEnabled ?? false
 
@@ -87,7 +109,9 @@ export function TradePanel({
       }
       return null
     }
-    if (price && costs) {
+    // A resting order reserves nothing, so what it would cost today is not a
+    // reason to refuse it. The funds check happens when it fills.
+    if (!resting && price && costs) {
       const cost = openingCost(
         quantity,
         price,
@@ -105,13 +129,15 @@ export function TradePanel({
   }
 
   function canPlace(side: TradeSide): boolean {
-    return Boolean(asset && price && quantityValid && refusalFor(side) === null)
+    return Boolean(
+      asset && price && quantityValid && triggerValid && refusalFor(side) === null,
+    )
   }
 
   // The breakdown quotes what opening costs, which is only meaningful when the
   // next order would open or add rather than sell back.
   const estimate =
-    quantityValid && price && costs && !reduces('BUY')
+    !resting && quantityValid && price && costs && !reduces('BUY')
       ? openingCost(quantity, price, 'LONG', costs)
       : null
 
@@ -121,7 +147,30 @@ export function TradePanel({
     setError(null)
     setPending(side)
     try {
-      await placeOrder(requireSupabase(), {
+      if (resting) {
+        await restOrder(requireSupabase(), {
+          assetId: asset.id,
+          side,
+          quantity,
+          triggerType: orderType as TriggerType,
+          triggerPrice: orderType === 'TIME' ? null : triggerPrice,
+          // A datetime-local value has no zone; the browser's own is right,
+          // since that is the clock the reader picked it on.
+          triggerAt:
+            orderType === 'TIME' ? new Date(whenText).toISOString() : null,
+          goodTil: expiryText ? new Date(expiryText).toISOString() : null,
+        })
+        toast.success(
+          t('orders.placedToast', { quantity, ticker: asset.ticker }),
+        )
+        setTriggerText('')
+        setWhenText('')
+        setExpiryText('')
+        onTraded()
+        return
+      }
+
+      await fillNow(requireSupabase(), {
         assetId: asset.id,
         side,
         quantity,
@@ -201,6 +250,37 @@ export function TradePanel({
           </div>
         )}
 
+        {/* What the order waits for. Market is first because it is what the
+            reader already knows; the rest are the ones worth learning. */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="order-type">{t('orders.typeLabel')}</Label>
+          <Select
+            value={orderType}
+            onValueChange={(value) => setOrderType(value as 'NOW' | TriggerType)}
+          >
+            <SelectTrigger id="order-type" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NOW">{t('orders.typeNow')}</SelectItem>
+              <SelectItem value="LIMIT">{t('orders.typeLimit')}</SelectItem>
+              <SelectItem value="STOP">{t('orders.typeStop')}</SelectItem>
+              <SelectItem value="TIME">{t('orders.typeTime')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {t(
+              orderType === 'NOW'
+                ? 'orders.hintNow'
+                : orderType === 'LIMIT'
+                  ? 'orders.hintLimit'
+                  : orderType === 'STOP'
+                    ? 'orders.hintStop'
+                    : 'orders.hintTime',
+            )}
+          </p>
+        </div>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor="trade-quantity">{t('common.quantity')}</Label>
           <Input
@@ -223,6 +303,49 @@ export function TradePanel({
             </button>
           )}
         </div>
+
+        {(orderType === 'LIMIT' || orderType === 'STOP') && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="trigger-price">{t('orders.priceLabel')}</Label>
+            <Input
+              id="trigger-price"
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder={price ? price.toFixed(decimals) : ''}
+              value={triggerText}
+              onChange={(event) => setTriggerText(event.target.value)}
+            />
+          </div>
+        )}
+
+        {orderType === 'TIME' && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="trigger-at">{t('orders.whenLabel')}</Label>
+            <Input
+              id="trigger-at"
+              type="datetime-local"
+              value={whenText}
+              onChange={(event) => setWhenText(event.target.value)}
+            />
+          </div>
+        )}
+
+        {resting && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="order-expiry">{t('orders.expiryLabel')}</Label>
+            <Input
+              id="order-expiry"
+              type="datetime-local"
+              value={expiryText}
+              onChange={(event) => setExpiryText(event.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">
+              {t('orders.expiryHint')}
+            </p>
+          </div>
+        )}
 
         <dl className="text-sm">
           <div className="flex items-center justify-between py-1">
@@ -279,9 +402,11 @@ export function TradePanel({
             <TrendingUp className="size-4" />
             {pending === 'BUY'
               ? t('trade.buying')
-              : held < 0
-                ? t('trade.cover')
-                : t('trade.buy')}
+              : resting
+                ? t('orders.restBuy')
+                : held < 0
+                  ? t('trade.cover')
+                  : t('trade.buy')}
           </Button>
           <Button
             variant="secondary"
@@ -291,9 +416,11 @@ export function TradePanel({
             <TrendingDown className="size-4" />
             {pending === 'SELL'
               ? t('trade.selling')
-              : held > 0
-                ? t('trade.sell')
-                : t('trade.sellShort')}
+              : resting
+                ? t('orders.restSell')
+                : held > 0
+                  ? t('trade.sell')
+                  : t('trade.sellShort')}
           </Button>
         </div>
 
@@ -348,21 +475,62 @@ export function TradePanel({
             onOpenChange={(next) => {
               if (!next) setConfirming(null)
             }}
-            title={t(
-              confirmReduces
-                ? confirming === 'SELL'
-                  ? 'confirm.sellTitle'
-                  : 'confirm.coverTitle'
-                : confirming === 'BUY'
-                  ? 'confirm.buyTitle'
-                  : 'confirm.shortTitle',
-            )}
-            description={t(
-              confirmReduces ? 'confirm.reduceBody' : 'confirm.openBody',
-              { quantity, ticker: asset.ticker },
-            )}
+            title={
+              resting
+                ? t('orders.confirmTitle')
+                : t(
+                    confirmReduces
+                      ? confirming === 'SELL'
+                        ? 'confirm.sellTitle'
+                        : 'confirm.coverTitle'
+                      : confirming === 'BUY'
+                        ? 'confirm.buyTitle'
+                        : 'confirm.shortTitle',
+                  )
+            }
+            description={
+              resting
+                ? t('orders.confirmBody', {
+                    quantity,
+                    ticker: asset.ticker,
+                  })
+                : t(
+                    confirmReduces ? 'confirm.reduceBody' : 'confirm.openBody',
+                    { quantity, ticker: asset.ticker },
+                  )
+            }
             lines={
-              confirmReduces
+              resting
+                ? [
+                    {
+                      label: t('orders.typeLabel'),
+                      value: t(
+                        orderType === 'LIMIT'
+                          ? 'orders.typeLimit'
+                          : orderType === 'STOP'
+                            ? 'orders.typeStop'
+                            : 'orders.typeTime',
+                      ),
+                    },
+                    {
+                      label:
+                        orderType === 'TIME'
+                          ? t('orders.whenLabel')
+                          : t('orders.priceLabel'),
+                      value:
+                        orderType === 'TIME'
+                          ? new Date(whenText).toLocaleString(locale)
+                          : triggerPrice.toFixed(decimals),
+                      emphasis: true,
+                    },
+                    {
+                      label: t('orders.expiryLabel'),
+                      value: expiryText
+                        ? new Date(expiryText).toLocaleString(locale)
+                        : t('orders.noExpiry'),
+                    },
+                  ]
+                : confirmReduces
                 ? [
                     {
                       label: t('common.entry'),
@@ -405,22 +573,28 @@ export function TradePanel({
                   ]
             }
             warning={
-              confirmReduces
-                ? t('confirm.closeCosts')
-                : confirming === 'SELL'
-                  ? t('trade.shortWarningBody')
-                  : null
+              resting
+                ? t('orders.confirmWarning')
+                : confirmReduces
+                  ? t('confirm.closeCosts')
+                  : confirming === 'SELL'
+                    ? t('trade.shortWarningBody')
+                    : null
             }
-            confirmLabel={t(
-              confirmReduces
-                ? confirming === 'SELL'
-                  ? 'confirm.sellAction'
-                  : 'confirm.coverAction'
-                : confirming === 'BUY'
-                  ? 'confirm.buyAction'
-                  : 'confirm.shortAction',
-              { quantity, ticker: asset.ticker },
-            )}
+            confirmLabel={
+              resting
+                ? t('orders.confirmAction')
+                : t(
+                    confirmReduces
+                      ? confirming === 'SELL'
+                        ? 'confirm.sellAction'
+                        : 'confirm.coverAction'
+                      : confirming === 'BUY'
+                        ? 'confirm.buyAction'
+                        : 'confirm.shortAction',
+                    { quantity, ticker: asset.ticker },
+                  )
+            }
             onConfirm={() => void submit(confirming)}
           />
         )}

@@ -17,6 +17,8 @@ export const he: Record<TranslationKey, string> = {
   'common.tryAgain': 'נסו שוב',
   'common.close': 'סגירה',
   'common.closing': 'סוגר…',
+  'common.buy': 'קנייה',
+  'common.sell': 'מכירה',
   'common.quantity': 'כמות',
   'common.cash': 'מזומן',
   'common.price': 'מחיר',
@@ -309,6 +311,51 @@ export const he: Record<TranslationKey, string> = {
   'rates.bank.name': 'בנק קמעונאי',
   'rates.bank.body':
     'כמה עשיריות האחוז עם מינימום גבוה. נסו עסקה של $100 כאן: המינימום לבדו לוקח 15% ממנה, ולכן עסקאות קטנות דרך בנק כמעט אף פעם לא משתלמות.',
+
+  // ----- פקודות ממתינות -----
+  'orders.typeLabel': 'סוג פקודה',
+  'orders.typeNow': 'שוק — ביצוע מיידי',
+  'orders.typeLimit': 'לימיט — המתנה למחיר טוב יותר',
+  'orders.typeStop': 'סטופ — המתנה למחיר גרוע יותר',
+  'orders.typeTime': 'מתוזמנת — המתנה לשעה',
+  'orders.hintNow': 'מתבצעת מייד במחיר שלמעלה.',
+  'orders.hintLimit':
+    'קנייה ממתינה שהמחיר יירד לרמה שקבעתם, מכירה ממתינה שיעלה. לעולם לא תשלמו גרוע מהרמה שנקבתם.',
+  'orders.hintStop':
+    'מכירה ממתינה שהמחיר יירד לרמה שקבעתם — סטופ־לוס, הפקודה שמחליטה מראש כמה אתם מוכנים להפסיד. קנייה ממתינה שיעלה.',
+  'orders.hintTime':
+    'מתבצעת במחיר השוק ברגע שהזמן מגיע. בלי שום הבטחה לגבי המחיר.',
+  'orders.priceLabel': 'מחיר הפעלה',
+  'orders.whenLabel': 'להריץ בשעה',
+  'orders.expiryLabel': 'תפוגה',
+  'orders.expiryHint': 'לא חובה. אם תשאירו ריק, הפקודה ממתינה ללא הגבלה.',
+  'orders.noExpiry': 'ללא',
+  'orders.restBuy': 'שליחת פקודת קנייה',
+  'orders.restSell': 'שליחת פקודת מכירה',
+  'orders.cancel': 'ביטול פקודה',
+  'orders.tab': 'ממתינות ({count})',
+  'orders.emptyWaiting': 'אין פקודות ממתינות. אפשר לשלוח אחת מדף השווקים.',
+  'orders.historyTitle': 'פקודות שהסתיימו',
+  'orders.confirmTitle': 'לשלוח את הפקודה?',
+  'orders.confirmBody':
+    'הפעולה משאירה פקודה ממתינה על {quantity} {ticker}. שום דבר לא נקנה או נמכר, ושום כסף לא מוקצה, עד שהיא מופעלת.',
+  'orders.confirmWarning':
+    'הכסף אינו מוקצה מראש. אם היתרה לא תספיק ברגע ההפעלה, הפקודה תידחה ולא תתבצע — והדחייה תסביר למה.',
+  'orders.confirmAction': 'שליחת הפקודה',
+  'orders.placedToast': 'נשלחה פקודה על {quantity} {ticker}',
+  'orders.cancelledToast': 'הפקודה בוטלה',
+  'orders.cancelError': 'לא ניתן לבטל את הפקודה.',
+  'orders.filledToast_one': 'פקודה ממתינה אחת בוצעה',
+  'orders.filledToast_other': '{count} פקודות ממתינות בוצעו',
+  'orders.rejectedToast_one': 'פקודה אחת לא הצליחה להתבצע',
+  'orders.rejectedToast_other': '{count} פקודות לא הצליחו להתבצע',
+  'orders.statusFILLED': 'בוצעה',
+  'orders.statusCANCELLED': 'בוטלה',
+  'orders.statusEXPIRED': 'פגה',
+  'orders.statusREJECTED': 'נדחתה',
+  'orders.statusPENDING': 'ממתינה',
+  'orders.settlementNote':
+    'שום דבר לא עוקב אחרי מחירים כשהאפליקציה סגורה. פקודה ממתינה נבדקת בכל פעם שפותחים את הגרף של אותו נכס, ולכן היא מתבצעת כשמסתכלים ולא ברגע שהשוק חוצה אותה.',
 
   // ----- תיק השקעות -----
   'portfolio.title': 'תיק השקעות',

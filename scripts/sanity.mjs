@@ -72,6 +72,11 @@ await section('Site', async () => {
       !bundle.includes('home.phaseLabel') && !bundle.includes('Phase {number}'),
     )
     check(
+      'resting orders shipped',
+      bundle.includes('Limit — wait for a better price') &&
+        bundle.includes('לימיט — המתנה למחיר טוב יותר'),
+    )
+    check(
       'cost profiles shipped',
       bundle.includes('What trading costs you') && bundle.includes('כמה המסחר עולה לכם'),
     )
@@ -222,6 +227,68 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ p_transaction_id: opened.id, p_price: 120 }),
     })
     check('refuses a double settlement', again.status >= 400, `HTTP ${again.status}`)
+
+    // Orders that wait. A limit buy far above the market triggers at once, so
+    // this both places and settles one.
+    const restBelow = await rest('rpc/place_pending_order', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: 1,
+        p_trigger_type: 'LIMIT', p_trigger_price: 1,
+      }),
+    })
+    check('a resting order can be placed', restBelow.status < 400, `HTTP ${restBelow.status}`)
+    const waiting = await (await rest('pending_orders?select=id,status&status=eq.PENDING')).json()
+    check('and it waits', waiting.length === 1, `${waiting.length} waiting`)
+
+    // Below its level, so nothing happens.
+    const quiet = await (await rest('rpc/settle_pending_orders', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 100 }),
+    })).json()
+    check('a price that does not reach it fills nothing', Number(quiet?.[0]?.filled ?? quiet?.filled) === 0)
+
+    const cancelled = await rest('rpc/cancel_pending_order', {
+      method: 'POST', body: JSON.stringify({ p_order_id: waiting[0].id }),
+    })
+    check('it can be cancelled', cancelled.status < 400, `HTTP ${cancelled.status}`)
+
+    // A limit buy above the market triggers on the next price it sees.
+    await rest('rpc/place_pending_order', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: 1,
+        p_trigger_type: 'LIMIT', p_trigger_price: 500,
+      }),
+    })
+    const settled = await (await rest('rpc/settle_pending_orders', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 100 }),
+    })).json()
+    check('a triggered order fills', Number(settled?.[0]?.filled ?? settled?.filled) === 1,
+      JSON.stringify(settled).slice(0, 60))
+
+    // Sold straight back: the fill left a holding, and the checks below assume
+    // an account that owns nothing.
+    await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_side: 'SELL', p_quantity: 1, p_price: 100 }),
+    })
+
+    // An order needs a shape the engine accepts.
+    const malformed = await rest('rpc/place_pending_order', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: 1,
+        p_trigger_type: 'LIMIT', p_trigger_price: null,
+      }),
+    })
+    check('a limit order with no price is refused', malformed.status >= 400, `HTTP ${malformed.status}`)
+
+    // The table has no client write path at all.
+    const forged = await rest('pending_orders', {
+      method: 'POST',
+      body: JSON.stringify({ asset_id: assetId, side: 'BUY', quantity: 1, trigger_type: 'LIMIT', trigger_price: 1 }),
+    })
+    check('orders are not client-insertable', forged.status >= 400, `HTTP ${forged.status}`)
 
     // What a trade costs is a choice, and the quote must follow the account.
     const profiles = await (await rest('commission_profiles?select=key,min_commission,commission_per_unit&order=sort_order')).json()

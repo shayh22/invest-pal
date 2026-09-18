@@ -8,8 +8,10 @@
 import type {
   AssetType,
   ExperienceLevel,
+  OrderStatus,
   TradeDirection,
   TradeSide,
+  TriggerType,
   TransactionStatus,
 } from '@/types'
 
@@ -54,6 +56,27 @@ export interface Database {
           commission_profile?: string
         }
         Update: { cash_balance?: number }
+        Relationships: []
+      }
+      pending_orders: {
+        Row: {
+          id: string
+          portfolio_id: string
+          asset_id: string
+          side: TradeSide
+          quantity: number
+          trigger_type: TriggerType
+          trigger_price: number | null
+          trigger_at: string | null
+          good_til: string | null
+          status: OrderStatus
+          reject_reason: string | null
+          transaction_id: string | null
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: never
+        Update: never
         Relationships: []
       }
       commission_profiles: {
@@ -162,6 +185,36 @@ export interface Database {
           p_price: number
         }
         Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /** Rest an order until a price or a time reaches it. */
+      place_pending_order: {
+        Args: {
+          p_asset_id: string
+          p_side: TradeSide
+          p_quantity: number
+          p_trigger_type: TriggerType
+          p_trigger_price?: number | null
+          p_trigger_at?: string | null
+          p_good_til?: string | null
+        }
+        Returns: Database['public']['Tables']['pending_orders']['Row']
+      }
+      cancel_pending_order: {
+        Args: { p_order_id: string }
+        Returns: Database['public']['Tables']['pending_orders']['Row']
+      }
+      /**
+       * Resolve every resting order on one asset against a price: fill what has
+       * triggered, expire what has run out of time.
+       */
+      settle_pending_orders: {
+        Args: { p_asset_id: string; p_price: number }
+        Returns: { filled: number; rejected: number; expired: number }[]
+      }
+      /** Expire what has run out of time, on assets nobody is looking at. */
+      expire_pending_orders: {
+        Args: Record<string, never>
+        Returns: number
       }
       /** Allow or forbid selling an asset this account does not hold. */
       set_short_selling: {
