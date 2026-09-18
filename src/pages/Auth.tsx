@@ -23,9 +23,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from '@/hooks/useTranslation'
-import type { ExperienceLevel } from '@/types'
+import { STARTING_BALANCES, type ExperienceLevel, type StartingBalance } from '@/types'
 
-const STARTING_BALANCE = '$100,000'
+const DEFAULT_STARTING_BALANCE: StartingBalance = 100000
+
+const balanceLabel = (amount: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount)
 
 export function Auth() {
   const { configured, user, signIn, signUp } = useAuth()
@@ -42,6 +49,9 @@ export function Auth() {
   const [displayName, setDisplayName] = useState('')
   const [experienceLevel, setExperienceLevel] =
     useState<ExperienceLevel>('beginner')
+  const [startingBalance, setStartingBalance] = useState<StartingBalance>(
+    DEFAULT_STARTING_BALANCE,
+  )
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -84,9 +94,15 @@ export function Auth() {
         password,
         displayName,
         experienceLevel,
+        startingBalance,
       })
       if (needsEmailConfirmation) {
-        setNotice(t('auth.confirmEmail', { email, amount: STARTING_BALANCE }))
+        setNotice(
+          t('auth.confirmEmail', {
+            email,
+            amount: balanceLabel(startingBalance),
+          }),
+        )
       }
     } catch (caught) {
       setError(errorMessage(caught))
@@ -163,7 +179,7 @@ export function Auth() {
             <CardHeader>
               <CardTitle>{t('auth.startTitle')}</CardTitle>
               <CardDescription>
-                {t('auth.startBody', { amount: STARTING_BALANCE })}
+                {t('auth.startBody', { amount: balanceLabel(startingBalance) })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -203,6 +219,32 @@ export function Auth() {
                     {t('auth.passwordHint')}
                   </p>
                 </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="signup-balance">
+                    {t('auth.startingBalance')}
+                  </Label>
+                  <Select
+                    value={String(startingBalance)}
+                    onValueChange={(next) =>
+                      setStartingBalance(Number(next) as StartingBalance)
+                    }
+                  >
+                    <SelectTrigger id="signup-balance" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STARTING_BALANCES.map((amount) => (
+                        <SelectItem key={amount} value={String(amount)}>
+                          {balanceLabel(amount)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-xs">
+                    {t('auth.startingBalanceHint')}
+                  </p>
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="signup-experience">
                     {t('auth.experience')}

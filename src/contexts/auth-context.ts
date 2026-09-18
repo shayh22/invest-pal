@@ -1,13 +1,20 @@
 import { createContext } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 
-import type { ExperienceLevel, Portfolio, UserProfile } from '@/types'
+import type {
+  ExperienceLevel,
+  Portfolio,
+  StartingBalance,
+  UserProfile,
+} from '@/types'
 
 export interface SignUpInput {
   email: string
   password: string
   displayName?: string
   experienceLevel?: ExperienceLevel
+  /** The database validates this against its own list and ignores anything else. */
+  startingBalance?: StartingBalance
 }
 
 export interface AuthContextValue {

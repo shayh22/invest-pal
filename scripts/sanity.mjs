@@ -91,6 +91,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.log('\nDatabase\n  skipped — SUPABASE_URL / SUPABASE_ANON_KEY not set')
 } else {
   await section('Database, auth and trading', async () => {
+    // Sign up with a chosen amount, to prove the choice is honoured.
     const email = `sanity${Date.now()}@example.com`
     const signup = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: 'POST',
@@ -98,7 +99,11 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({
         email,
         password: 'supersecret123',
-        data: { display_name: 'Sanity', experience_level: 'beginner' },
+        data: {
+          display_name: 'Sanity',
+          experience_level: 'beginner',
+          starting_balance: '100000',
+        },
       }),
     })
     const session = await signup.json()
@@ -186,6 +191,38 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ cash_balance: 9999999 }),
     })
     check('RLS blocks minting money', money(await balance()) === money(before), money(await balance()))
+
+    // Signup metadata is whatever the caller posts, so an amount nobody
+    // offered must not fund an account.
+    const greedyEmail = `greedy${Date.now()}@example.com`
+    const greedy = await (
+      await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: greedyEmail,
+          password: 'supersecret123',
+          data: { starting_balance: '999999999' },
+        }),
+      })
+    ).json()
+    if (greedy.access_token) {
+      const greedyBalance = await (
+        await fetch(`${SUPABASE_URL}/rest/v1/portfolios?select=cash_balance,starting_balance`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${greedy.access_token}` },
+        })
+      ).json()
+      check(
+        'an unoffered starting balance falls back to the default',
+        money(greedyBalance[0]?.cash_balance) === '100000.00',
+        money(greedyBalance[0]?.cash_balance),
+      )
+      check(
+        'the starting balance is recorded',
+        money(greedyBalance[0]?.starting_balance) === '100000.00',
+        money(greedyBalance[0]?.starting_balance),
+      )
+    }
 
     const signals = await (
       await rest('gann_signals?select=timeframe,ai_summaries&limit=20')

@@ -35,7 +35,7 @@ export async function fetchPortfolio(
 ): Promise<Portfolio | null> {
   const { data, error } = await client
     .from('portfolios')
-    .select('id, user_id, cash_balance, created_at')
+    .select('id, user_id, cash_balance, starting_balance, created_at')
     .eq('user_id', userId)
     .maybeSingle()
 
@@ -46,6 +46,7 @@ export async function fetchPortfolio(
     id: data.id,
     userId: data.user_id,
     cashBalance: Number(data.cash_balance),
+    startingBalance: Number(data.starting_balance ?? 100000),
     createdAt: data.created_at,
   }
 }

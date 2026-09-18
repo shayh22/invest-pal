@@ -76,6 +76,9 @@ export const he: Record<TranslationKey, string> = {
   'auth.password': 'סיסמה',
   'auth.displayName': 'שם תצוגה',
   'auth.passwordHint': 'לפחות 6 תווים.',
+  'auth.startingBalance': 'סכום פתיחה',
+  'auth.startingBalanceHint':
+    'חשבונות קטנים מרגישים את עלויות המסחר חזק יותר — על 100$, עמלת המינימום היא חצי אחוז לכל עסקה.',
   'auth.experience': 'רמת ניסיון',
   'auth.experienceHint': 'קובע כמה פירוט יספק מנטור ה-AI.',
   'auth.beginner': 'מתחיל — הסבירו לי הכול',
@@ -226,6 +229,8 @@ export const he: Record<TranslationKey, string> = {
   'portfolio.fees': 'עמלות',
   'portfolio.costsPaid': 'עלויות ששולמו',
   'portfolio.costsPaidHint': 'מרווח ועמלות על כל העסקאות שנסגרו.',
+  'portfolio.totalReturn': 'תשואה כוללת',
+  'portfolio.startedWith': 'התחלתם עם {amount}.',
   'portfolio.noMark': 'עדיין אין מחיר עדכני לפוזיציה הזו.',
   'portfolio.closedToastProfit': 'נסגרה ב-{price} ברווח של {amount}',
   'portfolio.closedToastLoss': 'נסגרה ב-{price} בהפסד של {amount}',

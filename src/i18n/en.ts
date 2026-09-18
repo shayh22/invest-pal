@@ -75,6 +75,9 @@ export const en = {
   'auth.password': 'Password',
   'auth.displayName': 'Display name',
   'auth.passwordHint': 'At least 6 characters.',
+  'auth.startingBalance': 'Starting balance',
+  'auth.startingBalanceHint':
+    'Smaller accounts feel trading costs more sharply — on $100, the minimum commission is half a percent per trade.',
   'auth.experience': 'Experience level',
   'auth.experienceHint': 'Sets how much the AI mentor explains.',
   'auth.beginner': 'Beginner — explain everything',
@@ -226,6 +229,8 @@ export const en = {
   'portfolio.fees': 'Fees',
   'portfolio.costsPaid': 'Costs paid',
   'portfolio.costsPaidHint': 'Spread and commission across all closed trades.',
+  'portfolio.totalReturn': 'Total return',
+  'portfolio.startedWith': 'Started with {amount}.',
   'portfolio.noMark': 'No current price available for this position yet.',
   'portfolio.closedToastProfit': 'Closed at {price} for a profit of {amount}',
   'portfolio.closedToastLoss': 'Closed at {price} for a loss of {amount}',

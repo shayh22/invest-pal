@@ -26,8 +26,14 @@ export interface Portfolio {
   userId: string
   /** Virtual cash available for new positions, in USD. */
   cashBalance: number
+  /** What the account was funded with. Fixed at signup. */
+  startingBalance: number
   createdAt: string
 }
+
+/** Amounts a new account may be funded with. Mirrors starting_balance_options(). */
+export const STARTING_BALANCES = [100, 1000, 10000, 100000] as const
+export type StartingBalance = (typeof STARTING_BALANCES)[number]
 
 export interface Asset {
   id: string

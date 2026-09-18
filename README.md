@@ -282,6 +282,21 @@ returns that collateral plus the result:
 position is closed. The database remains the authority — it settles every trade
 — but if one changes, so must the other.
 
+### Choosing how much to start with
+
+A new account picks from $100, $1,000, $10,000 or $100,000 (migration `0005`).
+Everyone starting with $100,000 was a poor teacher: on that balance the $0.50
+minimum commission is invisible, while on $100 it is half a percent of the
+account per fill, and a round trip costs over 1%. The tests assert exactly that.
+
+`starting_balance_options()` is the single source of truth, so the signup form
+and the provisioning trigger cannot disagree. Signup metadata is whatever the
+caller posts, so the trigger validates against that list and quietly falls back
+to the default — an account cannot fund itself with an arbitrary number.
+
+The amount is recorded in `portfolios.starting_balance`, because a portfolio
+that does not remember what it began with cannot tell you your return.
+
 ### Trading is not free
 
 Until migration `0004` a round trip at an unchanged price cost exactly nothing,

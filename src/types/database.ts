@@ -40,9 +40,14 @@ export interface Database {
           id: string
           user_id: string
           cash_balance: number
+          starting_balance: number
           created_at: string
         }
-        Insert: { user_id: string; cash_balance?: number }
+        Insert: {
+          user_id: string
+          cash_balance?: number
+          starting_balance?: number
+        }
         Update: { cash_balance?: number }
         Relationships: []
       }
