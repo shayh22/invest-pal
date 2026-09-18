@@ -61,6 +61,16 @@ await section('Site', async () => {
     check('Hebrew strings shipped', bundle.includes('ללמוד את השוק'))
     check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇬🇧'))
     // No order settles without being agreed to first, in either language.
+    // The landing page describes the product, not the build. A "Phase 3" here
+    // would mean development scaffolding shipped to readers again.
+    check(
+      'landing page describes the product',
+      bundle.includes('What you get') && bundle.includes('מה יש כאן'),
+    )
+    check(
+      'no development phases on the landing page',
+      !bundle.includes('home.phaseLabel') && !bundle.includes('Phase {number}'),
+    )
     check(
       'holdings-aware trading shipped',
       bundle.includes('You do not own any') && bundle.includes('אין בבעלותכם'),

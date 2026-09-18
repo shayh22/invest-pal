@@ -45,24 +45,46 @@ export const en = {
   'home.badge': 'Educational paper trading',
   'home.title': 'Learn the markets without risking a cent.',
   'home.subtitle':
-    'invest-pal pairs a virtual portfolio with predictive analysis based on W.D. Gann’s geometric and cyclical methods, then translates the result into language a beginner can act on.',
-  'home.cta': 'Start with $100,000 virtual',
-  'home.status.done': 'Complete',
-  'home.status.next': 'Up next',
-  'home.status.planned': 'Planned',
-  'home.phase1.title': 'Project setup',
-  'home.phase1.body': 'Vite + React + TypeScript, Tailwind CSS v4 and shadcn/ui.',
-  'home.phase2.title': 'Database & auth',
-  'home.phase2.body': 'Supabase schema, sign up / login, $100,000 starting balance.',
-  'home.phase3.title': 'Market data & charting',
-  'home.phase3.body': 'Live and historical OHLCV data rendered as candlesticks.',
-  'home.phase4.title': 'Gann engine',
-  'home.phase4.body': 'Gann angles, Square of Nine levels and time-cycle analysis.',
-  'home.phase5.title': 'Paper trading engine',
-  'home.phase5.body': 'Long/short positions, virtual balance accounting and live PnL.',
-  'home.phase6.title': 'AI mentor',
-  'home.phase6.body': 'Plain-language explanations of each signal via OpenRouter.',
-  'home.phaseLabel': 'Phase {number}',
+    'Real prices, real execution costs, virtual money. invest-pal draws W.D. Gann’s geometry over a live chart, then has an AI explain what it shows in two plain sentences — so you can practise reading a market before you ever fund an account.',
+  'home.cta': 'Create a practice account',
+  'home.ctaSignedIn': 'Go to the markets',
+  'home.ctaHint': 'Free, no card, no real money anywhere in it.',
+
+  'home.featuresTitle': 'What you get',
+  'home.featuresSubtitle': 'Six things, and they fit together.',
+  'home.feature.charts.title': 'Real market data',
+  'home.feature.charts.body':
+    'Live and historical prices for stocks and crypto, from one day to five years, drawn as candlesticks. The same numbers your broker sees.',
+  'home.feature.gann.title': 'Gann geometry on the chart',
+  'home.feature.gann.body':
+    'The 1x1 balance line and its fan, Square of Nine support and resistance, and the bar counts between past turns — computed from the history, drawn where you can see them.',
+  'home.feature.mentor.title': 'An AI that explains it',
+  'home.feature.mentor.body':
+    'Two sentences under every chart saying what the numbers mean right now, in English or Hebrew. It explains; it never advises, predicts, or tells you what to do.',
+  'home.feature.account.title': 'An account that behaves like one',
+  'home.feature.account.body':
+    'You cannot sell what you do not own. Buying twice adds to one holding instead of opening a second. Short selling exists, but it is off until you switch it on.',
+  'home.feature.costs.title': 'Costs that are not pretend',
+  'home.feature.costs.body':
+    'You buy at the ask, sell at the bid, and pay commission on both fills — so a round trip at an unchanged price loses money here, exactly as it does everywhere else.',
+  'home.feature.reset.title': 'Start small, start over',
+  'home.feature.reset.body':
+    'Begin with $100, $1,000, $10,000 or $100,000 — a small account is the sharper lesson. Wipe it and start again whenever you like.',
+
+  'home.howTitle': 'How it works',
+  'home.step.one.title': 'Pick what you start with',
+  'home.step.one.body':
+    'Sign up and choose your opening balance. On $100 the minimum commission is half a percent per fill, which teaches faster than $100,000 does.',
+  'home.step.two.title': 'Read the chart, then the note',
+  'home.step.two.body':
+    'Pick an asset, turn the Gann layers on and off, and read the mentor’s two sentences underneath before you touch anything.',
+  'home.step.three.title': 'Practise, and see what it cost',
+  'home.step.three.body':
+    'Every order is confirmed before it goes, and the portfolio shows profit, loss, and the spread and commission you paid to get there.',
+
+  'home.honestTitle': 'What this is not',
+  'home.honestBody':
+    'Not financial advice, and not a forecast. Gann levels are geometry drawn from past turning points — they describe where price has turned before, not where it will turn. Nothing here touches real money, and nothing here should be traded on.',
 
   // ----- auth -----
   'auth.tabSignIn': 'Sign in',
