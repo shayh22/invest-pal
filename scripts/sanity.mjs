@@ -60,6 +60,13 @@ await section('Site', async () => {
     check('English strings shipped', bundle.includes('Learn the markets'))
     check('Hebrew strings shipped', bundle.includes('ללמוד את השוק'))
     check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇬🇧'))
+    // No order settles without being agreed to first, in either language.
+    check(
+      'order confirmation shipped',
+      bundle.includes('Confirm this buy') &&
+        bundle.includes('אישור קנייה') &&
+        bundle.includes('Close this position?'),
+    )
     // Anything server-side in the browser bundle is a leak.
     check('no service-role key in bundle', !bundle.includes('service_role'))
     check('no secret key in bundle', !/sb_secret_[A-Za-z0-9-]{10}/.test(bundle))

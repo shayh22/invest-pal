@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TrendingDown, TrendingUp, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { ConfirmTradeDialog } from '@/components/trade/ConfirmTradeDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,6 +42,8 @@ export function TradePanel({
   const costs = useTradingCosts(asset?.type ?? null)
   const [quantityText, setQuantityText] = useState('1')
   const [pending, setPending] = useState<TradeDirection | null>(null)
+  // The direction awaiting confirmation. Nothing is sent until it is agreed to.
+  const [confirming, setConfirming] = useState<TradeDirection | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [direction, setDirection] = useState<TradeDirection>('LONG')
@@ -53,6 +56,10 @@ export function TradePanel({
     quantityValid && price && costs
       ? openingCost(quantity, price, direction, costs)
       : null
+  const confirmEstimate =
+    confirming && quantityValid && price && costs
+      ? openingCost(quantity, price, confirming, costs)
+      : null
   const cost = estimate?.total ?? (quantityValid && price ? quantity * price : 0)
   const balance = portfolio?.cashBalance ?? 0
   // The database enforces this too; checking here just avoids a pointless
@@ -63,6 +70,7 @@ export function TradePanel({
   async function trade(direction: TradeDirection) {
     if (!asset || !price) return
     setDirection(direction)
+    setConfirming(null)
     setError(null)
     setPending(direction)
     try {
@@ -170,7 +178,7 @@ export function TradePanel({
 
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => void trade('LONG')}
+            onClick={() => setConfirming('LONG')}
             disabled={!canTrade || pending !== null}
           >
             <TrendingUp className="size-4" />
@@ -178,13 +186,58 @@ export function TradePanel({
           </Button>
           <Button
             variant="secondary"
-            onClick={() => void trade('SHORT')}
+            onClick={() => setConfirming('SHORT')}
             disabled={!canTrade || pending !== null}
           >
             <TrendingDown className="size-4" />
             {pending === 'SHORT' ? t('trade.selling') : t('trade.sell')}
           </Button>
         </div>
+
+        {asset && price && confirming && (
+          <ConfirmTradeDialog
+            open
+            onOpenChange={(next) => {
+              if (!next) setConfirming(null)
+            }}
+            title={t(
+              confirming === 'LONG' ? 'confirm.buyTitle' : 'confirm.shortTitle',
+            )}
+            description={t('confirm.openBody', {
+              quantity,
+              ticker: asset.ticker,
+            })}
+            lines={[
+              {
+                label: t('trade.estimatedFill'),
+                value: (confirmEstimate?.fill ?? price).toFixed(decimals),
+              },
+              {
+                label: t('trade.commission'),
+                value: formatUsd(confirmEstimate?.commission ?? 0),
+              },
+              {
+                label: t('trade.cashRequired'),
+                value: formatUsd(confirmEstimate?.total ?? quantity * price),
+              },
+              {
+                label: t('trade.balanceAfter'),
+                value: formatUsd(
+                  balance - (confirmEstimate?.total ?? quantity * price),
+                ),
+                emphasis: true,
+              },
+            ]}
+            warning={
+              confirming === 'SHORT' ? t('trade.shortWarningBody') : null
+            }
+            confirmLabel={t(
+              confirming === 'LONG' ? 'confirm.buyAction' : 'confirm.shortAction',
+              { quantity, ticker: asset.ticker },
+            )}
+            onConfirm={() => void trade(confirming)}
+          />
+        )}
 
         {error && (
           <Alert variant="destructive">

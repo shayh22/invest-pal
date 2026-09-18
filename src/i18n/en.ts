@@ -178,6 +178,22 @@ export const en = {
   'mentor.missing':
     'No mentor note for this signal. Set OPENROUTER_API_KEY and re-run python -m gann.refresh.',
 
+  // ----- order confirmation -----
+  'confirm.cancel': 'Cancel',
+  'confirm.buyTitle': 'Confirm this buy',
+  'confirm.shortTitle': 'Confirm this short sale',
+  'confirm.openBody':
+    'This fills {quantity} {ticker} immediately at the price below. Undoing it means a second trade, at a second set of costs.',
+  'confirm.buyAction': 'Buy {quantity} {ticker}',
+  'confirm.shortAction': 'Short {quantity} {ticker}',
+  'confirm.closeTitle': 'Close this position?',
+  'confirm.closeBody':
+    'This settles your {direction} of {quantity} {ticker} at the price below and books the result. It cannot be undone.',
+  'confirm.resultSoFar': 'Result so far',
+  'confirm.closeCosts':
+    'The settled figure will be a little worse than this: closing fills at the far side of the spread and pays commission again.',
+  'confirm.closeAction': 'Close position',
+
   // ----- trade panel -----
   'trade.title': 'Practice trade',
   'trade.subtitleReady': 'Virtual money only. Filled at the last price shown above.',

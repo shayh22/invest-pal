@@ -179,6 +179,22 @@ export const he: Record<TranslationKey, string> = {
   'mentor.missing':
     'אין הערת מנטור לאיתות הזה. הגדירו OPENROUTER_API_KEY והריצו שוב את python -m gann.refresh.',
 
+  // ----- אישור פקודה -----
+  'confirm.cancel': 'ביטול',
+  'confirm.buyTitle': 'אישור קנייה',
+  'confirm.shortTitle': 'אישור מכירה בחסר',
+  'confirm.openBody':
+    'הפקודה תבוצע מייד על {quantity} {ticker} במחיר שלמטה. ביטול שלה פירושו עסקה שנייה, עם עלויות נוספות.',
+  'confirm.buyAction': 'קנו {quantity} {ticker}',
+  'confirm.shortAction': 'מכרו בחסר {quantity} {ticker}',
+  'confirm.closeTitle': 'לסגור את הפוזיציה?',
+  'confirm.closeBody':
+    'הפעולה תסגור את פוזיציית ה־{direction} שלכם על {quantity} {ticker} במחיר שלמטה ותרשום את התוצאה. אי אפשר לבטל.',
+  'confirm.resultSoFar': 'התוצאה עד כה',
+  'confirm.closeCosts':
+    'התוצאה בפועל תהיה מעט נמוכה יותר: הסגירה מבוצעת בצד הרחוק של המרווח ומשלמת עמלה נוספת.',
+  'confirm.closeAction': 'סגירת פוזיציה',
+
   // ----- פאנל מסחר -----
   'trade.title': 'עסקת תרגול',
   'trade.subtitleReady': 'כסף וירטואלי בלבד. הביצוע במחיר האחרון שמוצג למעלה.',
