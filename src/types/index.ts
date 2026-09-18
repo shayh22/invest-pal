@@ -26,10 +26,15 @@ export interface Portfolio {
   userId: string
   /** Virtual cash available for new positions, in USD. */
   cashBalance: number
-  /** What the account was funded with. Fixed at signup. */
+  /** What the account was funded with, at signup or at the last reset. */
   startingBalance: number
+  /** Whether this account may sell an asset it does not hold. */
+  shortSellingEnabled: boolean
   createdAt: string
 }
+
+/** Which way an order goes. A side acts on a holding; a direction describes one. */
+export type TradeSide = 'BUY' | 'SELL'
 
 /** Amounts a new account may be funded with. Mirrors starting_balance_options(). */
 export const STARTING_BALANCES = [100, 1000, 10000, 100000] as const

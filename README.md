@@ -253,11 +253,15 @@ effects have to commit together, so they are Postgres functions
 (`supabase/migrations/0002_trading_engine.sql`) rather than client-side writes:
 
 ```
-open_position(asset_id, direction, quantity, price) -> transactions
-close_position(transaction_id, price)               -> transactions
+trade(asset_id, side, quantity, price)       -> transactions
+reset_portfolio(starting_balance)            -> portfolios
+set_short_selling(enabled)                   -> portfolios
+
+open_position(asset_id, direction, qty, px)  -> transactions   # wrapper over trade()
+close_position(transaction_id, price)        -> transactions   # wrapper over trade()
 ```
 
-Both are `SECURITY DEFINER`, resolve the caller's portfolio from `auth.uid()`,
+All are `SECURITY DEFINER`, resolve the caller's portfolio from `auth.uid()`,
 and take `SELECT ... FOR UPDATE` on the rows they touch. The locking is the
 point: without it, two requests arriving together both read the same balance,
 both pass the funds check, and the same cash is spent twice.
@@ -267,6 +271,62 @@ open. They were holes: a browser that can `INSERT` into `transactions` can open
 a position without paying for it, and a browser that can `UPDATE portfolios`
 can simply set its own balance. Only `SELECT` remains, so these two functions
 are the only way money moves.
+
+### One holding per asset
+
+Until migration `0006` every order wrote a new row, so nothing stopped a
+portfolio holding a long *and* a short on the same asset, or five separate AAPL
+longs that any broker would have netted into one holding. You could also "sell"
+an asset you had never bought — which is not selling, it is shorting, and it
+happened by accident because the button said Sell.
+
+A portfolio now has at most one open position per asset, enforced by a partial
+unique index rather than by the function's good behaviour, and `trade()` moves
+it:
+
+| Holding | Buy | Sell |
+| --- | --- | --- |
+| flat | open a long | refused unless short selling is on |
+| long | add; entry becomes the weighted average | sell, up to the quantity held |
+| short | cover, up to the quantity short | add to the short |
+
+An order that would cross **through** zero is refused rather than flipped: being
+able to turn a long into a short with one tap is the accident this exists to
+prevent. Adding to a holding averages the entry exactly — the cash a fill posts
+is `quantity * entry`, so a weighted average preserves the total to the cent,
+and `netting_test.sql` asserts that identity rather than the arithmetic.
+
+Selling part of a holding splits it: the sold portion becomes its own settled
+row carrying a proportional share of what opening cost, and the rest stays open
+at the same entry. Selling the lot settles the row in place, so its id is
+stable.
+
+Migration `0006` also nets whatever the old engine left behind. Same-direction
+duplicates merge by weighted average, which is exact. A simultaneous long and
+short — a state no broker could produce — has its later leg unwound at its own
+entry price: the cash it posted comes back exactly, nothing is realised, and
+nothing is invented. That path is tested, including that the account is worth
+the same before and after.
+
+### Short selling is opt-in
+
+Off by default, switched on per account (`portfolios.short_selling_enabled`).
+On a real retail account shorting needs a margin agreement; it is not somewhere
+you arrive by mistake. Switching it back off never strands an open short,
+because covering is a *buy*, which reduces rather than opens and so does not
+consult the flag.
+
+### Starting over
+
+`reset_portfolio(amount)` deletes every trade — open positions and closed
+history alike — and re-funds the account at one of the offered balances,
+defaulting to whatever it currently has. Unlike signup metadata, which falls
+back to the default when it is nonsense, an unoffered amount here is refused
+outright: this is a deliberate choice made by someone already signed in.
+
+It is also the way out of a hole. A short that ran away leaves the balance
+negative and new positions blocked; without a reset that would be the end of
+the account.
 
 ### How a position is priced
 
@@ -328,10 +388,12 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Two suites. `trading_engine_test.sql` covers the accounting identity, both
-directions, rejected inputs, double settlement, cross-account access and every
-removed write path; `execution_costs_test.sql` owns the exact arithmetic of
-spread and commission.
+Four suites, 92 checks. `trading_engine_test.sql` covers the accounting
+identity, both directions, rejected inputs, double settlement, cross-account
+access and every removed write path; `execution_costs_test.sql` owns the exact
+arithmetic of spread and commission; `starting_balance_test.sql` covers
+provisioning and its validation; `netting_test.sql` covers the holding rules,
+the opt-in short switch, resetting, and the migration that nets legacy rows.
 
 The first asserts relationships rather than literal amounts — a rate change
 moves every figure, and a test that hardcodes them fails without anything being
@@ -340,10 +402,17 @@ wrong.
 ```bash
 npx supabase start   # or any Postgres
 psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/harness.sql
-psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/0001_init.sql
-psql "$DB" -v ON_ERROR_STOP=1 -f supabase/migrations/0002_trading_engine.sql
-psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/trading_engine_test.sql
+for m in supabase/migrations/*.sql; do
+  psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
+done
+for t in trading_engine execution_costs starting_balance netting; do
+  psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
+done
 ```
+
+Run `netting_test.sql` last: its final section re-applies migration `0006` to
+exercise the netting of legacy rows, so it leaves the schema rebuilt rather than
+as the earlier suites found it.
 
 `harness.sql` is a small stand-in for the parts of Supabase the migrations
 touch (`auth.users`, `auth.uid()`, the `authenticated` role), so this runs
@@ -351,8 +420,8 @@ against a plain Postgres — which is how it runs in CI on every push.
 
 ## The AI mentor
 
-Each cached signal carries a two-sentence, plain-language explanation, shown
-directly above the Buy and Sell buttons.
+Each cached signal carries a two-sentence, plain-language explanation, shown in
+its own card directly beneath the chart.
 
 It runs **inside the refresh job**, not in the browser and not in an edge
 function. The analysis is already in hand at that point, the API key sits

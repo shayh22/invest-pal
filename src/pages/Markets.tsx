@@ -334,6 +334,13 @@ export function Markets() {
           asset={selectedAsset}
           price={quote?.price ?? null}
           decimals={decimals}
+          holding={
+            // One open position per asset since migration 0006, so this is the
+            // holding rather than the first of several.
+            positions.open.find(
+              (position) => position.assetId === selectedAsset?.id,
+            ) ?? null
+          }
           onTraded={positions.reload}
         />
       </div>

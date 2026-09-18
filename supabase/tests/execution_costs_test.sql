@@ -29,9 +29,18 @@ select id::text as aapl from public.assets where ticker = 'AAPL'
 \gset
 select id::text as btc from public.assets where ticker = 'BTC-USD'
 \gset
+-- From migration 0006 a portfolio holds one position per asset, so each of the
+-- checks below that must land on a fresh position uses an asset of its own.
+select id::text as msft from public.assets where ticker = 'MSFT'
+\gset
+select id::text as nvda from public.assets where ticker = 'NVDA'
+\gset
 
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'u', false) \g /dev/null
+
+-- Shorting is opt-in from migration 0006.
+select public.set_short_selling(true) is not null \g /dev/null
 
 -- --------------------------------------------------------------------------
 \echo '== the spread always works against the trader =='
@@ -49,7 +58,9 @@ select public.assert_eq(
   100, 'the requested mid is recorded'
 );
 
-select (public.open_position(:'aapl'::uuid, 'SHORT', 10, 100)).id::text as short_id
+-- MSFT rather than AAPL, and at the same 5 bps: selling AAPL here would reduce
+-- the long opened above instead of opening a short.
+select (public.open_position(:'msft'::uuid, 'SHORT', 10, 100)).id::text as short_id
 \gset
 select public.assert_eq(
   (select round(entry_price, 4) from public.transactions where id = :'short_id'::uuid),
@@ -85,7 +96,7 @@ select public.assert_eq(
   0.50, 'a small trade pays the minimum commission'
 );
 -- 2 bps of 10,010 is 2.00, above the floor.
-select (public.open_position(:'aapl'::uuid, 'LONG', 100, 100)).id::text as big_id
+select (public.open_position(:'nvda'::uuid, 'LONG', 100, 100)).id::text as big_id
 \gset
 select public.assert_eq(
   (select open_fee from public.transactions where id = :'big_id'::uuid),

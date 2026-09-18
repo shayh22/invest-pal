@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ConfirmTradeDialog } from '@/components/trade/ConfirmTradeDialog'
+import { ResetAccountDialog } from '@/components/trade/ResetAccountDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,9 +36,9 @@ import {
   positionCollateral,
   positionPnl,
 } from '@/lib/trading'
-import { closePosition } from '@/services/trading'
+import { closePosition, resetPortfolio } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
-import type { Asset, Transaction } from '@/types'
+import type { Asset, StartingBalance, Transaction } from '@/types'
 
 function decimalsFor(price: number): number {
   return price >= 1 ? 2 : 6
@@ -85,6 +86,8 @@ export function Portfolio() {
   const [confirmingClose, setConfirmingClose] = useState<Transaction | null>(
     null,
   )
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const assetById = new Map<string, Asset>(
     assets.map((asset) => [asset.id, asset]),
@@ -187,6 +190,23 @@ export function Portfolio() {
     }
   }
 
+  async function handleReset(startingBalance: StartingBalance) {
+    setResetting(true)
+    try {
+      await resetPortfolio(requireSupabase(), startingBalance)
+      toast.success(t('reset.doneToast'))
+      setConfirmingReset(false)
+      await refreshAccount()
+      positions.reload()
+    } catch (caught) {
+      toast.error(
+        caught instanceof Error ? caught.message : t('reset.error'),
+      )
+    } finally {
+      setResetting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -198,17 +218,28 @@ export function Portfolio() {
             {t('portfolio.subtitle')}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            positions.reload()
-            void refreshAccount()
-          }}
-        >
-          <RefreshCw className="size-4" />
-          {t('common.refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              positions.reload()
+              void refreshAccount()
+            }}
+          >
+            <RefreshCw className="size-4" />
+            {t('common.refresh')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setConfirmingReset(true)}
+            disabled={!portfolio}
+          >
+            <RotateCcw className="size-4" />
+            {t('reset.button')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -494,6 +525,16 @@ export function Portfolio() {
           )}
         </TabsContent>
       </Tabs>
+
+      {portfolio && (
+        <ResetAccountDialog
+          open={confirmingReset}
+          onOpenChange={setConfirmingReset}
+          currentBalance={portfolio.startingBalance as StartingBalance}
+          pending={resetting}
+          onConfirm={(balance) => void handleReset(balance)}
+        />
+      )}
 
       {confirmingClose &&
         (() => {

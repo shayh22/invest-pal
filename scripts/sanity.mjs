@@ -62,6 +62,14 @@ await section('Site', async () => {
     check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇬🇧'))
     // No order settles without being agreed to first, in either language.
     check(
+      'holdings-aware trading shipped',
+      bundle.includes('You do not own any') && bundle.includes('אין בבעלותכם'),
+    )
+    check(
+      'starting over shipped',
+      bundle.includes('Start over') && bundle.includes('התחלה מחדש'),
+    )
+    check(
       'order confirmation shipped',
       bundle.includes('Confirm this buy') &&
         bundle.includes('אישור קנייה') &&
@@ -124,6 +132,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     }
     const rest = (path, init) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: h, ...init })
     const balance = async () => Number((await (await rest('portfolios?select=cash_balance')).json())[0]?.cash_balance)
+    const portfolioRow = async () =>
+      (await (await rest('portfolios?select=cash_balance,starting_balance,short_selling_enabled')).json())[0] ?? {}
 
     check('portfolio provisioned at 100,000', money(await balance()) === '100000.00', money(await balance()))
 
@@ -190,6 +200,51 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ p_transaction_id: opened.id, p_price: 120 }),
     })
     check('refuses a double settlement', again.status >= 400, `HTTP ${again.status}`)
+
+    // You cannot sell what you do not hold. This is the rule that makes the
+    // account behave like an account, so it is checked on the live system.
+    const namingShortSelling = await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_side: 'SELL', p_quantity: 1, p_price: 100 }),
+    })
+    check('selling nothing is refused', namingShortSelling.status >= 400, `HTTP ${namingShortSelling.status}`)
+    check('short selling is off by default', (await portfolioRow()).short_selling_enabled === false)
+
+    // Buying twice nets into one holding rather than opening a second.
+    for (const price of [100, 200]) {
+      await rest('rpc/trade', {
+        method: 'POST',
+        body: JSON.stringify({ p_asset_id: assetId, p_side: 'BUY', p_quantity: 4, p_price: price }),
+      })
+    }
+    const held = await (await rest(`transactions?select=quantity,entry_price&status=eq.OPEN&asset_id=eq.${assetId}`)).json()
+    check('buying twice leaves one netted holding', held.length === 1, `${held.length} open rows`)
+    check('with the quantities summed', Number(held[0]?.quantity) === 8, String(held[0]?.quantity))
+
+    // Selling more than is held would flip the account short in one order.
+    const overSell = await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_side: 'SELL', p_quantity: 9, p_price: 100 }),
+    })
+    check('selling more than held is refused', overSell.status >= 400, `HTTP ${overSell.status}`)
+
+    // Starting over: every trade goes and the account is re-funded.
+    const reset = await rest('rpc/reset_portfolio', {
+      method: 'POST',
+      body: JSON.stringify({ p_starting_balance: 1000 }),
+    })
+    check('reset_portfolio succeeds', reset.status < 400, `HTTP ${reset.status}`)
+    check('reset funds the chosen amount', money(await balance()) === '1000.00', money(await balance()))
+    const leftOver = await (await rest('transactions?select=id')).json()
+    check('reset clears every trade', leftOver.length === 0, `${leftOver.length} rows left`)
+
+    // An amount nobody offered is refused outright here, unlike at signup.
+    const badReset = await rest('rpc/reset_portfolio', {
+      method: 'POST',
+      body: JSON.stringify({ p_starting_balance: 999999999 }),
+    })
+    check('an unoffered reset amount is refused', badReset.status >= 400, `HTTP ${badReset.status}`)
+    check('and the refused reset changed nothing', money(await balance()) === '1000.00', money(await balance()))
 
     // The client has no write path to its own balance.
     const before = await balance()

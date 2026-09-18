@@ -95,6 +95,11 @@ begin
   raise notice 'ok: a 20%% move nets a profit after costs';
 end $$;
 
+-- Shorting is opt-in from migration 0006: an account may not sell what it does
+-- not hold until it says so. The switch itself, and what it refuses while off,
+-- are covered in netting_test.sql.
+select public.set_short_selling(true) is not null \g /dev/null
+
 -- --------------------------------------------------------------------------
 \echo '== short that wins =='
 -- --------------------------------------------------------------------------
