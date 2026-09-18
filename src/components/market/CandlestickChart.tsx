@@ -86,6 +86,12 @@ export function CandlestickChart({
       timeScale: { borderVisible: false, timeVisible: true },
       crosshair: { mode: CrosshairMode.Normal },
       handleScale: { axisPressedMouseMove: false },
+      // One finger belongs to the page, not to the chart. A chart that eats
+      // single-finger drags traps the reader halfway down a phone screen with
+      // no way past it, and there is no gesture to escape with. Two-finger
+      // pinch still zooms (the library handles it); two-finger drag pans, which
+      // is wired up below.
+      handleScroll: { horzTouchDrag: false, vertTouchDrag: false },
     })
     const series = chart.addSeries(CandlestickSeries, {
       // Thin marks: wicks and borders stay hairline so the bodies read first.
@@ -94,6 +100,57 @@ export function CandlestickChart({
 
     chartRef.current = chart
     seriesRef.current = series
+
+    /**
+     * Two-finger drag pans the time scale.
+     *
+     * The library has no two-finger pan of its own — only the single-finger
+     * drag disabled above — so this tracks the midpoint between the two
+     * touches and scrolls by however far it moved.
+     *
+     * No preventDefault anywhere: `touch-action: pan-y` on the container (see
+     * index.css) already tells the browser that horizontal gestures are ours
+     * and vertical ones are the page's, so a two-finger horizontal drag never
+     * scrolls the page and a one-finger vertical drag always does.
+     */
+    let midpointX: number | null = null
+
+    const midpoint = (touches: TouchList) =>
+      (touches[0].clientX + touches[1].clientX) / 2
+
+    const onTouchStart = (event: TouchEvent) => {
+      midpointX = event.touches.length === 2 ? midpoint(event.touches) : null
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || midpointX === null) return
+      const next = midpoint(event.touches)
+      const movedPixels = next - midpointX
+      midpointX = next
+
+      const timeScale = chart.timeScale()
+      const barSpacing = timeScale.options().barSpacing
+      if (!barSpacing) return
+      // scrollPosition() is the gap in bars between the right edge and the
+      // latest bar, and subtracting slides the drawing the same way the fingers
+      // went — so dragging right brings earlier bars into view.
+      //
+      // Measured, not reasoned: the test cross-correlates the canvas before and
+      // after a 60px drag, and a sign error shows up as a clean -60.
+      timeScale.scrollToPosition(
+        timeScale.scrollPosition() - movedPixels / barSpacing,
+        false,
+      )
+    }
+
+    const onTouchEnd = (event: TouchEvent) => {
+      midpointX = event.touches.length === 2 ? midpoint(event.touches) : null
+    }
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true })
+    container.addEventListener('touchmove', onTouchMove, { passive: true })
+    container.addEventListener('touchend', onTouchEnd, { passive: true })
+    container.addEventListener('touchcancel', onTouchEnd, { passive: true })
 
     // Crosshair readout. This is what keeps direction from being colour-alone.
     chart.subscribeCrosshairMove((param) => {
@@ -114,6 +171,11 @@ export function CandlestickChart({
     })
 
     return () => {
+      container.removeEventListener('touchstart', onTouchStart)
+      container.removeEventListener('touchmove', onTouchMove)
+      container.removeEventListener('touchend', onTouchEnd)
+      container.removeEventListener('touchcancel', onTouchEnd)
+
       // chart.remove() destroys every series it owns, so the overlay handles
       // are dead the moment this runs. Clearing them matters: on a remount
       // (StrictMode's double-invoke, or simply navigating away and back) the
@@ -293,7 +355,16 @@ export function CandlestickChart({
       )}
       {/* Time flows left-to-right on a price chart in every locale, so the
           canvas keeps LTR even when the page is mirrored. */}
-      <div ref={containerRef} dir="ltr" style={{ height }} className="w-full" />
+      <div
+        ref={containerRef}
+        dir="ltr"
+        style={{ height }}
+        className="chart-surface w-full"
+      />
+      {/* Only worth saying where there is a second finger to use. */}
+      <p className="text-muted-foreground coarse-pointer-only text-xs">
+        {t('chart.touchHint')}
+      </p>
     </div>
   )
 }

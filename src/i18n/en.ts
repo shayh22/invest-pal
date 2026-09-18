@@ -154,6 +154,7 @@ export const en = {
   'markets.toggleLevels': 'Sq9 levels',
 
   // ----- chart -----
+  'chart.touchHint': 'Two fingers to move the chart — one finger scrolls the page.',
   'chart.hoverHint': 'Hover the chart for open, high, low and close.',
   'chart.up': 'up',
   'chart.down': 'down',

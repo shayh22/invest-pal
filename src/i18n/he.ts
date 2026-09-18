@@ -155,6 +155,7 @@ export const he: Record<TranslationKey, string> = {
   'markets.toggleLevels': 'רמות ריבוע התשע',
 
   // ----- גרף -----
+  'chart.touchHint': 'שתי אצבעות להזזת הגרף — אצבע אחת גוללת את העמוד.',
   'chart.hoverHint': 'רחפו מעל הגרף לצפייה בפתיחה, גבוה, נמוך וסגירה.',
   'chart.up': 'עלייה',
   'chart.down': 'ירידה',
