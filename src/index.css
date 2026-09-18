@@ -143,3 +143,31 @@
     --chart-up: #0ea5a0;
     --chart-down: #ef4f4f;
 }
+
+/*
+ * Touch rules for the price chart.
+ *
+ * `pan-y` hands vertical gestures to the browser and horizontal ones to us. A
+ * one-finger drag therefore always scrolls the page — the chart cannot trap a
+ * reader mid-screen — while a two-finger horizontal drag pans the chart without
+ * the page moving underneath it. It also turns off browser pinch-zoom over the
+ * canvas, which is what lets the chart library handle pinch as a zoom.
+ *
+ * Declared here rather than as a utility class because the library creates its
+ * own canvases inside the container, and they need the rule too.
+ */
+.chart-surface,
+.chart-surface * {
+    touch-action: pan-y;
+}
+
+/* Gesture hints are noise on a device with a mouse. */
+.coarse-pointer-only {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .coarse-pointer-only {
+        display: block;
+    }
+}
