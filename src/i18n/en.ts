@@ -171,9 +171,10 @@ export const en = {
   'gann.support': 'Support',
 
   // ----- mentor -----
+  'mentor.title': 'AI mentor',
   'mentor.heading': 'What this means',
   'mentor.disclaimer':
-    'Written by an AI from the Gann numbers above. An explanation, not a recommendation.',
+    'Written by an AI from the Gann numbers on this page. An explanation, not a recommendation.',
   'mentor.missing':
     'No mentor note for this signal. Set OPENROUTER_API_KEY and re-run python -m gann.refresh.',
 
