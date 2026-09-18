@@ -10,25 +10,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { LanguageToggle } from '@/components/layout/LanguageToggle'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from '@/hooks/useTranslation'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
   to: string
-  label: string
+  labelKey: 'nav.overview' | 'nav.dashboard' | 'nav.markets' | 'nav.portfolio'
   end?: boolean
 }
 
-const signedOutNav: NavItem[] = [{ to: '/', label: 'Overview', end: true }]
+const signedOutNav: NavItem[] = [{ to: '/', labelKey: 'nav.overview', end: true }]
 
 const signedInNav: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/markets', label: 'Markets' },
-  { to: '/portfolio', label: 'Portfolio' },
+  { to: '/dashboard', labelKey: 'nav.dashboard' },
+  { to: '/markets', labelKey: 'nav.markets' },
+  { to: '/portfolio', labelKey: 'nav.portfolio' },
 ]
 
 export function AppLayout() {
   const { user, profile, signOut } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const navItems = user ? signedInNav : signedOutNav
 
@@ -51,7 +54,7 @@ export function AppLayout() {
             className="flex items-center gap-2 font-semibold"
           >
             <LineChart className="size-5" />
-            invest-pal
+            {t('common.appName')}
           </Link>
 
           <nav className="flex items-center gap-1 text-sm">
@@ -69,19 +72,20 @@ export function AppLayout() {
                   )
                 }
               >
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             ))}
           </nav>
 
-          <div className="ml-auto">
+          <div className="ms-auto flex items-center gap-1">
+            <LanguageToggle />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
-                    aria-label="Account menu"
+                    aria-label={t('nav.accountMenu')}
                   >
                     {initials}
                   </Button>
@@ -93,13 +97,13 @@ export function AppLayout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => void handleSignOut()}>
                     <LogOut className="size-4" />
-                    Sign out
+                    {t('nav.signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Button asChild size="sm">
-                <Link to="/auth">Sign in</Link>
+                <Link to="/auth">{t('nav.signIn')}</Link>
               </Button>
             )}
           </div>
@@ -111,8 +115,7 @@ export function AppLayout() {
       </main>
 
       <footer className="border-border/60 text-muted-foreground border-t py-4 text-center text-xs">
-        Educational paper trading with virtual money. Nothing here is financial
-        advice.
+        {t('common.notFinancialAdvice')}
       </footer>
     </div>
   )

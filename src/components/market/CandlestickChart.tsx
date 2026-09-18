@@ -12,6 +12,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts'
 
+import { useTranslation } from '@/hooks/useTranslation'
 import { useChartColors } from '@/lib/chart-theme'
 import { angleLine, nearestLevels, selectAngles } from '@/lib/gann-overlay'
 import type { Candle } from '@/types'
@@ -62,6 +63,7 @@ export function CandlestickChart({
   const angleSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
   const priceLinesRef = useRef<IPriceLine[]>([])
   const { colors } = useChartColors()
+  const { t, locale } = useTranslation()
   const [hover, setHover] = useState<HoverState | null>(null)
 
   // Create the chart once. Data, colours and sizing are applied by the effects
@@ -235,7 +237,7 @@ export function CandlestickChart({
         {readout ? (
           <>
             <span>
-              {new Date(readout.time * 1000).toLocaleString('en-US')}
+              {new Date(readout.time * 1000).toLocaleString(locale)}
             </span>
             <span>
               O <span className="text-foreground">{readout.open.toFixed(priceDecimals)}</span>
@@ -250,33 +252,48 @@ export function CandlestickChart({
               C <span className="text-foreground">{readout.close.toFixed(priceDecimals)}</span>
             </span>
             {/* Direction stated in words, not only in the candle colour. */}
-            <span className="text-foreground">{rising ? 'up' : 'down'}</span>
+            <span className="text-foreground">
+              {rising ? t('chart.up') : t('chart.down')}
+            </span>
           </>
         ) : (
-          <span>Hover the chart for open, high, low and close.</span>
+          <span>{t('chart.hoverHint')}</span>
         )}
       </div>
       {gann && (showAngles || showLevels) && (
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           {showAngles && (
             <>
-              <LegendKey color={colors.gannPrimary} label="1x1 balance line" />
-              <LegendKey color={colors.gannSecondary} label="2x1 / 1x2" dashed />
+              <LegendKey
+                color={colors.gannPrimary}
+                label={t('chart.legendBalance')}
+              />
+              <LegendKey
+                color={colors.gannSecondary}
+                label={t('chart.legendFan')}
+                dashed
+              />
             </>
           )}
           {showLevels && (
             <>
-              <LegendKey color={colors.levelSupport} label="Sq9 support" dashed />
+              <LegendKey
+                color={colors.levelSupport}
+                label={t('chart.legendSupport')}
+                dashed
+              />
               <LegendKey
                 color={colors.levelResistance}
-                label="Sq9 resistance"
+                label={t('chart.legendResistance')}
                 dashed
               />
             </>
           )}
         </div>
       )}
-      <div ref={containerRef} style={{ height }} className="w-full" />
+      {/* Time flows left-to-right on a price chart in every locale, so the
+          canvas keeps LTR even when the page is mirrored. */}
+      <div ref={containerRef} dir="ltr" style={{ height }} className="w-full" />
     </div>
   )
 }

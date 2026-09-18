@@ -183,6 +183,40 @@ python -m venv .venv && .venv/bin/pip install pytest
 ratios and ordering, pivot edge cases, cycle clustering and projection — plus
 the payload contract shared with `src/types/gann.ts`.
 
+## Languages
+
+English and Hebrew, switched with the flag button in the header. The choice is
+remembered per browser; a first visit follows the browser's own preference.
+
+Hebrew flips the whole page to RTL by setting `dir` on `<html>`, which is what
+Tailwind's logical properties (`ms-`, `ps-`, `text-end`) resolve against — so
+the layout mirrors rather than being re-specified. The price chart is the one
+exception: time runs left-to-right on a candlestick chart in every locale, so
+its canvas is pinned `dir="ltr"` inside the mirrored page.
+
+```
+src/i18n/
+  en.ts     source of truth; its keys are the contract
+  he.ts     typed Record<TranslationKey, string> — a missing key fails the build
+  index.ts  translate(), plural selection, per-language flag/dir/locale
+```
+
+Dates and times use the active locale. **Money does not**: `he-IL` renders USD
+as `\u200f100,000.00 \u200f$`, and those invisible RTL marks reorder the
+surrounding text when a price is interpolated into a sentence. The dollar is a
+foreign currency in both locales and `$100,000.00` reads correctly in Hebrew,
+so the marks buy nothing.
+
+`npm run lint` also runs `scripts/check-i18n.mjs`, which catches what types
+cannot: duplicate keys, and a translation using a `{placeholder}` English has no
+value for. A translation may *drop* a placeholder — Hebrew says
+"פוזיציה פתוחה אחת" rather than repeating the number — so the rule is
+one-directional.
+
+The AI mentor writes in either language: `python -m gann.refresh --lang he`.
+Summaries are cached per signal, not per user, so the language of the panel note
+is whichever the refresh job last ran in.
+
 ## Deploying
 
 `vercel.json` and `api/market/chart.ts` make a Vercel import work with only two

@@ -88,3 +88,15 @@ def test_missing_key_is_a_clear_error(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     with pytest.raises(MentorError, match="OPENROUTER_API_KEY"):
         summarise(analysis())
+
+
+def test_prompt_language_is_explicit_in_the_system_prompt():
+    from gann.mentor import LANGUAGE_NAMES, SYSTEM_PROMPT
+
+    hebrew = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["he"])
+    assert "Write in Hebrew" in hebrew
+    # Tickers must survive translation, or the summary stops matching the chart.
+    assert "Ticker symbols stay as they are" in hebrew
+
+    english = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["en"])
+    assert "Write in English" in english

@@ -49,6 +49,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="only this ticker (repeatable)",
     )
     parser.add_argument(
+        "--lang",
+        default="en",
+        choices=("en", "he"),
+        help="language for the mentor summary (default en)",
+    )
+    parser.add_argument(
         "--no-ai",
         action="store_true",
         help="skip the AI mentor summary even when a key is available",
@@ -67,6 +73,7 @@ def refresh(
     range_: str = "2y",
     ttl_hours: float = 6.0,
     symbols: list[str] | None = None,
+    language: str = "en",
     no_ai: bool = False,
     dry_run: bool = False,
 ) -> int:
@@ -109,7 +116,7 @@ def refresh(
         ai_summary: str | None = None
         if want_summary:
             try:
-                ai_summary = summarise(analysis)
+                ai_summary = summarise(analysis, language=language)
             except MentorError as error:
                 print(f"  {ticker}: no summary — {error}", file=sys.stderr)
 
@@ -161,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
             range_=args.range_,
             ttl_hours=args.ttl_hours,
             symbols=args.symbols,
+            language=args.lang,
             no_ai=args.no_ai,
             dry_run=args.dry_run,
         )

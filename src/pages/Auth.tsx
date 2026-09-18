@@ -22,17 +22,19 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from '@/hooks/useTranslation'
 import type { ExperienceLevel } from '@/types'
 
 const STARTING_BALANCE = '$100,000'
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return 'Something went wrong. Please try again.'
-}
-
 export function Auth() {
   const { configured, user, signIn, signUp } = useAuth()
+  const { t } = useTranslation()
+
+  function errorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message
+    return t('auth.genericError')
+  }
   const location = useLocation()
 
   const [email, setEmail] = useState('')
@@ -84,10 +86,7 @@ export function Auth() {
         experienceLevel,
       })
       if (needsEmailConfirmation) {
-        setNotice(
-          `Check ${email} for a confirmation link. Your ${STARTING_BALANCE} ` +
-            'virtual portfolio is ready once you confirm.',
-        )
+        setNotice(t('auth.confirmEmail', { email, amount: STARTING_BALANCE }))
       }
     } catch (caught) {
       setError(errorMessage(caught))
@@ -101,22 +100,22 @@ export function Auth() {
       <Tabs defaultValue="sign-in" onValueChange={resetFeedback}>
         <TabsList className="w-full">
           <TabsTrigger value="sign-in" className="flex-1">
-            Sign in
+            {t('auth.tabSignIn')}
           </TabsTrigger>
           <TabsTrigger value="sign-up" className="flex-1">
-            Create account
+            {t('auth.tabSignUp')}
           </TabsTrigger>
         </TabsList>
 
         {error && (
           <Alert variant="destructive" className="mt-4">
-            <AlertTitle>Could not continue</AlertTitle>
+            <AlertTitle>{t('auth.errorTitle')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         {notice && (
           <Alert className="mt-4">
-            <AlertTitle>Almost there</AlertTitle>
+            <AlertTitle>{t('auth.almostTitle')}</AlertTitle>
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
         )}
@@ -124,15 +123,13 @@ export function Auth() {
         <TabsContent value="sign-in" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Welcome back</CardTitle>
-              <CardDescription>
-                Pick up where you left off in your virtual portfolio.
-              </CardDescription>
+              <CardTitle>{t('auth.welcomeBack')}</CardTitle>
+              <CardDescription>{t('auth.welcomeBackBody')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="flex flex-col gap-4" onSubmit={handleSignIn}>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signin-email">Email</Label>
+                  <Label htmlFor="signin-email">{t('auth.email')}</Label>
                   <Input
                     id="signin-email"
                     type="email"
@@ -143,7 +140,7 @@ export function Auth() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signin-password">Password</Label>
+                  <Label htmlFor="signin-password">{t('auth.password')}</Label>
                   <Input
                     id="signin-password"
                     type="password"
@@ -154,7 +151,7 @@ export function Auth() {
                   />
                 </div>
                 <Button type="submit" disabled={pending}>
-                  {pending ? 'Signing in…' : 'Sign in'}
+                  {pending ? t('auth.signingIn') : t('auth.tabSignIn')}
                 </Button>
               </form>
             </CardContent>
@@ -164,16 +161,15 @@ export function Auth() {
         <TabsContent value="sign-up" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Start paper trading</CardTitle>
+              <CardTitle>{t('auth.startTitle')}</CardTitle>
               <CardDescription>
-                New accounts get {STARTING_BALANCE} in virtual cash. No real
-                money is ever involved.
+                {t('auth.startBody', { amount: STARTING_BALANCE })}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="flex flex-col gap-4" onSubmit={handleSignUp}>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signup-name">Display name</Label>
+                  <Label htmlFor="signup-name">{t('auth.displayName')}</Label>
                   <Input
                     id="signup-name"
                     autoComplete="name"
@@ -182,7 +178,7 @@ export function Auth() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">{t('auth.email')}</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -193,7 +189,7 @@ export function Auth() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">{t('auth.password')}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -204,11 +200,13 @@ export function Auth() {
                     onChange={(event) => setPassword(event.target.value)}
                   />
                   <p className="text-muted-foreground text-xs">
-                    At least 6 characters.
+                    {t('auth.passwordHint')}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="signup-experience">Experience level</Label>
+                  <Label htmlFor="signup-experience">
+                    {t('auth.experience')}
+                  </Label>
                   <Select
                     value={experienceLevel}
                     onValueChange={(next) =>
@@ -220,22 +218,22 @@ export function Auth() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="beginner">
-                        Beginner — explain everything
+                        {t('auth.beginner')}
                       </SelectItem>
                       <SelectItem value="intermediate">
-                        Intermediate — I know the basics
+                        {t('auth.intermediate')}
                       </SelectItem>
                       <SelectItem value="advanced">
-                        Advanced — just the data
+                        {t('auth.advanced')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-muted-foreground text-xs">
-                    Sets how much the AI mentor explains in Phase 6.
+                    {t('auth.experienceHint')}
                   </p>
                 </div>
                 <Button type="submit" disabled={pending}>
-                  {pending ? 'Creating account…' : 'Create account'}
+                  {pending ? t('auth.creating') : t('auth.tabSignUp')}
                 </Button>
               </form>
             </CardContent>

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
 import { usePositions } from '@/hooks/usePositions'
+import { useTranslation } from '@/hooks/useTranslation'
 import { useQuotes } from '@/hooks/useQuotes'
 import { formatUsd } from '@/lib/format'
 import { accountEquity } from '@/lib/trading'
@@ -20,6 +21,7 @@ import { accountEquity } from '@/lib/trading'
 export function Dashboard() {
   const { user, profile, portfolio } = useAuth()
   const { assets } = useAssets()
+  const { t } = useTranslation()
   const positions = usePositions(portfolio?.id ?? null)
 
   const tickerFor = (assetId: string) =>
@@ -42,35 +44,36 @@ export function Dashboard() {
     },
   )
 
-  const greetingName = profile?.displayName ?? user?.email ?? 'trader'
+  const greetingName =
+    profile?.displayName ?? user?.email ?? t('dashboard.fallbackName')
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome, {greetingName}
+          {t('dashboard.greeting', { name: greetingName })}
         </h1>
         <p className="text-muted-foreground text-sm">
-          Your virtual account, funded and ready.
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardDescription>Account value</CardDescription>
+            <CardDescription>{t('dashboard.accountValue')}</CardDescription>
             <CardTitle className="text-3xl tabular-nums">
               {portfolio ? formatUsd(equity) : <Skeleton className="h-8 w-32" />}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            Cash plus what open positions would return.
+            {t('dashboard.accountValueHint')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Virtual cash</CardDescription>
+            <CardDescription>{t('dashboard.cash')}</CardDescription>
             <CardTitle className="text-3xl tabular-nums">
               {portfolio ? (
                 formatUsd(portfolio.cashBalance)
@@ -80,13 +83,13 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            Available to open new positions.
+            {t('dashboard.cashHint')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Open positions</CardDescription>
+            <CardDescription>{t('dashboard.openPositions')}</CardDescription>
             <CardTitle className="text-3xl tabular-nums">
               {positions.loading ? (
                 <Skeleton className="h-8 w-10" />
@@ -96,23 +99,23 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            {positions.closed.length} closed so far.
+            {t('dashboard.closedCount', { count: positions.closed.length })}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Experience level</CardDescription>
+            <CardDescription>{t('dashboard.experience')}</CardDescription>
             <CardTitle className="text-xl capitalize">
               {profile ? (
-                profile.experienceLevel
+                t(`experience.${profile.experienceLevel}`)
               ) : (
                 <Skeleton className="h-6 w-24" />
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            Tunes how much the AI mentor explains.
+            {t('dashboard.experienceHint')}
           </CardContent>
         </Card>
       </div>
@@ -120,20 +123,17 @@ export function Dashboard() {
       <Card>
         <CardHeader>
           <Badge variant="outline" className="w-fit">
-            Up next
+            {t('dashboard.upNext')}
           </Badge>
-          <CardTitle className="text-lg">Phase 6 — The AI mentor</CardTitle>
-          <CardDescription>
-            Plain-language explanations of each Gann signal, next to the trade
-            buttons.
-          </CardDescription>
+          <CardTitle className="text-lg">{t('dashboard.nextTitle')}</CardTitle>
+          <CardDescription>{t('dashboard.nextBody')}</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-3">
           <Button asChild size="sm">
-            <Link to="/markets">Find a trade</Link>
+            <Link to="/markets">{t('dashboard.findTrade')}</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/portfolio">View positions</Link>
+            <Link to="/portfolio">{t('dashboard.viewPositions')}</Link>
           </Button>
         </CardContent>
       </Card>

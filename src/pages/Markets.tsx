@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useAssets } from '@/hooks/useAssets'
 import { usePositions } from '@/hooks/usePositions'
+import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
@@ -49,6 +50,15 @@ function decimalsFor(price: number): number {
   return 6
 }
 
+/**
+ * Money stays in en-US formatting in every language.
+ *
+ * he-IL renders USD as "\u200f100,000.00 \u200f$" — two invisible RTL marks
+ * that reorder the surrounding text when a price is interpolated into a
+ * sentence. The dollar is a foreign currency in both locales and "$100,000.00"
+ * reads correctly in Hebrew, so the marks buy nothing. Dates and times are
+ * localised properly; see the panels.
+ */
 function formatPrice(value: number, currency: string, decimals: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -60,6 +70,7 @@ function formatPrice(value: number, currency: string, decimals: number): string 
 
 export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
+  const { t } = useTranslation()
   const [symbol, setSymbol] = useState<string | null>(null)
   const [range, setRange] = useState<ChartRange>('6mo')
   const [showAngles, setShowAngles] = useState(true)
@@ -94,16 +105,17 @@ export function Markets() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Markets</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t('markets.title')}
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Real prices from Yahoo Finance, with Gann geometry from the cached
-          analysis.
+          {t('markets.subtitle')}
         </p>
       </div>
 
       {assetsError && (
         <Alert variant="destructive">
-          <AlertTitle>Could not load assets</AlertTitle>
+          <AlertTitle>{t('markets.assetsError')}</AlertTitle>
           <AlertDescription>{assetsError}</AlertDescription>
         </Alert>
       )}
@@ -115,8 +127,8 @@ export function Markets() {
           onValueChange={setSymbol}
           disabled={assetsLoading || assets.length === 0}
         >
-          <SelectTrigger className="w-64" aria-label="Asset">
-            <SelectValue placeholder="Select an asset">
+          <SelectTrigger className="w-64" aria-label={t('common.asset')}>
+            <SelectValue placeholder={t('markets.selectAsset')}>
               {selectedAsset
                 ? `${selectedAsset.ticker} — ${selectedAsset.name}`
                 : undefined}
@@ -131,7 +143,11 @@ export function Markets() {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-1" role="group" aria-label="Range">
+        <div
+          className="flex items-center gap-1"
+          role="group"
+          aria-label={t('markets.range')}
+        >
           {RANGES.map((option) => (
             <Button
               key={option.value}
@@ -145,7 +161,7 @@ export function Markets() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ms-auto flex items-center gap-4">
           {gann.signal && (
             <>
               <div className="flex items-center gap-2">
@@ -155,7 +171,7 @@ export function Markets() {
                   onCheckedChange={setShowAngles}
                 />
                 <Label htmlFor="show-angles" className="text-xs font-normal">
-                  Gann fan
+                  {t('markets.toggleFan')}
                 </Label>
               </div>
               <div className="flex items-center gap-2">
@@ -165,7 +181,7 @@ export function Markets() {
                   onCheckedChange={setShowLevels}
                 />
                 <Label htmlFor="show-levels" className="text-xs font-normal">
-                  Sq9 levels
+                  {t('markets.toggleLevels')}
                 </Label>
               </div>
             </>
@@ -177,7 +193,7 @@ export function Markets() {
             disabled={loading || !activeSymbol}
           >
             <RefreshCw className="size-4" />
-            Refresh
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -193,7 +209,7 @@ export function Markets() {
                 )}
               </CardTitle>
               <CardDescription>
-                {quote?.name ?? selectedAsset?.name ?? 'Select an asset'}
+                {quote?.name ?? selectedAsset?.name ?? t('markets.selectAsset')}
               </CardDescription>
             </div>
 
@@ -216,11 +232,11 @@ export function Markets() {
                   {Math.abs(quote.change).toFixed(decimals)} (
                   {formatPercent(quote.changePercent)})
                   <span className="sr-only">
-                    {rising ? 'up' : 'down'} since the previous close
+                    {rising ? t('chart.up') : t('chart.down')}
                   </span>
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  latest session
+                  {t('markets.latestSession')}
                 </span>
               </div>
             )}
@@ -230,11 +246,11 @@ export function Markets() {
         <CardContent>
           {error ? (
             <Alert variant="destructive">
-              <AlertTitle>Could not load prices</AlertTitle>
+              <AlertTitle>{t('markets.pricesError')}</AlertTitle>
               <AlertDescription className="flex flex-col items-start gap-2">
                 {error}
                 <Button size="sm" variant="outline" onClick={reload}>
-                  Try again
+                  {t('common.tryAgain')}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -255,11 +271,11 @@ export function Markets() {
       {quote && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatTile
-            label="Previous close"
+            label={t('markets.previousClose')}
             value={formatPrice(quote.previousClose, quote.currency, decimals)}
           />
           <StatTile
-            label={`${activeRangeLabel} change`}
+            label={t('markets.rangeChange', { range: activeRangeLabel })}
             value={
               data
                 ? `${data.rangeChange >= 0 ? '+' : '−'}${Math.abs(
@@ -269,7 +285,7 @@ export function Markets() {
             }
           />
           <StatTile
-            label="Day range"
+            label={t('markets.dayRange')}
             value={
               quote.dayLow != null && quote.dayHigh != null
                 ? `${quote.dayLow.toFixed(decimals)} – ${quote.dayHigh.toFixed(decimals)}`
@@ -277,14 +293,17 @@ export function Markets() {
             }
           />
           <StatTile
-            label="52-week range"
+            label={t('markets.weekRange')}
             value={
               quote.fiftyTwoWeekLow != null && quote.fiftyTwoWeekHigh != null
                 ? `${quote.fiftyTwoWeekLow.toFixed(decimals)} – ${quote.fiftyTwoWeekHigh.toFixed(decimals)}`
                 : '—'
             }
           />
-          <StatTile label="Candles loaded" value={String(data?.candles.length ?? 0)} />
+          <StatTile
+            label={t('markets.candlesLoaded')}
+            value={String(data?.candles.length ?? 0)}
+          />
         </div>
       )}
 

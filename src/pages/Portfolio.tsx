@@ -26,6 +26,7 @@ import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
 import { usePositions } from '@/hooks/usePositions'
 import { useQuotes } from '@/hooks/useQuotes'
+import { useTranslation } from '@/hooks/useTranslation'
 import { formatPercent, formatUsd } from '@/lib/format'
 import {
   accountEquity,
@@ -66,6 +67,7 @@ function SignedValue({ value, decimals }: { value: number; decimals: number }) {
 export function Portfolio() {
   const { portfolio, refreshAccount } = useAuth()
   const { assets } = useAssets()
+  const { t, tCount } = useTranslation()
   const positions = usePositions(portfolio?.id ?? null)
   const [closing, setClosing] = useState<string | null>(null)
 
@@ -123,7 +125,7 @@ export function Portfolio() {
   async function handleClose(position: Transaction) {
     const mark = markFor(position)
     if (mark === null) {
-      toast.error('No current price available for this position yet.')
+      toast.error(t('portfolio.noMark'))
       return
     }
     setClosing(position.id)
@@ -140,15 +142,16 @@ export function Portfolio() {
         closed.exitPrice ?? mark,
       )
       toast.success(
-        `Closed at ${mark.toFixed(decimalsFor(mark))} for a ${
-          pnl >= 0 ? 'profit' : 'loss'
-        } of ${formatUsd(Math.abs(pnl))}`,
+        t(pnl >= 0 ? 'portfolio.closedToastProfit' : 'portfolio.closedToastLoss', {
+          price: mark.toFixed(decimalsFor(mark)),
+          amount: formatUsd(Math.abs(pnl)),
+        }),
       )
       await refreshAccount()
       positions.reload()
     } catch (caught) {
       toast.error(
-        caught instanceof Error ? caught.message : 'Could not close the position.',
+        caught instanceof Error ? caught.message : t('portfolio.closeError'),
       )
     } finally {
       setClosing(null)
@@ -159,9 +162,11 @@ export function Portfolio() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Portfolio</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t('portfolio.title')}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            Virtual money. Open positions are marked at the latest price.
+            {t('portfolio.subtitle')}
           </p>
         </div>
         <Button
@@ -173,83 +178,80 @@ export function Portfolio() {
           }}
         >
           <RefreshCw className="size-4" />
-          Refresh
+          {t('common.refresh')}
         </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardDescription>Account value</CardDescription>
+            <CardDescription>{t('portfolio.accountValue')}</CardDescription>
             <CardTitle className="text-2xl tabular-nums">
               {portfolio ? formatUsd(equity) : <Skeleton className="h-7 w-28" />}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            Cash plus what open positions would return.
+            {t('portfolio.accountValueHint')}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Cash</CardDescription>
+            <CardDescription>{t('portfolio.cash')}</CardDescription>
             <CardTitle className="text-2xl tabular-nums">
               {portfolio ? formatUsd(cash) : <Skeleton className="h-7 w-28" />}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
             {cash < 0
-              ? 'Negative: a short closed for more than it reserved.'
-              : 'Available for new positions.'}
+              ? t('portfolio.cashNegativeHint')
+              : t('portfolio.cashHint')}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Unrealised</CardDescription>
+            <CardDescription>{t('portfolio.unrealised')}</CardDescription>
             <CardTitle className="text-2xl">
               <SignedValue value={openPnl} decimals={2} />
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            {positions.open.length} open position
-            {positions.open.length === 1 ? '' : 's'}
+            {tCount('portfolio.openCount', positions.open.length)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Realised</CardDescription>
+            <CardDescription>{t('portfolio.realised')}</CardDescription>
             <CardTitle className="text-2xl">
               <SignedValue value={realisedPnl} decimals={2} />
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-xs">
-            {positions.closed.length} closed
+            {t('portfolio.closedCount', { count: positions.closed.length })}
           </CardContent>
         </Card>
       </div>
 
       {cash < 0 && (
         <Alert variant="destructive">
-          <AlertTitle>Your cash balance is negative</AlertTitle>
-          <AlertDescription>
-            A short position closed for more than the cash it reserved. That is
-            the risk shorting carries — price has no ceiling. You cannot open
-            new positions until the balance recovers.
-          </AlertDescription>
+          <AlertTitle>{t('portfolio.negativeTitle')}</AlertTitle>
+          <AlertDescription>{t('portfolio.negativeBody')}</AlertDescription>
         </Alert>
       )}
 
       {positions.error && (
         <Alert variant="destructive">
-          <AlertTitle>Could not load positions</AlertTitle>
+          <AlertTitle>{t('portfolio.loadError')}</AlertTitle>
           <AlertDescription>{positions.error}</AlertDescription>
         </Alert>
       )}
 
       <Tabs defaultValue="open">
         <TabsList>
-          <TabsTrigger value="open">Open ({positions.open.length})</TabsTrigger>
+          <TabsTrigger value="open">
+            {t('portfolio.tabOpen', { count: positions.open.length })}
+          </TabsTrigger>
           <TabsTrigger value="closed">
-            Closed ({positions.closed.length})
+            {t('portfolio.tabClosed', { count: positions.closed.length })}
           </TabsTrigger>
         </TabsList>
 
@@ -257,19 +259,19 @@ export function Portfolio() {
           {positions.loading ? (
             <Skeleton className="h-32 w-full" />
           ) : positions.open.length === 0 ? (
-            <EmptyState message="No open positions. Open one from the Markets page." />
+            <EmptyState message={t('portfolio.emptyOpen')} />
           ) : (
             <Card>
               <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Direction</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Entry</TableHead>
-                      <TableHead className="text-right">Mark</TableHead>
-                      <TableHead className="text-right">P&amp;L</TableHead>
+                      <TableHead>{t('common.asset')}</TableHead>
+                      <TableHead>{t('common.direction')}</TableHead>
+                      <TableHead className="text-end">{t('common.quantity')}</TableHead>
+                      <TableHead className="text-end">{t('common.entry')}</TableHead>
+                      <TableHead className="text-end">{t('portfolio.mark')}</TableHead>
+                      <TableHead className="text-end">{t('portfolio.pnl')}</TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -304,29 +306,33 @@ export function Portfolio() {
                                   : 'secondary'
                               }
                             >
-                              {position.direction}
+                              {t(
+                                position.direction === 'LONG'
+                                  ? 'common.long'
+                                  : 'common.short',
+                              )}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {position.quantity}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {position.entryPrice.toFixed(decimals)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {mark === null ? (
                               quotesLoading ? (
-                                <Skeleton className="ml-auto h-4 w-16" />
+                                <Skeleton className="ms-auto h-4 w-16" />
                               ) : (
                                 <span className="text-muted-foreground">
-                                  unavailable
+                                  {t('common.unavailable')}
                                 </span>
                               )
                             ) : (
                               mark.toFixed(decimals)
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             {pnl === null ? (
                               <span className="text-muted-foreground">—</span>
                             ) : (
@@ -338,14 +344,16 @@ export function Portfolio() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             <Button
                               size="sm"
                               variant="outline"
                               disabled={mark === null || closing !== null}
                               onClick={() => void handleClose(position)}
                             >
-                              {closing === position.id ? 'Closing…' : 'Close'}
+                              {closing === position.id
+                                ? t('common.closing')
+                                : t('common.close')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -362,19 +370,19 @@ export function Portfolio() {
           {positions.loading ? (
             <Skeleton className="h-32 w-full" />
           ) : positions.closed.length === 0 ? (
-            <EmptyState message="Nothing closed yet." />
+            <EmptyState message={t('portfolio.emptyClosed')} />
           ) : (
             <Card>
               <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Direction</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Entry</TableHead>
-                      <TableHead className="text-right">Exit</TableHead>
-                      <TableHead className="text-right">P&amp;L</TableHead>
+                      <TableHead>{t('common.asset')}</TableHead>
+                      <TableHead>{t('common.direction')}</TableHead>
+                      <TableHead className="text-end">{t('common.quantity')}</TableHead>
+                      <TableHead className="text-end">{t('common.entry')}</TableHead>
+                      <TableHead className="text-end">{t('common.exit')}</TableHead>
+                      <TableHead className="text-end">{t('portfolio.pnl')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -394,18 +402,24 @@ export function Portfolio() {
                             {asset?.ticker ?? '—'}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{position.direction}</Badge>
+                            <Badge variant="outline">
+                              {t(
+                                position.direction === 'LONG'
+                                  ? 'common.long'
+                                  : 'common.short',
+                              )}
+                            </Badge>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {position.quantity}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {position.entryPrice.toFixed(decimals)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-end tabular-nums">
                             {exit.toFixed(decimals)}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             <SignedValue value={pnl} decimals={2} />
                           </TableCell>
                         </TableRow>

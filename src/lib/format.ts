@@ -1,3 +1,8 @@
+/**
+ * Deliberately en-US in every language: he-IL wraps USD in invisible RTL marks
+ * (U+200F) that reorder text when a price sits inside a sentence. Dates are
+ * localised; money is not.
+ */
 const usdFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',

@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useTranslation } from '@/hooks/useTranslation'
 import { balanceReading } from '@/lib/gann-overlay'
 import type { GannSignal } from '@/types/gann'
 
@@ -37,12 +38,14 @@ function formatLevel(value: number, decimals: number): string {
   })
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+function useFormatDate() {
+  const { locale } = useTranslation()
+  return (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
 }
 
 export function GannSignalPanel({
@@ -52,11 +55,14 @@ export function GannSignalPanel({
   stale,
   decimals,
 }: GannSignalPanelProps) {
+  const { t } = useTranslation()
+  const formatDate = useFormatDate()
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Gann analysis</CardTitle>
+          <CardTitle className="text-lg">{t('gann.title')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           <Skeleton className="h-5 w-48" />
@@ -69,7 +75,7 @@ export function GannSignalPanel({
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Could not load Gann signals</AlertTitle>
+        <AlertTitle>{t('gann.loadError')}</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     )
@@ -79,14 +85,11 @@ export function GannSignalPanel({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Gann analysis</CardTitle>
-          <CardDescription>No signal cached for this asset yet.</CardDescription>
+          <CardTitle className="text-lg">{t('gann.title')}</CardTitle>
+          <CardDescription>{t('gann.noSignalTitle')}</CardDescription>
         </CardHeader>
         <CardContent className="text-muted-foreground flex flex-col gap-2 text-sm">
-          <p>
-            Signals are computed by the Python engine and cached in the
-            database. Run it to populate this panel:
-          </p>
+          <p>{t('gann.noSignalBody')}</p>
           <code className="bg-muted text-foreground rounded-md px-2 py-1 text-xs">
             python -m gann.refresh
           </code>
@@ -109,15 +112,17 @@ export function GannSignalPanel({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="text-lg">Gann analysis</CardTitle>
+            <CardTitle className="text-lg">{t('gann.title')}</CardTitle>
             <div className="flex items-center gap-2">
-              {stale && <Badge variant="outline">Stale</Badge>}
+              {stale && <Badge variant="outline">{t('gann.stale')}</Badge>}
               <Badge variant="secondary">{payload.timeframe}</Badge>
             </div>
           </div>
           <CardDescription>
-            Computed {formatDate(signal.calculatedAt)} from{' '}
-            {payload.timeframe} candles.
+            {t('gann.computedOn', {
+              date: formatDate(signal.calculatedAt),
+              timeframe: payload.timeframe,
+            })}
           </CardDescription>
         </CardHeader>
 
@@ -125,26 +130,24 @@ export function GannSignalPanel({
           {balance && (
             <div className="flex flex-col gap-1">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Balance line (1x1)
+                {t('gann.balanceHeading')}
               </span>
               <p>
-                The 1x1 sits at{' '}
-                <span className="font-medium tabular-nums">
-                  {formatLevel(balance.angle.current_price, decimals)}
-                </span>
-                , and price is{' '}
-                <span className="font-medium">
-                  {balance.above ? 'above' : 'below'}
-                </span>{' '}
-                it. Gann read price above its own 1x1 as strength and below as
-                weakness.
+                {t('gann.balanceBody', {
+                  value: formatLevel(balance.angle.current_price, decimals),
+                  side: balance.above ? t('gann.above') : t('gann.below'),
+                })}
               </p>
               {payload.fan_anchor && (
                 <p className="text-muted-foreground text-xs">
-                  Fan drawn from the{' '}
-                  {payload.fan_anchor.kind === 'LOW' ? 'low' : 'high'} of{' '}
-                  {formatLevel(payload.fan_anchor.price, decimals)} on{' '}
-                  {formatDate(payload.fan_anchor.time)}.
+                  {t('gann.fanAnchor', {
+                    kind:
+                      payload.fan_anchor.kind === 'LOW'
+                        ? t('gann.anchorLow')
+                        : t('gann.anchorHigh'),
+                    price: formatLevel(payload.fan_anchor.price, decimals),
+                    date: formatDate(payload.fan_anchor.time),
+                  })}
                 </p>
               )}
             </div>
@@ -153,7 +156,7 @@ export function GannSignalPanel({
           {payload.cycles.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                Time cycles
+                {t('gann.cyclesHeading')}
               </span>
               <ul className="flex flex-col gap-1">
                 {payload.cycles.map((cycle) => (
@@ -163,14 +166,15 @@ export function GannSignalPanel({
                   >
                     <CalendarClock className="text-muted-foreground size-4 shrink-0" />
                     <span>
-                      <span className="font-medium tabular-nums">
-                        {cycle.length_bars} bars
-                      </span>{' '}
-                      between {cycle.anchor_kind.toLowerCase()}s, seen{' '}
-                      {cycle.occurrences} times — next due{' '}
-                      <span className="font-medium">
-                        {formatDate(cycle.projected_time)}
-                      </span>
+                      {t('gann.cycleLine', {
+                        bars: cycle.length_bars,
+                        kind:
+                          cycle.anchor_kind === 'HIGH'
+                            ? t('gann.cycleHighs')
+                            : t('gann.cycleLows'),
+                        count: cycle.occurrences,
+                        date: formatDate(cycle.projected_time),
+                      })}
                     </span>
                   </li>
                 ))}
@@ -181,19 +185,15 @@ export function GannSignalPanel({
           {payload.notes.map((note) => (
             <Alert key={note}>
               <Info className="size-4" />
-              <AlertTitle>Worth knowing</AlertTitle>
+              <AlertTitle>{t('gann.noteTitle')}</AlertTitle>
               <AlertDescription>{note}</AlertDescription>
             </Alert>
           ))}
 
           <Alert>
             <TriangleAlert className="size-4" />
-            <AlertTitle>This is not a forecast</AlertTitle>
-            <AlertDescription>
-              Gann levels are geometry drawn from past pivots. They describe
-              where price has turned before, not where it will turn. Practise
-              with virtual money.
-            </AlertDescription>
+            <AlertTitle>{t('gann.disclaimerTitle')}</AlertTitle>
+            <AlertDescription>{t('gann.disclaimerBody')}</AlertDescription>
           </Alert>
         </CardContent>
       </Card>
@@ -202,20 +202,20 @@ export function GannSignalPanel({
           as values and not only as lines. */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Square of Nine levels</CardTitle>
+          <CardTitle className="text-base">{t('gann.levelsTitle')}</CardTitle>
           <CardDescription>
-            Turns of the spiral from{' '}
-            {formatLevel(payload.square_of_nine_anchor, decimals)}, nearest
-            first.
+            {t('gann.levelsSubtitle', {
+              anchor: formatLevel(payload.square_of_nine_anchor, decimals),
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Turn</TableHead>
-                <TableHead className="text-right">Resistance</TableHead>
-                <TableHead className="text-right">Support</TableHead>
+                <TableHead>{t('gann.turn')}</TableHead>
+                <TableHead className="text-end">{t('gann.resistance')}</TableHead>
+                <TableHead className="text-end">{t('gann.support')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -226,10 +226,10 @@ export function GannSignalPanel({
                     <TableCell className="text-muted-foreground tabular-nums">
                       {resistance.degrees}&deg;
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-end tabular-nums">
                       {formatLevel(resistance.price, decimals)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-end tabular-nums">
                       {support ? formatLevel(support.price, decimals) : '—'}
                     </TableCell>
                   </TableRow>

@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
+import { useTranslation } from '@/hooks/useTranslation'
 import { formatUsd } from '@/lib/format'
 import { openPosition } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
@@ -42,6 +43,7 @@ export function TradePanel({
   onTraded,
 }: TradePanelProps) {
   const { portfolio, refreshAccount } = useAuth()
+  const { t } = useTranslation()
   const [quantityText, setQuantityText] = useState('1')
   const [pending, setPending] = useState<TradeDirection | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -68,14 +70,16 @@ export function TradePanel({
         price,
       })
       toast.success(
-        `${direction === 'LONG' ? 'Bought' : 'Shorted'} ${quantity} ${asset.ticker} at ${price.toFixed(decimals)}`,
+        t(direction === 'LONG' ? 'trade.boughtToast' : 'trade.shortedToast', {
+          quantity,
+          ticker: asset.ticker,
+          price: price.toFixed(decimals),
+        }),
       )
       await refreshAccount()
       onTraded()
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : 'Could not place the trade.',
-      )
+      setError(caught instanceof Error ? caught.message : t('trade.failed'))
     } finally {
       setPending(null)
     }
@@ -84,17 +88,15 @@ export function TradePanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Practice trade</CardTitle>
+        <CardTitle className="text-lg">{t('trade.title')}</CardTitle>
         <CardDescription>
-          {asset
-            ? `Virtual money only. Filled at the last price shown above.`
-            : 'Select an asset to trade.'}
+          {asset ? t('trade.subtitleReady') : t('trade.subtitleEmpty')}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="trade-quantity">Quantity</Label>
+          <Label htmlFor="trade-quantity">{t('common.quantity')}</Label>
           <Input
             id="trade-quantity"
             type="number"
@@ -109,17 +111,17 @@ export function TradePanel({
 
         <dl className="text-sm">
           <div className="flex items-center justify-between py-1">
-            <dt className="text-muted-foreground">Price</dt>
+            <dt className="text-muted-foreground">{t('common.price')}</dt>
             <dd className="tabular-nums">
               {price ? price.toFixed(decimals) : '—'}
             </dd>
           </div>
           <div className="flex items-center justify-between py-1">
-            <dt className="text-muted-foreground">Cash required</dt>
+            <dt className="text-muted-foreground">{t('trade.cashRequired')}</dt>
             <dd className="tabular-nums">{cost ? formatUsd(cost) : '—'}</dd>
           </div>
           <div className="flex items-center justify-between border-t py-1">
-            <dt className="text-muted-foreground">Balance after</dt>
+            <dt className="text-muted-foreground">{t('trade.balanceAfter')}</dt>
             <dd className="tabular-nums">
               {cost ? formatUsd(balance - cost) : formatUsd(balance)}
             </dd>
@@ -128,13 +130,15 @@ export function TradePanel({
 
         {quantityText !== '' && !quantityValid && (
           <p className="text-destructive text-xs">
-            Enter a quantity greater than zero.
+            {t('trade.quantityInvalid')}
           </p>
         )}
         {quantityValid && cost > 0 && !affordable && (
           <p className="text-destructive text-xs">
-            That costs {formatUsd(cost)}, more than the {formatUsd(balance)}{' '}
-            available.
+            {t('trade.tooExpensive', {
+              cost: formatUsd(cost),
+              balance: formatUsd(balance),
+            })}
           </p>
         )}
 
@@ -150,7 +154,7 @@ export function TradePanel({
             disabled={!canTrade || pending !== null}
           >
             <TrendingUp className="size-4" />
-            {pending === 'LONG' ? 'Buying…' : 'Buy (Long)'}
+            {pending === 'LONG' ? t('trade.buying') : t('trade.buy')}
           </Button>
           <Button
             variant="secondary"
@@ -158,25 +162,21 @@ export function TradePanel({
             disabled={!canTrade || pending !== null}
           >
             <TrendingDown className="size-4" />
-            {pending === 'SHORT' ? 'Shorting…' : 'Sell (Short)'}
+            {pending === 'SHORT' ? t('trade.selling') : t('trade.sell')}
           </Button>
         </div>
 
         {error && (
           <Alert variant="destructive">
-            <AlertTitle>Trade rejected</AlertTitle>
+            <AlertTitle>{t('trade.rejected')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         <Alert>
           <TriangleAlert className="size-4" />
-          <AlertTitle>Shorting can lose more than it costs</AlertTitle>
-          <AlertDescription>
-            A long can only fall to zero. A short loses as price rises, and
-            price has no ceiling — so a short can end up costing more than the
-            cash it reserved, and the balance can go negative.
-          </AlertDescription>
+          <AlertTitle>{t('trade.shortWarningTitle')}</AlertTitle>
+          <AlertDescription>{t('trade.shortWarningBody')}</AlertDescription>
         </Alert>
       </CardContent>
     </Card>

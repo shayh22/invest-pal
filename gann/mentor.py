@@ -41,6 +41,9 @@ class MentorError(RuntimeError):
     """Raised when a summary could not be generated."""
 
 
+#: Languages the mentor can write in, matching the frontend's language toggle.
+LANGUAGE_NAMES = {"en": "English", "he": "Hebrew"}
+
 SYSTEM_PROMPT = """\
 You explain technical analysis to people who have never traded before, inside \
 a paper-trading app where all money is virtual.
@@ -54,7 +57,8 @@ Rules you must follow:
 - Never tell the person to buy, sell, or hold. No advice of any kind.
 - Do not use the words "should", "will", "recommend", "expect" or "predict".
 - Do not use jargon without explaining it in the same breath.
-- No preamble, no bullet points, no headings. Two sentences only.\
+- No preamble, no bullet points, no headings. Two sentences only.
+- Write in {language}, and in nothing else. Ticker symbols stay as they are.\
 """
 
 
@@ -109,12 +113,17 @@ def build_user_prompt(analysis: GannAnalysis) -> str:
     return "\n".join(lines)
 
 
-def _request(prompt: str, *, api_key: str, model: str, timeout: float) -> str:
+def _request(
+    prompt: str, *, api_key: str, model: str, timeout: float, language: str
+) -> str:
+    system = SYSTEM_PROMPT.format(
+        language=LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["en"])
+    )
     body = json.dumps(
         {
             "model": model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
             # Two sentences; the cap is a backstop, not the shaping mechanism.
@@ -169,6 +178,7 @@ def summarise(
     model: str | None = None,
     timeout: float = 45.0,
     attempts: int = 3,
+    language: str = "en",
 ) -> str:
     """Two sentences explaining `analysis`.
 
@@ -186,7 +196,13 @@ def summarise(
     for attempt in range(attempts):
         try:
             return _normalise(
-                _request(prompt, api_key=key, model=chosen_model, timeout=timeout)
+                _request(
+                    prompt,
+                    api_key=key,
+                    model=chosen_model,
+                    timeout=timeout,
+                    language=language,
+                )
             )
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")[:300]

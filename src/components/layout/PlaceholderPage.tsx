@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useTranslation } from '@/hooks/useTranslation'
 
 interface PlaceholderPageProps {
   title: string
@@ -18,6 +19,8 @@ export function PlaceholderPage({
   phase,
   description,
 }: PlaceholderPageProps) {
+  const { t } = useTranslation()
+
   return (
     <Card>
       <CardHeader>
@@ -25,7 +28,7 @@ export function PlaceholderPage({
           {phase}
         </Badge>
         <CardTitle className="text-2xl">{title}</CardTitle>
-        <CardDescription>Not built yet.</CardDescription>
+        <CardDescription>{t('placeholder.notBuilt')}</CardDescription>
       </CardHeader>
       <CardContent className="text-muted-foreground text-sm">
         {description}
