@@ -43,6 +43,7 @@ the sign-in form.
 | `npx supabase start` | Run the whole backend locally (needs Docker) |
 | `python -m gann.refresh` | Compute Gann signals and cache them |
 | `pytest -q` | Run the Gann engine's test suite |
+| `npm run sanity` | End-to-end checks against a running deployment |
 
 ## Project structure
 
@@ -216,6 +217,26 @@ one-directional.
 The AI mentor writes in either language: `python -m gann.refresh --lang he`.
 Summaries are cached per signal, not per user, so the language of the panel note
 is whichever the refresh job last ran in.
+
+## Sanity checks
+
+The unit suites prove the pieces work; `scripts/sanity.mjs` proves a deployment
+is wired together — the site serves every route, the market data proxy reaches
+Yahoo and rejects a traversal attempt, signup provisions $100,000, a position
+opens and settles for the right amount, a second settlement is refused, and row
+level security still blocks a client editing its own balance. It also checks the
+browser bundle carries no server-side key.
+
+```bash
+BASE_URL=https://invest-pal.vercel.app \
+SUPABASE_URL=https://<ref>.supabase.co \
+SUPABASE_ANON_KEY=sb_publishable_... \
+npm run sanity
+```
+
+The database section is skipped when the Supabase variables are absent, so the
+site and proxy checks still run against any deployment. Exits non-zero on the
+first failure.
 
 ## Deploying
 
