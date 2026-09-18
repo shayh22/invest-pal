@@ -73,6 +73,9 @@ export interface GannSignal {
   timeframe: string
   calculatedAt: string
   expiresAt: string
+  /** Deprecated single-language summary; holds English. */
   aiSummary: string | null
+  /** Summaries keyed by language code, written by the refresh job. */
+  aiSummaries: Record<string, string>
   payload: GannPayload
 }

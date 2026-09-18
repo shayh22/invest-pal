@@ -15,7 +15,9 @@ export async function fetchLatestSignal(
 ): Promise<GannSignal | null> {
   const { data, error } = await client
     .from('gann_signals')
-    .select('id, asset_id, timeframe, payload, ai_summary, calculated_at, expires_at')
+    .select(
+      'id, asset_id, timeframe, payload, ai_summary, ai_summaries, calculated_at, expires_at',
+    )
     .eq('asset_id', assetId)
     .eq('timeframe', timeframe)
     .order('calculated_at', { ascending: false })
@@ -32,6 +34,7 @@ export async function fetchLatestSignal(
     calculatedAt: data.calculated_at,
     expiresAt: data.expires_at,
     aiSummary: data.ai_summary,
+    aiSummaries: (data.ai_summaries ?? {}) as Record<string, string>,
     payload: data.payload as GannPayload,
   }
 }

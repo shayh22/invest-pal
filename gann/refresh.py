@@ -51,8 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--lang",
         default="en",
-        choices=("en", "he"),
-        help="language for the mentor summary (default en)",
+        help="comma-separated mentor languages, e.g. en,he (default en)",
     )
     parser.add_argument(
         "--no-ai",
@@ -73,7 +72,7 @@ def refresh(
     range_: str = "2y",
     ttl_hours: float = 6.0,
     symbols: list[str] | None = None,
-    language: str = "en",
+    languages: tuple[str, ...] = ("en",),
     no_ai: bool = False,
     dry_run: bool = False,
 ) -> int:
@@ -113,25 +112,49 @@ def refresh(
         # Note this drops any summary the previous run wrote. That is deliberate
         # — the prices it described have just been replaced, and a note that
         # contradicts the levels on screen is worse than no note at all.
-        ai_summary: str | None = None
+        summaries: dict[str, str] = {}
         if want_summary:
-            try:
-                ai_summary = summarise(analysis, language=language)
-            except MentorError as error:
-                print(f"  {ticker}: no summary — {error}", file=sys.stderr)
+            for language in languages:
+                try:
+                    summaries[language] = summarise(analysis, language=language)
+                except MentorError as error:
+                    print(
+                        f"  {ticker}: no {language} summary — {error}",
+                        file=sys.stderr,
+                    )
+                    continue
+
+                # The prompt forbids advice and prediction. A model can still
+                # slip, and a summary beside a Buy button is the wrong place to
+                # find out quietly — so say so rather than storing it silently.
+                slipped = [
+                    word
+                    for word in ("should", "will ", "recommend", "expect", "predict")
+                    if word in summaries[language].lower()
+                ]
+                if slipped:
+                    print(
+                        f"  {ticker}: WARNING {language} summary used {slipped}"
+                        " — review it",
+                        file=sys.stderr,
+                    )
+
+        # ai_summary is the deprecated single-language column; keep it holding
+        # English so anything still reading it stays correct.
+        ai_summary = summaries.get("en")
 
         summary = (
             f"{len(candles)} candles, "
             f"{len(analysis.angles)} angles, "
             f"{len(analysis.square_of_nine)} levels, "
             f"{len(analysis.cycles)} cycles"
-            f"{', summarised' if ai_summary else ''}"
+            f"{', summarised ' + '+'.join(summaries) if summaries else ''}"
         )
 
         if dry_run:
             print(f"  {ticker}: {summary} (dry run)")
-            if ai_summary:
-                print(f"    mentor: {ai_summary}")
+            for language, text in summaries.items():
+                print(f"    mentor[{language}]: {text}")
             print(json.dumps(payload, indent=2)[:400])
             continue
 
@@ -145,6 +168,7 @@ def refresh(
                     "timeframe": timeframe,
                     "payload": payload,
                     "ai_summary": ai_summary,
+                    "ai_summaries": summaries,
                     "expires_at": expires_at.isoformat(),
                 }
             )
@@ -168,7 +192,9 @@ def main(argv: list[str] | None = None) -> int:
             range_=args.range_,
             ttl_hours=args.ttl_hours,
             symbols=args.symbols,
-            language=args.lang,
+            languages=tuple(
+                lang.strip() for lang in args.lang.split(",") if lang.strip()
+            ),
             no_ai=args.no_ai,
             dry_run=args.dry_run,
         )

@@ -323,9 +323,17 @@ is a few cents a month.
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...
-python -m gann.refresh              # now writes summaries too
-python -m gann.refresh --no-ai      # skip them
+python -m gann.refresh                  # English summaries
+python -m gann.refresh --lang en,he     # both languages
+python -m gann.refresh --no-ai          # skip them
 ```
+
+Summaries live in `gann_signals.ai_summaries`, a jsonb map keyed by language
+code (migration `0003`), and the panel picks the active language with an English
+fallback. The older single-language `ai_summary` column is kept holding English.
+
+About $0.007 per summary on `anthropic/claude-opus-5`, so both languages across
+eight assets is roughly **$0.11 a run**.
 
 Without a key the signals are still computed and cached, just without the
 summary, and the panel says how to get one.
@@ -354,4 +362,9 @@ Buy button will otherwise be read as a tip.
 
 A failed summary never costs the signal, and it drops the previous one rather
 than keeping it: the prices that note described have just been replaced, and a
-note contradicting the levels on screen is worse than no note.
+note contradicting the levels on screen is worse than no note. One language
+failing does not cost the others.
+
+An empty completion — `finish_reason: "stop"` with no content — happens
+occasionally and is retried, because the same prompt returns a good answer on
+the next attempt. It was treated as terminal until a real run hit it.

@@ -70,7 +70,7 @@ function formatPrice(value: number, currency: string, decimals: number): string 
 
 export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const [symbol, setSymbol] = useState<string | null>(null)
   const [range, setRange] = useState<ChartRange>('6mo')
   const [showAngles, setShowAngles] = useState(true)
@@ -319,7 +319,14 @@ export function Markets() {
           asset={selectedAsset}
           price={quote?.price ?? null}
           decimals={decimals}
-          mentorSummary={gann.signal?.aiSummary ?? null}
+          mentorSummary={
+            // Prefer the active language; fall back to English, then to the
+            // deprecated single-language column.
+            gann.signal?.aiSummaries?.[language] ??
+            gann.signal?.aiSummaries?.en ??
+            gann.signal?.aiSummary ??
+            null
+          }
           mentorLoading={gann.loading}
           hasSignal={gann.signal !== null}
           onTraded={positions.reload}
