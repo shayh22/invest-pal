@@ -372,18 +372,29 @@ Summaries live in `gann_signals.ai_summaries`, a jsonb map keyed by language
 code (migration `0003`), and the panel picks the active language with an English
 fallback. The older single-language `ai_summary` column is kept holding English.
 
-About $0.007 per summary on `anthropic/claude-opus-5`, so both languages across
-eight assets is roughly **$0.11 a run**.
+About $0.00085 per summary on the default model, so both languages across eight
+assets is roughly **$0.014 a run** — about **$0.40 a month** on the daily
+schedule in `.github/workflows/refresh-gann-signals.yml`.
 
 Without a key the signals are still computed and cached, just without the
 summary, and the panel says how to get one.
 
 ### Model
 
-Defaults to `anthropic/claude-opus-5`. Note these are OpenRouter's slugs, not
-Anthropic's — `anthropic/claude-opus-5`, not `claude-opus-5`. Override with
-`OPENROUTER_MODEL`; a smaller model is a reasonable trade here, since the task
-is rephrasing numbers rather than reasoning about them.
+Defaults to `anthropic/claude-haiku-4.5`. Note these are OpenRouter's slugs, not
+Anthropic's — `anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`. Override with
+`OPENROUTER_MODEL`.
+
+A small model is the right tool here: the engine has already done the reasoning,
+and the prompt hands over a handful of numbers to rephrase. Measured across all
+eight seeded assets in both languages, the default produced 16 clean summaries
+out of 16 for $0.0136 a run, against $0.1124 for the largest model.
+
+Free models were tried and rejected. Across 18 calls to three of OpenRouter's
+free-tier models, one usable summary came back; the rest were 429s and empty
+completions. The cheapest paid models are cheaper still, but the ones tested
+answered a Hebrew prompt in English, which fails half of what this app asks for.
+If you only need English, they are worth revisiting.
 
 If you would rather call Anthropic directly and skip OpenRouter's margin,
 `_request` in `gann/mentor.py` is the only function that needs replacing.
