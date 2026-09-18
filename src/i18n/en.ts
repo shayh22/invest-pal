@@ -17,6 +17,7 @@ export const en = {
   'common.close': 'Close',
   'common.closing': 'Closing…',
   'common.quantity': 'Quantity',
+  'common.cash': 'Cash',
   'common.price': 'Price',
   'common.asset': 'Asset',
   'common.direction': 'Direction',
@@ -182,6 +183,12 @@ export const en = {
   'confirm.cancel': 'Cancel',
   'confirm.buyTitle': 'Confirm this buy',
   'confirm.shortTitle': 'Confirm this short sale',
+  'confirm.sellTitle': 'Confirm this sale',
+  'confirm.coverTitle': 'Confirm this cover',
+  'confirm.reduceBody':
+    'This sells {quantity} {ticker} out of what you hold and books the result at the price below.',
+  'confirm.sellAction': 'Sell {quantity} {ticker}',
+  'confirm.coverAction': 'Cover {quantity} {ticker}',
   'confirm.openBody':
     'This fills {quantity} {ticker} immediately at the price below. Undoing it means a second trade, at a second set of costs.',
   'confirm.buyAction': 'Buy {quantity} {ticker}',
@@ -199,26 +206,53 @@ export const en = {
   'trade.subtitleReady': 'Virtual money only. Filled at the last price shown above.',
   'trade.subtitleEmpty': 'Select an asset to trade.',
   'trade.estimatedFill': 'Estimated fill',
-  'trade.spreadCost': 'Spread',
   'trade.commission': 'Commission',
   'trade.cashRequired': 'Cash required',
   'trade.balanceAfter': 'Balance after',
-  'trade.buy': 'Buy (Long)',
-  'trade.sell': 'Sell (Short)',
+  'trade.buy': 'Buy',
+  'trade.sell': 'Sell',
+  'trade.cover': 'Buy to cover',
+  'trade.sellShort': 'Sell short',
   'trade.buying': 'Buying…',
-  'trade.selling': 'Shorting…',
+  'trade.selling': 'Selling…',
+  'trade.youHold': 'You hold',
+  'trade.holdNothing': 'nothing',
+  'trade.holdLong': '{quantity} long',
+  'trade.holdShort': '{quantity} short',
+  'trade.useAll': 'Use all {quantity}',
+  'trade.nothingToSell':
+    'You do not own any {ticker}, so there is nothing to sell.',
+  'trade.shortingOff':
+    'Short selling is switched off for this account, so the short cannot be made larger. Buying to cover still works.',
+  'trade.moreThanHeld': 'You hold {held} {ticker}. Selling more is not possible.',
+  'trade.allowShorting': 'Allow short selling',
+  'trade.allowShortingBody':
+    'Sell an asset you do not own, betting it falls. A real broker needs a margin agreement for this, and the loss is not capped.',
+  'trade.turnShortingOff': 'Switch short selling off',
   'trade.quantityInvalid': 'Enter a quantity greater than zero.',
   'trade.tooExpensive':
     'That costs {cost}, more than the {balance} available.',
   'trade.rejected': 'Trade rejected',
   'trade.failed': 'Could not place the trade.',
   'trade.boughtToast': 'Bought {quantity} {ticker} at {price}',
-  'trade.shortedToast': 'Shorted {quantity} {ticker} at {price}',
+  'trade.soldToast': 'Sold {quantity} {ticker} at {price}',
   'trade.costsNote':
     'You buy at the ask and sell at the bid, and pay commission on both fills — so a round trip at an unchanged price loses money. That is true of every real broker.',
   'trade.shortWarningTitle': 'Shorting can lose more than it costs',
   'trade.shortWarningBody':
     'A long can only fall to zero. A short loses as price rises, and price has no ceiling — so a short can end up costing more than the cash it reserved, and the balance can go negative.',
+
+  // ----- starting over -----
+  'reset.button': 'Start over',
+  'reset.title': 'Start this account over?',
+  'reset.body':
+    'Every trade goes: open positions and closed history alike, with nothing settled and nothing carried over. There is no undo.',
+  'reset.balanceLabel': 'Start again with',
+  'reset.balanceHint':
+    'A smaller account is the sharper lesson: on $100 the $0.50 minimum commission is half a percent of everything you have, per fill.',
+  'reset.action': 'Start over with {amount}',
+  'reset.doneToast': 'Account reset. Nothing held, nothing owed.',
+  'reset.error': 'Could not reset the account.',
 
   // ----- portfolio -----
   'portfolio.title': 'Portfolio',

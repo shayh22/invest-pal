@@ -9,6 +9,7 @@ import type {
   AssetType,
   ExperienceLevel,
   TradeDirection,
+  TradeSide,
   TransactionStatus,
 } from '@/types'
 
@@ -41,12 +42,14 @@ export interface Database {
           user_id: string
           cash_balance: number
           starting_balance: number
+          short_selling_enabled: boolean
           created_at: string
         }
         Insert: {
           user_id: string
           cash_balance?: number
           starting_balance?: number
+          short_selling_enabled?: boolean
         }
         Update: { cash_balance?: number }
         Relationships: []
@@ -128,8 +131,38 @@ export interface Database {
     Views: Record<never, never>
     Functions: {
       /**
+       * Buy or sell, adjusting the single open position for that asset.
+       *
+       * The rules about what may be sold live here, not in the client: an
+       * account cannot sell what it does not hold unless short selling is
+       * switched on, and an order that would cross through zero is refused
+       * rather than flipped. See supabase/migrations/0006_netting_and_reset.sql.
+       */
+      trade: {
+        Args: {
+          p_asset_id: string
+          p_side: TradeSide
+          p_quantity: number
+          p_price: number
+        }
+        Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /** Allow or forbid selling an asset this account does not hold. */
+      set_short_selling: {
+        Args: { p_enabled: boolean }
+        Returns: Database['public']['Tables']['portfolios']['Row']
+      }
+      /**
+       * Delete every trade and re-fund the account. Omitting the amount keeps
+       * whatever it was last funded with.
+       */
+      reset_portfolio: {
+        Args: { p_starting_balance?: number }
+        Returns: Database['public']['Tables']['portfolios']['Row']
+      }
+      /**
        * Opens a position atomically: reserves the cash and writes the trade in
-       * one transaction. See supabase/migrations/0002_trading_engine.sql.
+       * one transaction. A thin wrapper over trade() since migration 0006.
        */
       open_position: {
         Args: {

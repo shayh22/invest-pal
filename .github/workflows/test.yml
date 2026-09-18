@@ -46,7 +46,8 @@ jobs:
                    supabase/migrations/0002_trading_engine.sql \
                    supabase/migrations/0003_mentor_languages.sql \
                    supabase/migrations/0004_execution_costs.sql \
-                   supabase/migrations/0005_starting_balance.sql; do
+                   supabase/migrations/0005_starting_balance.sql \
+                   supabase/migrations/0006_netting_and_reset.sql; do
             psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Trading engine tests
@@ -57,6 +58,12 @@ jobs:
 
       - name: Starting balance tests
         run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/starting_balance_test.sql
+
+      # Runs last: its final section re-applies migration 0006 to exercise the
+      # netting of legacy rows, so it leaves the schema rebuilt rather than as
+      # the earlier suites found it.
+      - name: Netting and reset tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/netting_test.sql
 
   engine:
     runs-on: ubuntu-latest

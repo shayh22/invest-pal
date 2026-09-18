@@ -1,12 +1,23 @@
 import type { InvestPalClient } from '@/services/supabase'
-import type { AssetType, TradeDirection, TradingCosts, Transaction } from '@/types'
+import type {
+  AssetType,
+  TradeDirection,
+  TradeSide,
+  TradingCosts,
+  Transaction,
+} from '@/types'
 
 /**
- * Trading goes through two Postgres functions, never through direct table
- * writes: moving the cash and recording the trade have to commit together, and
- * the client's INSERT/UPDATE policies were removed in migration 0002 so this is
- * the only path. Row locking inside the functions is what stops a double-spend
- * or a double-settle.
+ * Trading goes through Postgres functions, never through direct table writes:
+ * moving the cash and recording the trade have to commit together, and the
+ * client's INSERT/UPDATE policies were removed in migration 0002 so this is the
+ * only path. Row locking inside the functions is what stops a double-spend or a
+ * double-settle.
+ *
+ * From migration 0006 there is one open position per asset, and trade() moves
+ * it. The rules about what may be sold live in the database, not here: this
+ * module disables buttons to save a round trip, but the refusal that matters is
+ * the one that comes back from Postgres.
  */
 
 interface TransactionRow {
@@ -52,6 +63,53 @@ function toTransaction(row: TransactionRow): Transaction {
  */
 function tradingError(message: string | undefined, fallback: string): Error {
   return new Error(message?.trim() || fallback)
+}
+
+/**
+ * Buy or sell. Adds to the holding, reduces it, or opens one if there is none.
+ *
+ * An order that would cross through zero — selling more than is held, or buying
+ * back more than is short — is refused by the database rather than flipped.
+ */
+export async function trade(
+  client: InvestPalClient,
+  input: { assetId: string; side: TradeSide; quantity: number; price: number },
+): Promise<Transaction> {
+  const { data, error } = await client.rpc('trade', {
+    p_asset_id: input.assetId,
+    p_side: input.side,
+    p_quantity: input.quantity,
+    p_price: input.price,
+  })
+
+  if (error) throw tradingError(error.message, 'Could not place the order.')
+  if (!data) throw new Error('The trade did not return a position.')
+  return toTransaction(data as unknown as TransactionRow)
+}
+
+/** Allow or forbid selling an asset this account does not hold. */
+export async function setShortSelling(
+  client: InvestPalClient,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await client.rpc('set_short_selling', { p_enabled: enabled })
+  if (error) throw tradingError(error.message, 'Could not change the setting.')
+}
+
+/**
+ * Delete every trade and re-fund the account.
+ *
+ * Omitting the amount keeps whatever the account was last funded with. An
+ * amount that is not one of the offered options is refused by the database.
+ */
+export async function resetPortfolio(
+  client: InvestPalClient,
+  startingBalance?: number,
+): Promise<void> {
+  const { error } = await client.rpc('reset_portfolio', {
+    p_starting_balance: startingBalance ?? undefined,
+  })
+  if (error) throw tradingError(error.message, 'Could not reset the account.')
 }
 
 export async function openPosition(

@@ -18,6 +18,7 @@ export const he: Record<TranslationKey, string> = {
   'common.close': 'סגירה',
   'common.closing': 'סוגר…',
   'common.quantity': 'כמות',
+  'common.cash': 'מזומן',
   'common.price': 'מחיר',
   'common.asset': 'נכס',
   'common.direction': 'כיוון',
@@ -183,6 +184,12 @@ export const he: Record<TranslationKey, string> = {
   'confirm.cancel': 'ביטול',
   'confirm.buyTitle': 'אישור קנייה',
   'confirm.shortTitle': 'אישור מכירה בחסר',
+  'confirm.sellTitle': 'אישור מכירה',
+  'confirm.coverTitle': 'אישור כיסוי',
+  'confirm.reduceBody':
+    'הפעולה תמכור {quantity} {ticker} מתוך מה שבחזקתכם ותרשום את התוצאה במחיר שלמטה.',
+  'confirm.sellAction': 'מכרו {quantity} {ticker}',
+  'confirm.coverAction': 'כסו {quantity} {ticker}',
   'confirm.openBody':
     'הפקודה תבוצע מייד על {quantity} {ticker} במחיר שלמטה. ביטול שלה פירושו עסקה שנייה, עם עלויות נוספות.',
   'confirm.buyAction': 'קנו {quantity} {ticker}',
@@ -200,25 +207,51 @@ export const he: Record<TranslationKey, string> = {
   'trade.subtitleReady': 'כסף וירטואלי בלבד. הביצוע במחיר האחרון שמוצג למעלה.',
   'trade.subtitleEmpty': 'בחרו נכס למסחר.',
   'trade.estimatedFill': 'מחיר ביצוע משוער',
-  'trade.spreadCost': 'מרווח',
   'trade.commission': 'עמלה',
   'trade.cashRequired': 'מזומן נדרש',
   'trade.balanceAfter': 'יתרה לאחר מכן',
-  'trade.buy': 'קנייה (לונג)',
-  'trade.sell': 'מכירה (שורט)',
+  'trade.buy': 'קנייה',
+  'trade.sell': 'מכירה',
+  'trade.cover': 'קנייה לכיסוי',
+  'trade.sellShort': 'מכירה בחסר',
   'trade.buying': 'קונה…',
-  'trade.selling': 'פותח שורט…',
+  'trade.selling': 'מוכר…',
+  'trade.youHold': 'בחזקתכם',
+  'trade.holdNothing': 'כלום',
+  'trade.holdLong': '{quantity} בלונג',
+  'trade.holdShort': '{quantity} בשורט',
+  'trade.useAll': 'השתמשו בכל {quantity}',
+  'trade.nothingToSell': 'אין בבעלותכם {ticker}, ולכן אין מה למכור.',
+  'trade.shortingOff':
+    'מכירה בחסר מכובה בחשבון הזה, ולכן אי אפשר להגדיל את השורט. קנייה לכיסוי עדיין אפשרית.',
+  'trade.moreThanHeld': 'בחזקתכם {held} {ticker}. אי אפשר למכור יותר מזה.',
+  'trade.allowShorting': 'אפשרו מכירה בחסר',
+  'trade.allowShortingBody':
+    'מכירת נכס שאינו בבעלותכם, בהימור שהוא יירד. אצל ברוקר אמיתי זה דורש הסכם מרג׳ין, וההפסד אינו מוגבל.',
+  'trade.turnShortingOff': 'כבו מכירה בחסר',
   'trade.quantityInvalid': 'הזינו כמות גדולה מאפס.',
   'trade.tooExpensive': 'העסקה עולה {cost}, יותר מ-{balance} שזמינים.',
   'trade.rejected': 'העסקה נדחתה',
   'trade.failed': 'לא ניתן לבצע את העסקה.',
   'trade.boughtToast': 'נקנו {quantity} {ticker} במחיר {price}',
-  'trade.shortedToast': 'נפתח שורט על {quantity} {ticker} במחיר {price}',
+  'trade.soldToast': 'נמכרו {quantity} {ticker} במחיר {price}',
   'trade.costsNote':
     'קונים במחיר המבוקש ומוכרים במחיר המוצע, ומשלמים עמלה על שני הביצועים — ולכן סיבוב שלם ללא שינוי במחיר מפסיד כסף. כך זה אצל כל ברוקר אמיתי.',
   'trade.shortWarningTitle': 'שורט עלול להפסיד יותר ממה שהוא עולה',
   'trade.shortWarningBody':
     'לונג יכול לרדת לכל היותר לאפס. שורט מפסיד ככל שהמחיר עולה, ולמחיר אין תקרה — ולכן שורט עלול לעלות יותר מהמזומן שהוקצה לו, והיתרה עלולה להפוך לשלילית.',
+
+  // ----- התחלה מחדש -----
+  'reset.button': 'התחלה מחדש',
+  'reset.title': 'להתחיל את החשבון מחדש?',
+  'reset.body':
+    'כל העסקאות נמחקות: גם הפוזיציות הפתוחות וגם ההיסטוריה הסגורה, בלי סגירה ובלי העברה של כלום. אין דרך חזרה.',
+  'reset.balanceLabel': 'להתחיל מחדש עם',
+  'reset.balanceHint':
+    'חשבון קטן הוא השיעור החד יותר: על $100, עמלת המינימום של $0.50 היא חצי אחוז מכל מה שיש לכם, בכל ביצוע.',
+  'reset.action': 'התחילו מחדש עם {amount}',
+  'reset.doneToast': 'החשבון אופס. אין אחזקות ואין חובות.',
+  'reset.error': 'לא ניתן לאפס את החשבון.',
 
   // ----- תיק השקעות -----
   'portfolio.title': 'תיק השקעות',
