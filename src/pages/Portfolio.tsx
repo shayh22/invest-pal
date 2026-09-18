@@ -348,7 +348,98 @@ export function Portfolio() {
           ) : positions.open.length === 0 ? (
             <EmptyState message={t('portfolio.emptyOpen')} />
           ) : (
-            <Card>
+            <>
+              {/* Seven columns do not fit a phone. Below sm each position is a
+                  card instead of a row: an inner scrollbar would have hidden
+                  the result and the Close button off the right edge, which are
+                  the two things worth seeing. */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {positions.open.map((position) => {
+                  const asset = assetById.get(position.assetId)
+                  const mark = markFor(position)
+                  const decimals = decimalsFor(position.entryPrice)
+                  const pnl =
+                    mark === null
+                      ? null
+                      : positionPnl(
+                          position.direction,
+                          position.quantity,
+                          position.entryPrice,
+                          mark,
+                        )
+                  const collateral = positionCollateral(
+                    position.quantity,
+                    position.entryPrice,
+                  )
+                  return (
+                    <Card key={position.id}>
+                      <CardContent className="flex flex-col gap-3 pt-6">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{asset?.ticker ?? '—'}</span>
+                          <Badge
+                            variant={
+                              position.direction === 'LONG' ? 'default' : 'secondary'
+                            }
+                          >
+                            {t(
+                              position.direction === 'LONG'
+                                ? 'common.long'
+                                : 'common.short',
+                            )}
+                          </Badge>
+                          <span className="text-muted-foreground ms-auto text-sm tabular-nums">
+                            {position.quantity}
+                          </span>
+                        </div>
+                        <dl className="text-sm">
+                          <CardRow
+                            label={t('common.entry')}
+                            value={position.entryPrice.toFixed(decimals)}
+                          />
+                          <CardRow
+                            label={t('portfolio.mark')}
+                            value={
+                              mark === null
+                                ? t('common.unavailable')
+                                : mark.toFixed(decimals)
+                            }
+                          />
+                          <div className="flex items-center justify-between border-t py-1">
+                            <dt className="text-muted-foreground">
+                              {t('portfolio.pnl')}
+                            </dt>
+                            <dd>
+                              {pnl === null ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <SignedValue value={pnl} decimals={2} />
+                                  <span className="text-muted-foreground text-xs tabular-nums">
+                                    {formatPercent(pnlPercent(pnl, collateral))}
+                                  </span>
+                                </span>
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          disabled={mark === null || closing !== null}
+                          onClick={() => setConfirmingClose(position)}
+                        >
+                          {closing === position.id
+                            ? t('common.closing')
+                            : t('common.close')}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              <Card className="hidden sm:block">
               <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
@@ -449,7 +540,8 @@ export function Portfolio() {
                   </TableBody>
                 </Table>
               </CardContent>
-            </Card>
+              </Card>
+            </>
           )}
         </TabsContent>
 
@@ -459,7 +551,65 @@ export function Portfolio() {
           ) : positions.closed.length === 0 ? (
             <EmptyState message={t('portfolio.emptyClosed')} />
           ) : (
-            <Card>
+            <>
+              <div className="flex flex-col gap-3 sm:hidden">
+                {positions.closed.map((position) => {
+                  const asset = assetById.get(position.assetId)
+                  const decimals = decimalsFor(position.entryPrice)
+                  const exit = position.exitPrice ?? position.entryPrice
+                  const fees = position.openFee + position.closeFee
+                  const pnl =
+                    positionPnl(
+                      position.direction,
+                      position.quantity,
+                      position.entryPrice,
+                      exit,
+                    ) - fees
+                  return (
+                    <Card key={position.id}>
+                      <CardContent className="flex flex-col gap-3 pt-6">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{asset?.ticker ?? '—'}</span>
+                          <Badge variant="outline">
+                            {t(
+                              position.direction === 'LONG'
+                                ? 'common.long'
+                                : 'common.short',
+                            )}
+                          </Badge>
+                          <span className="text-muted-foreground ms-auto text-sm tabular-nums">
+                            {position.quantity}
+                          </span>
+                        </div>
+                        <dl className="text-sm">
+                          <CardRow
+                            label={t('common.entry')}
+                            value={position.entryPrice.toFixed(decimals)}
+                          />
+                          <CardRow
+                            label={t('common.exit')}
+                            value={exit.toFixed(decimals)}
+                          />
+                          <CardRow
+                            label={t('portfolio.fees')}
+                            value={formatUsd(fees)}
+                          />
+                          <div className="flex items-center justify-between border-t py-1">
+                            <dt className="text-muted-foreground">
+                              {t('portfolio.pnl')}
+                            </dt>
+                            <dd>
+                              <SignedValue value={pnl} decimals={2} />
+                            </dd>
+                          </div>
+                        </dl>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              <Card className="hidden sm:block">
               <CardContent className="pt-6">
                 <Table>
                   <TableHeader>
@@ -522,7 +672,8 @@ export function Portfolio() {
                   </TableBody>
                 </Table>
               </CardContent>
-            </Card>
+              </Card>
+            </>
           )}
         </TabsContent>
       </Tabs>
@@ -585,6 +736,16 @@ export function Portfolio() {
             />
           )
         })()}
+    </div>
+  )
+}
+
+/** One label/value line inside a position card. */
+function CardRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="tabular-nums">{value}</dd>
     </div>
   )
 }
