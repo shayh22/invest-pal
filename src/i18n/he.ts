@@ -250,6 +250,12 @@ export const he: Record<TranslationKey, string> = {
   'trade.holdLong': '{quantity} בלונג',
   'trade.holdShort': '{quantity} בשורט',
   'trade.useAll': 'השתמשו בכל {quantity}',
+  'trade.amountLabel': 'סכום להשקעה',
+  'trade.switchToAmount': 'להזין סכום במקום',
+  'trade.switchToShares': 'להזין כמות במקום',
+  'trade.amountBuys': 'קונה בערך {quantity} {ticker} במחיר שלמעלה.',
+  'trade.feeHeavy':
+    'העלויות מסתכמות ב־{percent}% מפקודה בגודל כזה. לעמלות יש רצפה, ולכן פקודה קטנה משלמת חלק גדול ממנה.',
   'trade.nothingToSell': 'אין בבעלותכם {ticker}, ולכן אין מה למכור.',
   'trade.shortingOff':
     'מכירה בחסר מכובה בחשבון הזה, ולכן אי אפשר להגדיל את השורט. קנייה לכיסוי עדיין אפשרית.',

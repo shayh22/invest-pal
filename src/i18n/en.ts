@@ -249,6 +249,12 @@ export const en = {
   'trade.holdLong': '{quantity} long',
   'trade.holdShort': '{quantity} short',
   'trade.useAll': 'Use all {quantity}',
+  'trade.amountLabel': 'Amount to spend',
+  'trade.switchToAmount': 'enter an amount instead',
+  'trade.switchToShares': 'enter a quantity instead',
+  'trade.amountBuys': 'Buys about {quantity} {ticker} at the price above.',
+  'trade.feeHeavy':
+    'Costs come to {percent}% of an order this size. Fees have a floor, so a small order pays a large share of it.',
   'trade.nothingToSell':
     'You do not own any {ticker}, so there is nothing to sell.',
   'trade.shortingOff':
