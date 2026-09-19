@@ -1,3 +1,4 @@
+import { Star, TrendingDown, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -13,9 +14,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
 import { usePositions } from '@/hooks/usePositions'
+import { useWatchlist } from '@/hooks/useWatchlist'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useQuotes } from '@/hooks/useQuotes'
-import { formatUsd } from '@/lib/format'
+import { formatPercent, formatUsd } from '@/lib/format'
 import { accountEquity } from '@/lib/trading'
 
 export function Dashboard() {
@@ -29,7 +31,14 @@ export function Dashboard() {
   const openSymbols = positions.open
     .map((position) => tickerFor(position.assetId))
     .filter((ticker): ticker is string => Boolean(ticker))
-  const { quotes } = useQuotes(openSymbols)
+  const watchlist = useWatchlist(portfolio?.id ?? null)
+  const watchedAssets = assets.filter((asset) => watchlist.watched.has(asset.id))
+
+  // One request for both: the positions need marks and the watchlist needs
+  // prices, and asking twice for the same ticker would be wasteful.
+  const { quotes } = useQuotes([
+    ...new Set([...openSymbols, ...watchedAssets.map((a) => a.ticker)]),
+  ])
 
   const equity = accountEquity(
     portfolio?.cashBalance ?? 0,
@@ -121,6 +130,64 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* What you are actually following, with today's move. Tapping one opens
+          it on the Markets page rather than making you search for it again. */}
+      {watchedAssets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Star className="size-4" aria-hidden />
+              {t('watchlist.title')}
+            </CardTitle>
+            <CardDescription>{t('watchlist.subtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {watchedAssets.map((asset) => {
+              const quote = quotes.get(asset.ticker)
+              const rising = (quote?.changePercent ?? 0) >= 0
+              return (
+                <Link
+                  key={asset.id}
+                  to={`/markets?symbol=${encodeURIComponent(asset.ticker)}`}
+                  className="hover:bg-muted/50 -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2"
+                >
+                  <span className="flex min-w-0 flex-col">
+                    <span className="font-medium">{asset.ticker}</span>
+                    <span className="text-muted-foreground truncate text-xs">
+                      {asset.name}
+                    </span>
+                  </span>
+                  {quote ? (
+                    <span className="flex shrink-0 flex-col items-end">
+                      <span className="tabular-nums">
+                        {quote.price.toFixed(quote.price >= 1 ? 2 : 6)}
+                      </span>
+                      {/* Icon and sign as well as colour, so the direction
+                          never rests on colour alone. */}
+                      <span
+                        className="flex items-center gap-1 text-xs tabular-nums"
+                        style={{
+                          color: rising ? 'var(--chart-up)' : 'var(--chart-down)',
+                        }}
+                      >
+                        {rising ? (
+                          <TrendingUp className="size-3" aria-hidden />
+                        ) : (
+                          <TrendingDown className="size-3" aria-hidden />
+                        )}
+                        {formatPercent(quote.changePercent)}
+                      </span>
+                    </span>
+                  ) : (
+                    <Skeleton className="h-8 w-16 shrink-0" />
+                  )}
+                </Link>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

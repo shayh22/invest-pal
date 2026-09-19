@@ -19,6 +19,34 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { cn } from 'cn'
 import type { Asset } from '@/types'
 
+/**
+ * How well one "TICKER Name" entry answers a query.
+ *
+ * cmdk sorts descending and drops anything scoring zero, so the bands only
+ * have to be ordered, not meaningful: an exact ticker beats a ticker that
+ * starts with the query, which beats a name that starts with it, which beats a
+ * match anywhere.
+ */
+function score(itemValue: string, search: string): number {
+  const query = search.toLowerCase().trim()
+  if (query === '') return 1
+
+  const value = itemValue.toLowerCase()
+  const [ticker = '', ...rest] = value.split(' ')
+  const name = rest.join(' ')
+
+  if (ticker === query) return 1
+  if (ticker.startsWith(query)) return 0.9
+  // Its own band, above a mere prefix: "bitcoin" names exactly one asset, and
+  // without this it ties with Bitcoin Cash and the order is arbitrary.
+  if (name === query) return 0.85
+  if (name.startsWith(query)) return 0.8
+  // A word inside the name, so "sector" finds the sector funds.
+  if (name.split(' ').some((word) => word.startsWith(query))) return 0.7
+  if (value.includes(query)) return 0.6
+  return 0
+}
+
 interface AssetPickerProps {
   assets: Asset[]
   value: string | null
@@ -71,10 +99,10 @@ export function AssetPicker({
       <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] p-0" align="start">
         <Command
           // Ticker and name both, so either way of thinking about an asset
-          // finds it.
-          filter={(itemValue, search) =>
-            itemValue.toLowerCase().includes(search.toLowerCase().trim()) ? 1 : 0
-          }
+          // finds it — but ranked, not merely matched. Typing "bitcoin" with a
+          // flat substring filter puts Bitcoin Cash first, which is the wrong
+          // answer to an unambiguous question.
+          filter={(itemValue, search) => score(itemValue, search)}
         >
           <CommandInput placeholder={t('markets.searchAssets')} />
           <CommandList>

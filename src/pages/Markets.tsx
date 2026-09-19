@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { RefreshCw, Star, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
 import { AssetPicker } from '@/components/market/AssetPicker'
@@ -20,6 +21,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useAssets } from '@/hooks/useAssets'
+import { useWatchlist } from '@/hooks/useWatchlist'
 import { usePositions } from '@/hooks/usePositions'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,7 +31,8 @@ import { formatPercent } from '@/lib/format'
 import { toast } from 'sonner'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
 import { settleOrders } from '@/services/orders'
-import { supabase } from '@/services/supabase'
+import { setWatched } from '@/services/watchlist'
+import { requireSupabase, supabase } from '@/services/supabase'
 
 const RANGES: { value: ChartRange; label: string }[] = [
   { value: '1d', label: '1D' },
@@ -69,7 +72,12 @@ function formatPrice(value: number, currency: string, decimals: number): string 
 export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
   const { t, tCount, language } = useTranslation()
-  const [symbol, setSymbol] = useState<string | null>(null)
+  // The dashboard links here with ?symbol=, so arriving from the watchlist
+  // opens the asset you tapped rather than the first one in the list.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [symbol, setSymbol] = useState<string | null>(
+    searchParams.get('symbol'),
+  )
   const [range, setRange] = useState<ChartRange>('6mo')
   const [showAngles, setShowAngles] = useState(true)
   const [showLevels, setShowLevels] = useState(true)
@@ -92,6 +100,31 @@ export function Markets() {
   const gann = useGannSignal(selectedAsset?.id ?? null)
 
   const { portfolio, refreshAccount } = useAuth()
+  const watchlist = useWatchlist(portfolio?.id ?? null)
+  const isWatched = selectedAsset
+    ? watchlist.watched.has(selectedAsset.id)
+    : false
+
+  async function toggleWatched() {
+    if (!selectedAsset) return
+    try {
+      const next = await setWatched(
+        requireSupabase(),
+        selectedAsset.id,
+        !isWatched,
+      )
+      watchlist.reload()
+      toast.success(
+        t(next ? 'watchlist.added' : 'watchlist.removed', {
+          ticker: selectedAsset.ticker,
+        }),
+      )
+    } catch (caught) {
+      toast.error(
+        caught instanceof Error ? caught.message : t('watchlist.error'),
+      )
+    }
+  }
   const positions = usePositions(portfolio?.id ?? null)
 
   // Prefer the active language; fall back to English, then to the
@@ -166,8 +199,23 @@ export function Markets() {
           assets={assets}
           value={activeSymbol}
           disabled={assetsLoading || assets.length === 0}
-          onChange={setSymbol}
+          onChange={(next) => {
+            setSymbol(next)
+            setSearchParams({ symbol: next }, { replace: true })
+          }}
         />
+
+        <Button
+          variant={isWatched ? 'secondary' : 'outline'}
+          size="icon"
+          aria-pressed={isWatched}
+          aria-label={t(isWatched ? 'watchlist.unfollow' : 'watchlist.follow')}
+          title={t(isWatched ? 'watchlist.unfollow' : 'watchlist.follow')}
+          disabled={!selectedAsset}
+          onClick={() => void toggleWatched()}
+        >
+          <Star className={isWatched ? 'size-4 fill-current' : 'size-4'} />
+        </Button>
 
         <div
           className="flex flex-wrap items-center gap-1"

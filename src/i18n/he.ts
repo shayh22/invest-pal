@@ -357,6 +357,15 @@ export const he: Record<TranslationKey, string> = {
   'orders.settlementNote':
     'שום דבר לא עוקב אחרי מחירים כשהאפליקציה סגורה. פקודה ממתינה נבדקת בכל פעם שפותחים את הגרף של אותו נכס, ולכן היא מתבצעת כשמסתכלים ולא ברגע שהשוק חוצה אותה.',
 
+  // ----- רשימת מעקב -----
+  'watchlist.title': 'במעקב',
+  'watchlist.subtitle': 'הקישו על אחד כדי לפתוח את הגרף שלו.',
+  'watchlist.follow': 'הוספה למעקב',
+  'watchlist.unfollow': 'הסרה מהמעקב',
+  'watchlist.added': '{ticker} נוסף למעקב',
+  'watchlist.removed': '{ticker} הוסר מהמעקב',
+  'watchlist.error': 'לא ניתן לעדכן את הרשימה.',
+
   // ----- תיק השקעות -----
   'portfolio.title': 'תיק השקעות',
   'portfolio.subtitle': 'כסף וירטואלי. פוזיציות פתוחות משוערכות לפי המחיר האחרון.',

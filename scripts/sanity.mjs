@@ -72,6 +72,10 @@ await section('Site', async () => {
       !bundle.includes('home.phaseLabel') && !bundle.includes('Phase {number}'),
     )
     check(
+      'the watchlist shipped',
+      bundle.includes('Follow this asset') && bundle.includes('הוספה למעקב'),
+    )
+    check(
       'resting orders shipped',
       bundle.includes('Limit — wait for a better price') &&
         bundle.includes('לימיט — המתנה למחיר טוב יותר'),
@@ -228,6 +232,24 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     })
     check('refuses a double settlement', again.status >= 400, `HTTP ${again.status}`)
 
+    // The watchlist: a preference, so starting over must not clear it.
+    const watched = await rest('rpc/set_watched', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_watched: true }),
+    })
+    check('an asset can be followed', watched.status < 400, `HTTP ${watched.status}`)
+    const list = await (await rest('watchlist?select=asset_id')).json()
+    check('and appears on the list', list.length === 1, `${list.length} followed`)
+    const watchedTwice = await rest('rpc/set_watched', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_watched: true }),
+    })
+    const stillOne = await (await rest('watchlist?select=asset_id')).json()
+    check('following twice does not duplicate it', watchedTwice.status < 400 && stillOne.length === 1,
+      `${stillOne.length} rows`)
+    const forgedWatch = await rest('watchlist', {
+      method: 'POST', body: JSON.stringify({ asset_id: assetId }),
+    })
+    check('the list is not client-writable', forgedWatch.status >= 400, `HTTP ${forgedWatch.status}`)
+
     // Orders that wait. A limit buy far above the market triggers at once, so
     // this both places and settles one.
     const restBelow = await rest('rpc/place_pending_order', {
@@ -363,6 +385,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     check('reset funds the chosen amount', money(await balance()) === '1000.00', money(await balance()))
     const leftOver = await (await rest('transactions?select=id')).json()
     check('reset clears every trade', leftOver.length === 0, `${leftOver.length} rows left`)
+    const keptWatch = await (await rest('watchlist?select=asset_id')).json()
+    check('but keeps the watchlist, which is a preference', keptWatch.length === 1,
+      `${keptWatch.length} followed`)
 
     // An amount nobody offered is refused outright here, unlike at signup.
     const badReset = await rest('rpc/reset_portfolio', {
