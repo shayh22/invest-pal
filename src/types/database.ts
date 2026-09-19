@@ -12,6 +12,7 @@ import type {
   AlertDirection,
   TradeDirection,
   TradeSide,
+  TrailUnit,
   TriggerType,
   TransactionStatus,
 } from '@/types'
@@ -70,6 +71,9 @@ export interface Database {
           trigger_price: number | null
           trigger_at: string | null
           good_til: string | null
+          trail_amount: number | null
+          trail_unit: TrailUnit | null
+          trail_peak: number | null
           status: OrderStatus
           reject_reason: string | null
           transaction_id: string | null
@@ -247,6 +251,9 @@ export interface Database {
           p_trigger_price?: number | null
           p_trigger_at?: string | null
           p_good_til?: string | null
+          p_trail_amount?: number | null
+          p_trail_unit?: TrailUnit | null
+          p_reference_price?: number | null
         }
         Returns: Database['public']['Tables']['pending_orders']['Row']
       }

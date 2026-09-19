@@ -76,6 +76,11 @@ await section('Site', async () => {
       bundle.includes('Follow this asset') && bundle.includes('הוספה למעקב'),
     )
     check(
+      'trailing stops shipped',
+      bundle.includes('Trailing stop — follows the price') &&
+        bundle.includes('סטופ נגרר'),
+    )
+    check(
       'price alerts shipped',
       bundle.includes('Tell me when') && bundle.includes('עדכנו אותי כש'),
     )
@@ -294,6 +299,63 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ asset_id: assetId, direction: 'ABOVE', price: 1 }),
     })
     check('alerts are not client-writable', forgedAlert.status >= 400, `HTTP ${forgedAlert.status}`)
+
+    // A trailing stop. Placed against a reference price, walked up, and only
+    // then dropped on to the level the walk left behind — the ratchet is the
+    // one property worth checking against the deployed database.
+    const trailPlaced = await rest('rpc/place_pending_order', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: 1,
+        p_trigger_type: 'TRAILING', p_trail_amount: 10, p_trail_unit: 'PERCENT',
+        p_reference_price: 100,
+      }),
+    })
+    check('a trailing stop can be placed', trailPlaced.status < 400,
+      `HTTP ${trailPlaced.status}`)
+    const trailRow = await trailPlaced.json().catch(() => null)
+    check('and starts one distance away', Number(trailRow?.trigger_price) === 110,
+      String(trailRow?.trigger_price))
+    // A buy trails a low, so a fall drags the stop down with it.
+    await rest('rpc/settle_pending_orders', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 50 }),
+    })
+    const walked = await (await rest(
+      `pending_orders?select=trigger_price,trail_peak&id=eq.${trailRow?.id}`,
+    )).json()
+    check('a new low moves the stop with it', Number(walked?.[0]?.trigger_price) === 55,
+      String(walked?.[0]?.trigger_price))
+    // Back up, but not as far as the stop: the level must not retreat.
+    await rest('rpc/settle_pending_orders', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 54 }),
+    })
+    const stayed = await (await rest(
+      `pending_orders?select=trigger_price,status&id=eq.${trailRow?.id}`,
+    )).json()
+    check('and a move back does not move it again',
+      Number(stayed?.[0]?.trigger_price) === 55 && stayed?.[0]?.status === 'PENDING',
+      `${stayed?.[0]?.trigger_price} ${stayed?.[0]?.status}`)
+    const trailFill = await (await rest('rpc/settle_pending_orders', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 55 }),
+    })).json()
+    check('reaching the moved stop fills it',
+      Number(trailFill?.[0]?.filled ?? trailFill?.filled) === 1)
+    // Sold straight back: that fill left a holding, and everything below
+    // assumes an account that owns nothing.
+    await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_side: 'SELL', p_quantity: 1, p_price: 55 }),
+    })
+    const badTrail = await rest('rpc/place_pending_order', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: 1,
+        p_trigger_type: 'TRAILING', p_trail_amount: 100, p_trail_unit: 'PERCENT',
+        p_reference_price: 100,
+      }),
+    })
+    check('a hundred percent trail is refused', badTrail.status >= 400,
+      `HTTP ${badTrail.status}`)
 
     // Orders that wait. A limit buy far above the market triggers at once, so
     // this both places and settles one.

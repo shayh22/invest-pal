@@ -1,5 +1,5 @@
 import type { InvestPalClient } from '@/services/supabase'
-import type { PendingOrder, TradeSide, TriggerType } from '@/types'
+import type { PendingOrder, TradeSide, TrailUnit, TriggerType } from '@/types'
 
 /**
  * Orders that wait.
@@ -25,6 +25,9 @@ interface OrderRow {
   trigger_price: number | null
   trigger_at: string | null
   good_til: string | null
+  trail_amount: number | null
+  trail_unit: TrailUnit | null
+  trail_peak: number | null
   status: PendingOrder['status']
   reject_reason: string | null
   transaction_id: string | null
@@ -42,6 +45,9 @@ function toOrder(row: OrderRow): PendingOrder {
     triggerPrice: row.trigger_price === null ? null : Number(row.trigger_price),
     triggerAt: row.trigger_at,
     goodTil: row.good_til,
+    trailAmount: row.trail_amount === null ? null : Number(row.trail_amount),
+    trailUnit: row.trail_unit,
+    trailPeak: row.trail_peak === null ? null : Number(row.trail_peak),
     status: row.status,
     rejectReason: row.reject_reason,
     transactionId: row.transaction_id,
@@ -63,7 +69,7 @@ export async function fetchOrders(
     // One string literal on purpose: supabase-js infers the row type from the
     // literal, and a concatenated expression defeats that.
     .select(
-      'id, asset_id, side, quantity, trigger_type, trigger_price, trigger_at, good_til, status, reject_reason, transaction_id, created_at, resolved_at',
+      'id, asset_id, side, quantity, trigger_type, trigger_price, trigger_at, good_til, trail_amount, trail_unit, trail_peak, status, reject_reason, transaction_id, created_at, resolved_at',
     )
     .eq('portfolio_id', portfolioId)
     .order('created_at', { ascending: false })
@@ -82,6 +88,14 @@ export async function placeOrder(
     triggerPrice?: number | null
     triggerAt?: string | null
     goodTil?: string | null
+    /** TRAILING only: how far behind the peak to sit, and in what units. */
+    trailAmount?: number | null
+    trailUnit?: TrailUnit | null
+    /**
+     * TRAILING only: the price to start trailing from. The database will not
+     * guess it — the screen is what knows the current price.
+     */
+    referencePrice?: number | null
   },
 ): Promise<PendingOrder> {
   const { data, error } = await client.rpc('place_pending_order', {
@@ -92,6 +106,9 @@ export async function placeOrder(
     p_trigger_price: input.triggerPrice ?? null,
     p_trigger_at: input.triggerAt ?? null,
     p_good_til: input.goodTil ?? null,
+    p_trail_amount: input.trailAmount ?? null,
+    p_trail_unit: input.trailUnit ?? null,
+    p_reference_price: input.referencePrice ?? null,
   })
 
   if (error) throw orderError(error.message, 'Could not place the order.')

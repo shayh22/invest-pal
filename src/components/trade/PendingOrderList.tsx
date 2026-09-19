@@ -66,7 +66,9 @@ export function PendingOrderList({
                         ? 'Limit'
                         : order.triggerType === 'STOP'
                           ? 'Stop'
-                          : 'Time'
+                          : order.triggerType === 'TRAILING'
+                            ? 'Trailing'
+                            : 'Time'
                     }` as TranslationKey,
                   )}
                 </Badge>
@@ -81,11 +83,28 @@ export function PendingOrderList({
                     {t(
                       order.triggerType === 'TIME'
                         ? 'orders.whenLabel'
-                        : 'orders.priceLabel',
+                        : order.triggerType === 'TRAILING'
+                          ? 'orders.trailStopAt'
+                          : 'orders.priceLabel',
                     )}
                   </dt>
                   <dd className="tabular-nums">{waitingFor}</dd>
                 </div>
+                {/* A trailing stop has two numbers: where it is now, which
+                    the row above shows, and how far behind it keeps. Without
+                    the second, a stop that has moved looks arbitrary. */}
+                {order.triggerType === 'TRAILING' && (
+                  <div className="flex items-center justify-between gap-3 py-1">
+                    <dt className="text-muted-foreground">
+                      {t('orders.trailLabel')}
+                    </dt>
+                    <dd className="tabular-nums">
+                      {order.trailUnit === 'PERCENT'
+                        ? `${order.trailAmount}%`
+                        : order.trailAmount}
+                    </dd>
+                  </div>
+                )}
                 {order.goodTil && (
                   <div className="flex items-center justify-between gap-3 py-1">
                     <dt className="text-muted-foreground">
@@ -97,6 +116,12 @@ export function PendingOrderList({
                   </div>
                 )}
               </dl>
+
+              {order.triggerType === 'TRAILING' && (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {t('orders.trailSeenNote')}
+                </p>
+              )}
 
               <Button
                 size="sm"

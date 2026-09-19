@@ -318,15 +318,30 @@ export const en = {
   'orders.typeNow': 'Market — fill now',
   'orders.typeLimit': 'Limit — wait for a better price',
   'orders.typeStop': 'Stop — wait for a worse price',
+  'orders.typeTrailing': 'Trailing stop — follows the price',
   'orders.typeTime': 'Scheduled — wait for a time',
   'orders.hintNow': 'Fills immediately at the price above.',
   'orders.hintLimit':
     'A buy waits for the price to fall to your level; a sell waits for it to rise. You never pay worse than the level you named.',
   'orders.hintStop':
     'A sell waits for the price to fall to your level — a stop-loss, the order that decides in advance how much you are willing to lose. A buy waits for it to rise.',
+  'orders.hintTrailing':
+    'A stop that moves up with the price and never back down. Name a distance rather than a level, and it stays that far behind the best price seen — so a rise protects more of your profit without you touching it.',
   'orders.hintTime':
     'Fills at whatever the market is when the moment arrives. No promise about the price.',
   'orders.priceLabel': 'Trigger price',
+  'orders.trailLabel': 'Distance behind',
+  'orders.trailUnitLabel': 'Distance in',
+  'orders.trailPercent': 'percent',
+  'orders.trailAmount': 'dollars',
+  'orders.trailHint':
+    'How far behind the price the stop sits. A percentage keeps the same distance as the price moves; a fixed amount does not.',
+  'orders.trailPreview':
+    'At {price} today, a sell would stop at {down} and a buy at {up}. The level follows the price and never retreats.',
+  'orders.trailStopNow': 'Stop starts at',
+  'orders.trailStopAt': 'Stop now at',
+  'orders.trailSeenNote':
+    'The stop moves when this app sees a new price, which is while you have the asset open. A move nobody watched does not raise it.',
   'orders.whenLabel': 'Run at',
   'orders.expiryLabel': 'Expires',
   'orders.expiryHint': 'Optional. Leave empty and the order waits indefinitely.',

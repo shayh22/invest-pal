@@ -30,7 +30,13 @@ import { openingCost, positionPnl } from '@/lib/trading'
 import { placeOrder as restOrder } from '@/services/orders'
 import { setShortSelling, trade as fillNow } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
-import type { Asset, TradeSide, Transaction, TriggerType } from '@/types'
+import type {
+  Asset,
+  TradeSide,
+  Transaction,
+  TrailUnit,
+  TriggerType,
+} from '@/types'
 
 interface TradePanelProps {
   asset: Asset | null
@@ -63,17 +69,45 @@ export function TradePanel({
   const [triggerText, setTriggerText] = useState('')
   const [whenText, setWhenText] = useState('')
   const [expiryText, setExpiryText] = useState('')
+  // How far behind the peak a trailing stop sits. Percent by default: it is
+  // the one that means the same thing on a four dollar stock and on Bitcoin.
+  const [trailText, setTrailText] = useState('')
+  const [trailUnit, setTrailUnit] = useState<TrailUnit>('PERCENT')
 
   const quantity = Number(quantityText)
   const quantityValid = Number.isFinite(quantity) && quantity > 0
   const resting = orderType !== 'NOW'
   const triggerPrice = Number(triggerText)
+  const trailAmount = Number(trailText)
+  // Mirrors migration 0011: a hundred percent behind the peak is a stop at
+  // zero, and an amount larger than the price is a stop below it.
+  const trailValid =
+    Number.isFinite(trailAmount) &&
+    trailAmount > 0 &&
+    (trailUnit === 'PERCENT' ? trailAmount < 100 : !price || trailAmount < price)
   const triggerValid =
     orderType === 'LIMIT' || orderType === 'STOP'
       ? Number.isFinite(triggerPrice) && triggerPrice > 0
       : orderType === 'TIME'
         ? whenText !== '' && !Number.isNaN(Date.parse(whenText))
-        : true
+        : orderType === 'TRAILING'
+          ? trailValid
+          : true
+
+  /**
+   * Where the stop would sit the moment it is placed. Mirrors
+   * trailing_stop_level() in migration 0011.
+   *
+   * Shown rather than described: "three percent behind" is an abstraction and
+   * "sells at 97.00 if it turns" is not. Both sides are named because the
+   * order type is chosen before the button is pressed, and a sell trails below
+   * while a buy trails above.
+   */
+  function stopFor(side: TradeSide): number | null {
+    if (!price || !trailValid) return null
+    const away = trailUnit === 'PERCENT' ? (price * trailAmount) / 100 : trailAmount
+    return side === 'SELL' ? price - away : price + away
+  }
 
   const balance = portfolio?.cashBalance ?? 0
   const shortingOn = portfolio?.shortSellingEnabled ?? false
@@ -153,12 +187,20 @@ export function TradePanel({
           side,
           quantity,
           triggerType: orderType as TriggerType,
-          triggerPrice: orderType === 'TIME' ? null : triggerPrice,
+          // A trailing stop is given a distance; the level is worked out from
+          // the price and then follows it, so no level goes up with it.
+          triggerPrice:
+            orderType === 'TIME' || orderType === 'TRAILING' ? null : triggerPrice,
           // A datetime-local value has no zone; the browser's own is right,
           // since that is the clock the reader picked it on.
           triggerAt:
             orderType === 'TIME' ? new Date(whenText).toISOString() : null,
           goodTil: expiryText ? new Date(expiryText).toISOString() : null,
+          trailAmount: orderType === 'TRAILING' ? trailAmount : null,
+          trailUnit: orderType === 'TRAILING' ? trailUnit : null,
+          // The screen is what knows the current price, so it is what hands
+          // the database somewhere to start trailing from.
+          referencePrice: orderType === 'TRAILING' ? price : null,
         })
         toast.success(
           t('orders.placedToast', { quantity, ticker: asset.ticker }),
@@ -166,6 +208,7 @@ export function TradePanel({
         setTriggerText('')
         setWhenText('')
         setExpiryText('')
+        setTrailText('')
         onTraded()
         return
       }
@@ -265,6 +308,7 @@ export function TradePanel({
               <SelectItem value="NOW">{t('orders.typeNow')}</SelectItem>
               <SelectItem value="LIMIT">{t('orders.typeLimit')}</SelectItem>
               <SelectItem value="STOP">{t('orders.typeStop')}</SelectItem>
+              <SelectItem value="TRAILING">{t('orders.typeTrailing')}</SelectItem>
               <SelectItem value="TIME">{t('orders.typeTime')}</SelectItem>
             </SelectContent>
           </Select>
@@ -276,7 +320,9 @@ export function TradePanel({
                   ? 'orders.hintLimit'
                   : orderType === 'STOP'
                     ? 'orders.hintStop'
-                    : 'orders.hintTime',
+                    : orderType === 'TRAILING'
+                      ? 'orders.hintTrailing'
+                      : 'orders.hintTime',
             )}
           </p>
         </div>
@@ -317,6 +363,55 @@ export function TradePanel({
               value={triggerText}
               onChange={(event) => setTriggerText(event.target.value)}
             />
+          </div>
+        )}
+
+        {orderType === 'TRAILING' && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="trail-amount">{t('orders.trailLabel')}</Label>
+            {/* Distance and unit on one row: they are one number with one
+                meaning, and splitting them costs a whole line on a phone. */}
+            <div className="flex items-center gap-2">
+              <Input
+                id="trail-amount"
+                type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
+                className="min-w-0 flex-1"
+                placeholder={trailUnit === 'PERCENT' ? '3' : ''}
+                value={trailText}
+                onChange={(event) => setTrailText(event.target.value)}
+              />
+              <Select
+                value={trailUnit}
+                onValueChange={(value) => setTrailUnit(value as TrailUnit)}
+              >
+                <SelectTrigger
+                  aria-label={t('orders.trailUnitLabel')}
+                  className="w-28 shrink-0"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PERCENT">{t('orders.trailPercent')}</SelectItem>
+                  <SelectItem value="AMOUNT">{t('orders.trailAmount')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {price && trailValid ? (
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t('orders.trailPreview', {
+                  price: price.toFixed(decimals),
+                  down: (stopFor('SELL') ?? 0).toFixed(decimals),
+                  up: (stopFor('BUY') ?? 0).toFixed(decimals),
+                })}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t('orders.trailHint')}
+              </p>
+            )}
           </div>
         )}
 
@@ -509,20 +604,42 @@ export function TradePanel({
                           ? 'orders.typeLimit'
                           : orderType === 'STOP'
                             ? 'orders.typeStop'
-                            : 'orders.typeTime',
+                            : orderType === 'TRAILING'
+                              ? 'orders.typeTrailing'
+                              : 'orders.typeTime',
                       ),
                     },
-                    {
-                      label:
-                        orderType === 'TIME'
-                          ? t('orders.whenLabel')
-                          : t('orders.priceLabel'),
-                      value:
-                        orderType === 'TIME'
-                          ? new Date(whenText).toLocaleString(locale)
-                          : triggerPrice.toFixed(decimals),
-                      emphasis: true,
-                    },
+                    // A trailing stop is agreed to as two facts: the distance
+                    // it keeps, and where that puts the stop today. Showing
+                    // only the distance would hide the number that matters.
+                    ...(orderType === 'TRAILING'
+                      ? [
+                          {
+                            label: t('orders.trailLabel'),
+                            value:
+                              trailUnit === 'PERCENT'
+                                ? `${trailAmount}%`
+                                : trailAmount.toFixed(decimals),
+                          },
+                          {
+                            label: t('orders.trailStopNow'),
+                            value: (stopFor(confirming) ?? 0).toFixed(decimals),
+                            emphasis: true,
+                          },
+                        ]
+                      : [
+                          {
+                            label:
+                              orderType === 'TIME'
+                                ? t('orders.whenLabel')
+                                : t('orders.priceLabel'),
+                            value:
+                              orderType === 'TIME'
+                                ? new Date(whenText).toLocaleString(locale)
+                                : triggerPrice.toFixed(decimals),
+                            emphasis: true,
+                          },
+                        ]),
                     {
                       label: t('orders.expiryLabel'),
                       value: expiryText
