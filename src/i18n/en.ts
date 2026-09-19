@@ -367,6 +367,27 @@ export const en = {
   'watchlist.removed': 'No longer following {ticker}',
   'watchlist.error': 'Could not update the list.',
 
+  // ----- price alerts -----
+  'alerts.title': 'Tell me when',
+  'alerts.subtitle': 'Watch a level without committing to a trade.',
+  'alerts.directionLabel': 'Watch for',
+  'alerts.above': 'Rises to',
+  'alerts.below': 'Falls to',
+  'alerts.levelLabel': 'Level',
+  'alerts.add': 'Set the alert',
+  'alerts.remove': 'Remove',
+  'alerts.onThisAsset': 'Alerts on this asset',
+  'alerts.firedAt': 'fired {when}',
+  'alerts.setToast': 'Alert set on {ticker}',
+  'alerts.error': 'Could not update the alert.',
+  'alerts.firedToast_one': '{count} price alert',
+  'alerts.firedToast_other': '{count} price alerts',
+  'alerts.firedTitle': 'Levels reached',
+  'alerts.firedSubtitle': 'Tap one to open its chart.',
+  'alerts.markSeen': 'Mark all as seen',
+  'alerts.note':
+    'An alert fires once and then stops. Like a waiting order, it is checked when you open this asset rather than the instant the market crosses it.',
+
   // ----- portfolio -----
   'portfolio.title': 'Portfolio',
   'portfolio.subtitle': 'Virtual money. Open positions are marked at the latest price.',

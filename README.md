@@ -363,6 +363,29 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### Being told, without trading
+
+A stop order says "sell if it falls to 80". Often what someone actually wants
+is "*tell me* if it falls to 80" — and making them place an order to find out
+means committing to a trade they have not decided on. Migration `0010` adds
+`price_alerts`: a level, a direction, and nothing else.
+
+Deliberately much smaller than `pending_orders`. An alert has no side, no
+quantity, no funds check and no failure mode, so reusing the order machinery
+would have meant a row with three null columns and a status that can never be
+`REJECTED`. It fires once — a `triggered_at` that stays set — rather than
+re-firing on every price still past the level.
+
+Alerts fire on the same opportunistic settlement as resting orders: whenever a
+page holds a fresh price for an asset, it hands that price to both
+`settle_pending_orders()` and `settle_price_alerts()`. So an alert arrives when
+you next look, not the instant the market crosses it. The panel says that out
+loud instead of implying a push notification that does not exist.
+
+Like the watchlist, alerts survive `reset_portfolio()`. They hold no money and
+no position, and re-funding the account says nothing about which levels are
+still worth knowing about.
+
 ### Orders that wait
 
 Everything filled instantly at whatever the screen showed. Real brokers are
@@ -499,7 +522,7 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Seven suites, 184 checks. `trading_engine_test.sql` covers the accounting
+Eight suites, 209 checks. `trading_engine_test.sql` covers the accounting
 identity, both directions, rejected inputs, double settlement, cross-account
 access and every removed write path; `execution_costs_test.sql` owns the exact
 arithmetic of spread and commission; `starting_balance_test.sql` covers
@@ -508,7 +531,9 @@ profiles, including that the quote matches the charge and that switching does
 not rewrite an open position; `pending_orders_test.sql` covers all four trigger
 directions, expiry, rejection with a reason, and that orders are private;
 `watchlist_test.sql` covers the idempotent toggle, the cap, privacy, and that a
-reset leaves the list alone;
+reset leaves the list alone; `price_alerts_test.sql` covers both directions,
+firing exactly once, the shape constraint on a fired row, privacy, and that a
+reset leaves the alerts alone;
 `netting_test.sql` covers the holding rules, the opt-in short switch, resetting,
 and the migration that nets legacy rows.
 
@@ -523,7 +548,7 @@ for m in supabase/migrations/*.sql; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
 done
 for t in trading_engine execution_costs starting_balance \
-         commission_profiles pending_orders watchlist netting; do
+         commission_profiles pending_orders watchlist price_alerts netting; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
 done
 ```

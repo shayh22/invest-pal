@@ -76,6 +76,10 @@ await section('Site', async () => {
       bundle.includes('Follow this asset') && bundle.includes('הוספה למעקב'),
     )
     check(
+      'price alerts shipped',
+      bundle.includes('Tell me when') && bundle.includes('עדכנו אותי כש'),
+    )
+    check(
       'resting orders shipped',
       bundle.includes('Limit — wait for a better price') &&
         bundle.includes('לימיט — המתנה למחיר טוב יותר'),
@@ -250,6 +254,47 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     })
     check('the list is not client-writable', forgedWatch.status >= 400, `HTTP ${forgedWatch.status}`)
 
+    // Price alerts: a level with no trade behind it. Two in opposite
+    // directions, so a single price can only ever reach one of them.
+    const alertAbove = await rest('rpc/create_price_alert', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_direction: 'ABOVE', p_price: 500 }),
+    })
+    check('an alert can be set', alertAbove.status < 400, `HTTP ${alertAbove.status}`)
+    await rest('rpc/create_price_alert', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_direction: 'BELOW', p_price: 50 }),
+    })
+    const sideways = await rest('rpc/create_price_alert', {
+      method: 'POST',
+      body: JSON.stringify({ p_asset_id: assetId, p_direction: 'SIDEWAYS', p_price: 50 }),
+    })
+    check('an alert only watches up or down', sideways.status >= 400, `HTTP ${sideways.status}`)
+    const quietAlerts = await (await rest('rpc/settle_price_alerts', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 100 }),
+    })).json()
+    check('a price between the levels fires nothing', Number(quietAlerts) === 0,
+      String(quietAlerts))
+    const firedAlerts = await (await rest('rpc/settle_price_alerts', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 501 }),
+    })).json()
+    check('and the level it reaches fires once', Number(firedAlerts) === 1, String(firedAlerts))
+    const stillFired = await (await rest('rpc/settle_price_alerts', {
+      method: 'POST', body: JSON.stringify({ p_asset_id: assetId, p_price: 502 }),
+    })).json()
+    check('a fired alert does not fire again', Number(stillFired) === 0, String(stillFired))
+    const unseen = await (await rest(
+      'price_alerts?select=id&triggered_at=not.is.null&acknowledged=is.false',
+    )).json()
+    check('the fired one is waiting to be read', unseen.length === 1, `${unseen.length} unread`)
+    const seen = await (await rest('rpc/acknowledge_price_alerts', { method: 'POST' })).json()
+    check('marking them seen empties the badge', Number(seen) === 1, String(seen))
+    const forgedAlert = await rest('price_alerts', {
+      method: 'POST',
+      body: JSON.stringify({ asset_id: assetId, direction: 'ABOVE', price: 1 }),
+    })
+    check('alerts are not client-writable', forgedAlert.status >= 400, `HTTP ${forgedAlert.status}`)
+
     // Orders that wait. A limit buy far above the market triggers at once, so
     // this both places and settles one.
     const restBelow = await rest('rpc/place_pending_order', {
@@ -388,6 +433,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     const keptWatch = await (await rest('watchlist?select=asset_id')).json()
     check('but keeps the watchlist, which is a preference', keptWatch.length === 1,
       `${keptWatch.length} followed`)
+    const keptAlerts = await (await rest('price_alerts?select=id')).json()
+    check('and keeps the alerts, for the same reason', keptAlerts.length === 2,
+      `${keptAlerts.length} alerts`)
 
     // An amount nobody offered is refused outright here, unlike at signup.
     const badReset = await rest('rpc/reset_portfolio', {
