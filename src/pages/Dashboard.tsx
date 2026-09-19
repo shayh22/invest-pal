@@ -243,23 +243,13 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Which chart to look at, for the reader who does not already know.
-          Placed above the shortcuts because "where do I start" is the
-          question that comes first. */}
+      {/* The one action on this page. It used to sit under a card announcing
+          the next phase of the build, beside two buttons that only went to
+          Markets and Portfolio — which the header already does. The roadmap
+          is gone and so are they; what is left is the button that actually
+          decides something, and the paragraphs explaining what it decided. */}
       <OpportunityScanner />
 
-      {/* Just the two places to go next. This used to be a card announcing
-          the next phase of the build, which stayed on screen long after that
-          phase had shipped — a roadmap is not something a reader of the app
-          needs, and one that is out of date is worse than none. */}
-      <div className="flex flex-wrap gap-3">
-        <Button asChild size="sm">
-          <Link to="/markets">{t('dashboard.findTrade')}</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/portfolio">{t('dashboard.viewPositions')}</Link>
-        </Button>
-      </div>
     </div>
   )
 }

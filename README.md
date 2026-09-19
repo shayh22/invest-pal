@@ -208,6 +208,29 @@ The card sits behind a button. It is one request covering every scored asset,
 and a ranked list of things to buy should be something you went looking for
 rather than something the app greets you with.
 
+**The pick is written out, not listed.** A rank and a score tell you nothing
+about what to do with them, so the top pick answers four questions in
+sentences, and the button says where it goes before you press it:
+
+- **Why this one** — which side of the 1x1 the close sits on, and how much
+  more room there is ahead than behind.
+- **What that means to watch** — the support a buyer leans on and where a stop
+  belongs just under it, or the mirror of that for a sell, plus the level next
+  in the way.
+- **When** — the date the cycles point at, computed in the browser from the
+  projected turn rather than from the engine's `days_to_cycle`, which was
+  measured against the moment the refresh ran. A signal read the next morning
+  would otherwise say five days when it means four. The copy calls it the date
+  the reading is built around, not a deadline to act on.
+- **Where the button goes** — named asset, named page, and what is on it.
+
+The runners-up stay compact. Five of those paragraphs is a wall, and the point
+of a shortlist is to choose from it.
+
+The dashboard's two generic buttons went with the roadmap card that held them:
+they only linked to Markets and Portfolio, which the header nav already does.
+What is left is the one button that decides something.
+
 ### Tests
 
 ```bash

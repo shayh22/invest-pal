@@ -81,6 +81,15 @@ await section('Site', async () => {
         bundle.includes('היכן הגאומטריה מסתדרת'),
     )
     check(
+      // A button that moves you somewhere has to say where, why, and what
+      // the reading actually points at — otherwise it is a slot machine.
+      'the pick explains itself',
+      bundle.includes('Takes you to {ticker} on the Markets page') &&
+        bundle.includes('מעביר אתכם ל־{ticker} בדף השווקים') &&
+        bundle.includes('where a stop belongs') &&
+        bundle.includes('not a deadline to act on'),
+    )
+    check(
       // The card that announced the next phase of the build outlived the
       // phase it named. Nothing in the app should carry a roadmap.
       'no build roadmap on the dashboard',
