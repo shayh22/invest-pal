@@ -46,6 +46,25 @@ export interface RankedOpportunity {
   calculatedAt: string
   stale: boolean
   opportunity: GannOpportunity
+  /** The close the reading was taken from, so levels have something to sit against. */
+  lastPrice: number
+  /**
+   * When the nearest projected turn lands, as a date.
+   *
+   * Taken from the cycles rather than from `days_to_cycle`, which the engine
+   * measured against the moment it ran: a signal read the next morning would
+   * otherwise say a turn is five days out when it is four.
+   */
+  nextTurn: string | null
+}
+
+/** The soonest projected turn still ahead of us, or null. */
+function nextTurnAfter(payload: GannPayload, now: number): string | null {
+  const ahead = (payload.cycles ?? [])
+    .map((cycle) => cycle.projected_time)
+    .filter((time) => new Date(time).getTime() > now)
+    .sort()
+  return ahead[0] ?? null
 }
 
 /**
@@ -92,6 +111,8 @@ export async function fetchRankedOpportunities(
       calculatedAt: row.calculated_at,
       stale: new Date(row.expires_at).getTime() < now,
       opportunity,
+      lastPrice: payload.last_price,
+      nextTurn: nextTurnAfter(payload, now),
     })
   }
 

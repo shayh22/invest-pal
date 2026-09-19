@@ -128,8 +128,6 @@ export const en = {
   'dashboard.closedCount': '{count} closed so far.',
   'dashboard.experience': 'Experience level',
   'dashboard.experienceHint': 'Tunes how much the AI mentor explains.',
-  'dashboard.findTrade': 'Find a trade',
-  'dashboard.viewPositions': 'View positions',
   'experience.beginner': 'beginner',
   'experience.intermediate': 'intermediate',
   'experience.advanced': 'advanced',
@@ -457,19 +455,45 @@ export const en = {
   // ----- the Gann scanner -----
   'scan.title': 'Where the geometry lines up',
   'scan.subtitle':
-    'Ranks every asset the engine has measured, so you have somewhere to start.',
-  'scan.action': 'Scan the charts',
+    'Picks the asset whose Gann reading is best arranged today, and says why.',
+  'scan.action': 'Pick one for me',
+  'scan.beforeYouPress':
+    'Ranks every asset the engine has measured, then explains the top one \u2014 which side the reading is on, which level it leans against and what date the cycles point at. Nothing is bought; the button at the end opens that chart.',
   'scan.errorTitle': 'Could not rank the assets',
   'scan.empty':
     'Nothing has been scored yet. The engine measures every asset once a day; check back after the next run.',
+  'scan.topPick': 'Top pick',
   'scan.biasLong': 'Above the 1x1',
   'scan.biasShort': 'Below the 1x1',
-  'scan.room': 'Room above is {ratio}x the room below',
-  'scan.noRoom': 'No level on both sides of the price',
-  'scan.turnDue': 'a turn due in {days}d',
-  'scan.confidence': '{percent}% of the geometry resolved',
+  'scan.whyHeading': 'Why this one',
+  'scan.whyLong':
+    '{ticker} closed above its 1x1, which is the side Gann reads as buying.',
+  'scan.whyShort':
+    '{ticker} closed below its 1x1, which is the side Gann reads as selling.',
+  'scan.whyNone':
+    'No confirmed fan on this chart, so there is no side to read \u2014 it ranks on its levels alone.',
+  'scan.whyRoom':
+    'There is {ratio}x more room to the next level ahead than there is back to the one behind.',
+  'scan.noRoom': 'There is no level on both sides of the price to measure against.',
+  'scan.whatHeading': 'What that means to watch',
+  'scan.whatLong':
+    'Last close {price}. Support at {support} is the level a buyer leans on, and just under it is where a stop belongs. {resistance} is the next thing in the way.',
+  'scan.whatShort':
+    'Last close {price}. Resistance at {resistance} is the level a seller leans on, and just above it is where a stop belongs. {support} is the next thing in the way.',
+  'scan.whatNoLevels':
+    'The Square of Nine levels all sit on one side of the price here, so there is no bracket to trade against.',
+  'scan.whenHeading': 'When',
+  'scan.whenDate':
+    'The cycles point at {date}, about {days} days away. That is the date this reading is built around \u2014 not a deadline to act on.',
+  'scan.whenNone':
+    'No cycle is due inside the next three weeks, so this one has no date attached.',
+  'scan.openPick': 'Open {ticker}',
+  'scan.opensChart':
+    'Takes you to {ticker} on the Markets page: the chart with the fan drawn on it, the full Gann reading, and the panel where an order is placed.',
+  'scan.alsoTitle': 'Also ranked',
+  'scan.roomShort': '{ratio}x room',
   'scan.caveat':
-    'A ranking, not a recommendation. A high score means this chart\u2019s Gann geometry is unusually well arranged today — where price has turned before, not where it will turn. Practise with virtual money.',
+    'A ranking, not advice. A high score means this chart\u2019s Gann geometry is unusually well arranged today \u2014 where price has turned before, not where it will turn. Practise with virtual money.',
 } as const
 
 export type TranslationKey = keyof typeof en
