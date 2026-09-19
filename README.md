@@ -363,6 +363,35 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### A stop that follows the price
+
+A stop-loss is set once and then it is wrong. Buy at 100, stop at 90, and if
+the price runs to 150 the stop is still sitting at 90 — fifty points of profit
+with nothing under it. Moving it by hand means remembering to.
+
+Migration `0011` adds `TRAILING` as a fourth trigger type on `pending_orders`:
+name a **distance** rather than a level and the stop rides along behind the
+best price seen so far. A sell trails below the high, a buy trails above the
+low, and the distance is either an amount or a percentage — both, because
+which one is natural depends entirely on the price of the thing.
+
+The property that matters is the **ratchet**, and it is one ordering decision
+inside `settle_pending_orders()`: the peak advances *before* anything is
+tested. A price that sets a new high moves the stop and therefore cannot have
+hit it; a price that does not is left to the ordinary stop test against the
+level the high left behind. That single pass is what makes "the stop never
+moves against you" true rather than nearly true, and the test suite states it
+as its own check.
+
+`trailing_stop_level()` exists so that placement and settlement cannot disagree
+about where the stop is. Two copies of that arithmetic drifting apart is
+exactly the bug that would fire an order at the wrong level.
+
+The honest caveat, which the order card says out loud: the peak is the best
+price this account has **seen**, not the best price that happened. The ratchet
+advances on the same opportunistic prices that fire everything else, so a spike
+nobody was looking at does not raise the stop.
+
 ### Being told, without trading
 
 A stop order says "sell if it falls to 80". Often what someone actually wants
@@ -522,7 +551,7 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Eight suites, 209 checks. `trading_engine_test.sql` covers the accounting
+Nine suites, 253 checks. `trading_engine_test.sql` covers the accounting
 identity, both directions, rejected inputs, double settlement, cross-account
 access and every removed write path; `execution_costs_test.sql` owns the exact
 arithmetic of spread and commission; `starting_balance_test.sql` covers
@@ -533,7 +562,9 @@ directions, expiry, rejection with a reason, and that orders are private;
 `watchlist_test.sql` covers the idempotent toggle, the cap, privacy, and that a
 reset leaves the list alone; `price_alerts_test.sql` covers both directions,
 firing exactly once, the shape constraint on a fired row, privacy, and that a
-reset leaves the alerts alone;
+reset leaves the alerts alone; `trailing_stops_test.sql` covers the ratchet in
+both directions, that a new peak cannot fire the stop it just moved, the
+refusals, and that a stranger's prices move nobody else's stop;
 `netting_test.sql` covers the holding rules, the opt-in short switch, resetting,
 and the migration that nets legacy rows.
 
@@ -548,7 +579,8 @@ for m in supabase/migrations/*.sql; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
 done
 for t in trading_engine execution_costs starting_balance \
-         commission_profiles pending_orders watchlist price_alerts netting; do
+         commission_profiles pending_orders watchlist price_alerts \
+         trailing_stops netting; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
 done
 ```

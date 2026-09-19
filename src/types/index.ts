@@ -45,7 +45,10 @@ export type TradeSide = 'BUY' | 'SELL'
  *   STOP   a worse price than now — a sell waiting for a fall is a stop-loss
  *   TIME   a moment, then fills at whatever the market is
  */
-export type TriggerType = 'LIMIT' | 'STOP' | 'TIME'
+export type TriggerType = 'LIMIT' | 'STOP' | 'TIME' | 'TRAILING'
+
+/** How far behind the peak a trailing stop sits: in dollars, or in percent. */
+export type TrailUnit = 'AMOUNT' | 'PERCENT'
 
 /** Which way a price alert is watching. */
 export type AlertDirection = 'ABOVE' | 'BELOW'
@@ -76,12 +79,20 @@ export interface PendingOrder {
   side: TradeSide
   quantity: number
   triggerType: TriggerType
-  /** The level, for LIMIT and STOP. */
+  /**
+   * The level, for LIMIT and STOP. For TRAILING it is where the stop sits
+   * right now, which moves as the peak does.
+   */
   triggerPrice: number | null
   /** The moment, for TIME. */
   triggerAt: string | null
   /** Past this it expires unfilled. */
   goodTil: string | null
+  /** TRAILING only: the distance kept behind the peak. */
+  trailAmount: number | null
+  trailUnit: TrailUnit | null
+  /** TRAILING only: the best price seen since it was placed. */
+  trailPeak: number | null
   status: OrderStatus
   /** Why a triggered order did not become a trade. */
   rejectReason: string | null

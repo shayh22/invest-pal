@@ -107,33 +107,42 @@ select public.assert_eq(
 
 -- The two price orders are mirror images, and getting either backwards would
 -- be silent. Stated directly rather than inferred from the fills above.
+--
+-- Built from named fields rather than a positional row literal: the literal
+-- had to be rewritten every time the table grew a column, which is a test
+-- failing for a reason that has nothing to do with what it tests.
 select public.assert_true(
   public.order_is_triggered(
-    row(null, null, null, 'BUY', 1, 'LIMIT', 100, null, null, 'PENDING', null, null, now(), null)::public.pending_orders,
+    jsonb_populate_record(null::public.pending_orders,
+      '{"side": "BUY", "trigger_type": "LIMIT", "trigger_price": 100}'::jsonb),
     99),
   'a limit buy triggers below its level'
 );
 select public.assert_true(
   not public.order_is_triggered(
-    row(null, null, null, 'BUY', 1, 'LIMIT', 100, null, null, 'PENDING', null, null, now(), null)::public.pending_orders,
+    jsonb_populate_record(null::public.pending_orders,
+      '{"side": "BUY", "trigger_type": "LIMIT", "trigger_price": 100}'::jsonb),
     101),
   'and not above it'
 );
 select public.assert_true(
   public.order_is_triggered(
-    row(null, null, null, 'BUY', 1, 'STOP', 100, null, null, 'PENDING', null, null, now(), null)::public.pending_orders,
+    jsonb_populate_record(null::public.pending_orders,
+      '{"side": "BUY", "trigger_type": "STOP", "trigger_price": 100}'::jsonb),
     101),
   'a stop buy triggers above its level'
 );
 select public.assert_true(
   public.order_is_triggered(
-    row(null, null, null, 'SELL', 1, 'LIMIT', 100, null, null, 'PENDING', null, null, now(), null)::public.pending_orders,
+    jsonb_populate_record(null::public.pending_orders,
+      '{"side": "SELL", "trigger_type": "LIMIT", "trigger_price": 100}'::jsonb),
     101),
   'a limit sell triggers above its level'
 );
 select public.assert_true(
   public.order_is_triggered(
-    row(null, null, null, 'SELL', 1, 'STOP', 100, null, null, 'PENDING', null, null, now(), null)::public.pending_orders,
+    jsonb_populate_record(null::public.pending_orders,
+      '{"side": "SELL", "trigger_type": "STOP", "trigger_price": 100}'::jsonb),
     99),
   'a stop sell triggers below its level'
 );
