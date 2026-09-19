@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import { useTradingCosts } from '@/hooks/useTradingCosts'
 import { useTranslation } from '@/hooks/useTranslation'
-import { formatUsd } from '@/lib/format'
+import { formatQuantity, formatUsd } from '@/lib/format'
 import { openingCost, positionPnl } from '@/lib/trading'
 import { placeOrder as restOrder } from '@/services/orders'
 import { setShortSelling, trade as fillNow } from '@/services/trading'
@@ -59,6 +59,12 @@ export function TradePanel({
   const { t, locale } = useTranslation()
   const costs = useTradingCosts(asset?.type ?? null)
   const [quantityText, setQuantityText] = useState('1')
+  // 'SHARES' is how a broker asks; 'AMOUNT' is how people actually think —
+  // "put fifty dollars into this" rather than "buy 0.1487 of it". Offered only
+  // for a market order, because converting an amount into a quantity needs a
+  // price, and a resting order does not have one yet.
+  const [entryMode, setEntryMode] = useState<'SHARES' | 'AMOUNT'>('SHARES')
+  const [amountText, setAmountText] = useState('')
   const [pending, setPending] = useState<TradeSide | null>(null)
   // The side awaiting confirmation. Nothing is sent until it is agreed to.
   const [confirming, setConfirming] = useState<TradeSide | null>(null)
@@ -74,7 +80,21 @@ export function TradePanel({
   const [trailText, setTrailText] = useState('')
   const [trailUnit, setTrailUnit] = useState<TrailUnit>('PERCENT')
 
-  const quantity = Number(quantityText)
+  const amount = Number(amountText)
+  const byAmount = entryMode === 'AMOUNT'
+  /**
+   * What the typed amount buys at today's price.
+   *
+   * Truncated to eight places rather than rounded, which is the quantity
+   * column's scale: rounding up could ask for a hair more than the amount
+   * covers, and being refused for a rounding error you cannot see is the
+   * worst kind of refusal.
+   */
+  const impliedQuantity =
+    byAmount && price && Number.isFinite(amount) && amount > 0
+      ? Math.floor((amount / price) * 1e8) / 1e8
+      : 0
+  const quantity = byAmount ? impliedQuantity : Number(quantityText)
   const quantityValid = Number.isFinite(quantity) && quantity > 0
   const resting = orderType !== 'NOW'
   const triggerPrice = Number(triggerText)
@@ -137,7 +157,7 @@ export function TradePanel({
     if (reduces(side)) {
       if (quantity > Math.abs(held)) {
         return t('trade.moreThanHeld', {
-          held: Math.abs(held),
+          held: formatQuantity(Math.abs(held)),
           ticker: asset.ticker,
         })
       }
@@ -167,6 +187,24 @@ export function TradePanel({
       asset && price && quantityValid && triggerValid && refusalFor(side) === null,
     )
   }
+
+  /**
+   * What the commission comes to as a share of the order.
+   *
+   * Worth its own number because the minimum commission does not scale down:
+   * fifty cents on a five dollar order is ten percent before the price has
+   * moved at all, and the whole point of letting someone spend an amount is
+   * that they will try small amounts.
+   */
+  const feeShare =
+    !resting && quantityValid && price && costs
+      ? (() => {
+          const quoted = openingCost(quantity, price, 'LONG', costs)
+          return quoted.notional > 0
+            ? (quoted.commission / quoted.notional) * 100
+            : null
+        })()
+      : null
 
   // The breakdown quotes what opening costs, which is only meaningful when the
   // next order would open or add rather than sell back.
@@ -203,7 +241,10 @@ export function TradePanel({
           referencePrice: orderType === 'TRAILING' ? price : null,
         })
         toast.success(
-          t('orders.placedToast', { quantity, ticker: asset.ticker }),
+          t('orders.placedToast', {
+            quantity: formatQuantity(quantity),
+            ticker: asset.ticker,
+          }),
         )
         setTriggerText('')
         setWhenText('')
@@ -221,11 +262,12 @@ export function TradePanel({
       })
       toast.success(
         t(side === 'BUY' ? 'trade.boughtToast' : 'trade.soldToast', {
-          quantity,
+          quantity: formatQuantity(quantity),
           ticker: asset.ticker,
           price: price.toFixed(decimals),
         }),
       )
+      setAmountText('')
       await refreshAccount()
       onTraded()
     } catch (caught) {
@@ -287,8 +329,8 @@ export function TradePanel({
               {held === 0
                 ? t('trade.holdNothing')
                 : held > 0
-                  ? t('trade.holdLong', { quantity: held })
-                  : t('trade.holdShort', { quantity: -held })}
+                  ? t('trade.holdLong', { quantity: formatQuantity(held) })
+                  : t('trade.holdShort', { quantity: formatQuantity(-held) })}
             </span>
           </div>
         )}
@@ -299,7 +341,13 @@ export function TradePanel({
           <Label htmlFor="order-type">{t('orders.typeLabel')}</Label>
           <Select
             value={orderType}
-            onValueChange={(value) => setOrderType(value as 'NOW' | TriggerType)}
+            onValueChange={(value) => {
+              const next = value as 'NOW' | TriggerType
+              setOrderType(next)
+              // A resting order has no price yet, so there is nothing to turn
+              // an amount into. Falling back to shares is the honest move.
+              if (next !== 'NOW') setEntryMode('SHARES')
+            }}
           >
             <SelectTrigger id="order-type" className="w-full">
               <SelectValue />
@@ -328,24 +376,74 @@ export function TradePanel({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="trade-quantity">{t('common.quantity')}</Label>
-          <Input
-            id="trade-quantity"
-            type="number"
-            min="0"
-            step="any"
-            inputMode="decimal"
-            value={quantityText}
-            onChange={(event) => setQuantityText(event.target.value)}
-            disabled={!asset || !price}
-          />
-          {held !== 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label htmlFor={byAmount ? 'trade-amount' : 'trade-quantity'}>
+              {t(byAmount ? 'trade.amountLabel' : 'common.quantity')}
+            </Label>
+            {/* Only for a market order. Switching is a link rather than a
+                second select: it is one choice with two states, and a select
+                would cost a whole row on a phone. */}
+            {orderType === 'NOW' && (
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                onClick={() => setEntryMode(byAmount ? 'SHARES' : 'AMOUNT')}
+              >
+                {t(byAmount ? 'trade.switchToShares' : 'trade.switchToAmount')}
+              </button>
+            )}
+          </div>
+
+          {byAmount ? (
+            <Input
+              id="trade-amount"
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              placeholder="50"
+              value={amountText}
+              onChange={(event) => setAmountText(event.target.value)}
+              disabled={!asset || !price}
+            />
+          ) : (
+            <Input
+              id="trade-quantity"
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              value={quantityText}
+              onChange={(event) => setQuantityText(event.target.value)}
+              disabled={!asset || !price}
+            />
+          )}
+
+          {byAmount && quantityValid && asset && (
+            <p className="text-muted-foreground text-xs">
+              {t('trade.amountBuys', {
+                quantity: formatQuantity(quantity),
+                ticker: asset.ticker,
+              })}
+            </p>
+          )}
+
+          {/* Fees do not scale all the way down: a fifty cent minimum on a
+              five dollar order is ten percent before the price has moved. Said
+              plainly rather than left for the reader to work out. */}
+          {feeShare !== null && feeShare >= 2 && (
+            <p className="text-xs" style={{ color: 'var(--chart-down)' }}>
+              {t('trade.feeHeavy', { percent: feeShare.toFixed(1) })}
+            </p>
+          )}
+
+          {held !== 0 && !byAmount && (
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-2"
-              onClick={() => setQuantityText(String(Math.abs(held)))}
+              onClick={() => setQuantityText(formatQuantity(Math.abs(held)))}
             >
-              {t('trade.useAll', { quantity: Math.abs(held) })}
+              {t('trade.useAll', { quantity: formatQuantity(Math.abs(held)) })}
             </button>
           )}
         </div>
@@ -586,12 +684,12 @@ export function TradePanel({
             description={
               resting
                 ? t('orders.confirmBody', {
-                    quantity,
+                    quantity: formatQuantity(quantity),
                     ticker: asset.ticker,
                   })
                 : t(
                     confirmReduces ? 'confirm.reduceBody' : 'confirm.openBody',
-                    { quantity, ticker: asset.ticker },
+                    { quantity: formatQuantity(quantity), ticker: asset.ticker },
                   )
             }
             lines={
@@ -709,7 +807,7 @@ export function TradePanel({
                       : confirming === 'BUY'
                         ? 'confirm.buyAction'
                         : 'confirm.shortAction',
-                    { quantity, ticker: asset.ticker },
+                    { quantity: formatQuantity(quantity), ticker: asset.ticker },
                   )
             }
             onConfirm={() => void submit(confirming)}

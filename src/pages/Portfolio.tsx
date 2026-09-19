@@ -35,7 +35,7 @@ import { usePendingOrders } from '@/hooks/usePendingOrders'
 import { usePositions } from '@/hooks/usePositions'
 import { useQuotes } from '@/hooks/useQuotes'
 import { useTranslation } from '@/hooks/useTranslation'
-import { formatPercent, formatUsd } from '@/lib/format'
+import { formatPercent, formatQuantity, formatUsd } from '@/lib/format'
 import {
   accountEquity,
   pnlPercent,
@@ -414,7 +414,7 @@ export function Portfolio() {
                             )}
                           </Badge>
                           <span className="text-muted-foreground ms-auto text-sm tabular-nums">
-                            {position.quantity}
+                            {formatQuantity(position.quantity)}
                           </span>
                         </div>
                         <dl className="text-sm">
@@ -518,7 +518,7 @@ export function Portfolio() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
-                            {position.quantity}
+                            {formatQuantity(position.quantity)}
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
                             {position.entryPrice.toFixed(decimals)}
@@ -604,7 +604,7 @@ export function Portfolio() {
                             )}
                           </Badge>
                           <span className="text-muted-foreground ms-auto text-sm tabular-nums">
-                            {position.quantity}
+                            {formatQuantity(position.quantity)}
                           </span>
                         </div>
                         <dl className="text-sm">
@@ -678,7 +678,7 @@ export function Portfolio() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
-                            {position.quantity}
+                            {formatQuantity(position.quantity)}
                           </TableCell>
                           <TableCell className="text-end tabular-nums">
                             {position.entryPrice.toFixed(decimals)}

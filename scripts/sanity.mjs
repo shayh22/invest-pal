@@ -76,6 +76,10 @@ await section('Site', async () => {
       bundle.includes('Follow this asset') && bundle.includes('הוספה למעקב'),
     )
     check(
+      'buying by amount shipped',
+      bundle.includes('Amount to spend') && bundle.includes('סכום להשקעה'),
+    )
+    check(
       'trailing stops shipped',
       bundle.includes('Trailing stop — follows the price') &&
         bundle.includes('סטופ נגרר'),
@@ -299,6 +303,34 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       body: JSON.stringify({ asset_id: assetId, direction: 'ABOVE', price: 1 }),
     })
     check('alerts are not client-writable', forgedAlert.status >= 400, `HTTP ${forgedAlert.status}`)
+
+    // Fractions. The column is numeric(18, 8), and the point of checking it
+    // here is that the whole round trip keeps all eight places.
+    const fraction = 0.12345678
+    const fracBuy = await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'BUY', p_quantity: fraction, p_price: 100,
+      }),
+    })
+    check('a fraction of a share can be bought', fracBuy.status < 400,
+      `HTTP ${fracBuy.status}`)
+    const fracHeld = await (await rest(
+      `transactions?select=quantity&status=eq.OPEN&asset_id=eq.${assetId}`,
+    )).json()
+    check('and is held to the last place',
+      Number(fracHeld?.[0]?.quantity) === fraction, String(fracHeld?.[0]?.quantity))
+    await rest('rpc/trade', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_asset_id: assetId, p_side: 'SELL', p_quantity: fraction, p_price: 100,
+      }),
+    })
+    const fracGone = await (await rest(
+      `transactions?select=id&status=eq.OPEN&asset_id=eq.${assetId}`,
+    )).json()
+    check('and selling the same fraction closes it exactly',
+      fracGone.length === 0, `${fracGone.length} left open`)
 
     // A trailing stop. Placed against a reference price, walked up, and only
     // then dropped on to the level the walk left behind — the ratchet is the

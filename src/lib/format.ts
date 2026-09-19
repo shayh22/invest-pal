@@ -16,3 +16,18 @@ export function formatUsd(value: number): string {
 export function formatPercent(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
 }
+
+/**
+ * A quantity, without the trailing zeros that make a fraction look like noise.
+ *
+ * Quantities are numeric(18, 8) in the database, so a holding bought with a
+ * dollar amount comes back as 0.14876543 and a whole one as 3.00000000.
+ * Printing both verbatim makes the second look like a bug and the first look
+ * like a precision error, so this trims to what was actually bought.
+ */
+export function formatQuantity(value: number): string {
+  if (!Number.isFinite(value)) return '0'
+  // Eight is the column's scale; anything beyond it was never stored.
+  const fixed = value.toFixed(8)
+  return fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed
+}

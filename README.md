@@ -363,6 +363,31 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### Spending an amount instead of counting shares
+
+Quantities were always `numeric(18, 8)`, so fractions worked from the first
+migration — what was missing was the way people actually think. Nobody decides
+to buy 0.1487 of a share; they decide to put fifty dollars into something.
+
+The trade panel now takes either. Switch to an amount and it divides by the
+price on screen, **truncating** to eight places rather than rounding: rounding
+up could ask for a hair more than the amount covers, and being refused for a
+rounding error you cannot see is the worst kind of refusal.
+
+Offered only for a market order, and the switch falls back to a quantity the
+moment a resting type is chosen — converting an amount needs a price, and a
+limit order does not have one yet.
+
+One thing worth saying out loud, which the panel does: **fees do not scale all
+the way down.** A fifty cent minimum on a five dollar order is ten percent
+before the price has moved at all. When costs come to more than 2% of an order
+the panel says so, because trying small amounts is exactly what someone
+learning will do.
+
+`formatQuantity()` trims to what was actually bought, so a whole share prints
+as `3` rather than `3.00000000` and a fraction is not mistaken for a precision
+error.
+
 ### A stop that follows the price
 
 A stop-loss is set once and then it is wrong. Buy at 100, stop at 90, and if

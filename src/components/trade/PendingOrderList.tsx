@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTranslation } from '@/hooks/useTranslation'
+import { formatQuantity } from '@/lib/format'
 import type { TranslationKey } from '@/i18n'
 import { cancelOrder } from '@/services/orders'
 import { requireSupabase } from '@/services/supabase'
@@ -73,7 +74,7 @@ export function PendingOrderList({
                   )}
                 </Badge>
                 <span className="text-muted-foreground ms-auto text-sm tabular-nums">
-                  {order.quantity}
+                  {formatQuantity(order.quantity)}
                 </span>
               </div>
 
@@ -164,7 +165,7 @@ export function ResolvedOrderList({
                   {t(order.side === 'BUY' ? 'common.buy' : 'common.sell')}
                 </Badge>
                 <span className="text-muted-foreground ms-auto text-sm tabular-nums">
-                  {order.quantity}
+                  {formatQuantity(order.quantity)}
                 </span>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
