@@ -342,6 +342,27 @@ returns that collateral plus the result:
 position is closed. The database remains the authority — it settles every trade
 — but if one changes, so must the other.
 
+### A list of what you are following
+
+74 assets means typing tickers into the picker every visit. Migration `0009`
+adds a watchlist: star an asset on the chart and it appears on the dashboard
+with its price and the day's move, tappable straight back to its chart.
+
+The list is a **preference, not account state**, so `reset_portfolio()` is
+deliberately left alone — starting over with the money should not make you
+forget what you were following. Those are different decisions, and the button
+names the money.
+
+`set_watched(asset, bool)` is one idempotent call rather than an add and a
+remove, because the UI has a single star and asking it to know which way round
+it currently is invites the two to disagree.
+
+The picker's search became **ranked** rather than merely filtered while testing
+this: an exact ticker beats a ticker prefix, beats an exact name, beats a name
+prefix, beats a word inside the name, beats a substring. Without the exact-name
+band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
+whichever the query happened to return first.
+
 ### Orders that wait
 
 Everything filled instantly at whatever the screen showed. Real brokers are
@@ -478,7 +499,7 @@ positions are refused until the balance recovers.
 
 ### Tests
 
-Six suites, 166 checks. `trading_engine_test.sql` covers the accounting
+Seven suites, 184 checks. `trading_engine_test.sql` covers the accounting
 identity, both directions, rejected inputs, double settlement, cross-account
 access and every removed write path; `execution_costs_test.sql` owns the exact
 arithmetic of spread and commission; `starting_balance_test.sql` covers
@@ -486,6 +507,8 @@ provisioning and its validation; `commission_profiles_test.sql` covers the cost
 profiles, including that the quote matches the charge and that switching does
 not rewrite an open position; `pending_orders_test.sql` covers all four trigger
 directions, expiry, rejection with a reason, and that orders are private;
+`watchlist_test.sql` covers the idempotent toggle, the cap, privacy, and that a
+reset leaves the list alone;
 `netting_test.sql` covers the holding rules, the opt-in short switch, resetting,
 and the migration that nets legacy rows.
 
@@ -500,7 +523,7 @@ for m in supabase/migrations/*.sql; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "$m"
 done
 for t in trading_engine execution_costs starting_balance \
-         commission_profiles pending_orders netting; do
+         commission_profiles pending_orders watchlist netting; do
   psql "$DB" -v ON_ERROR_STOP=1 -f "supabase/tests/${t}_test.sql"
 done
 ```

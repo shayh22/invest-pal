@@ -79,6 +79,16 @@ export interface Database {
         Update: never
         Relationships: []
       }
+      watchlist: {
+        Row: {
+          portfolio_id: string
+          asset_id: string
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       commission_profiles: {
         Row: {
           key: string
@@ -185,6 +195,11 @@ export interface Database {
           p_price: number
         }
         Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /** Follow an asset or stop following it. Returns the state after. */
+      set_watched: {
+        Args: { p_asset_id: string; p_watched: boolean }
+        Returns: boolean
       }
       /** Rest an order until a price or a time reaches it. */
       place_pending_order: {

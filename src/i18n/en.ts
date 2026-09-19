@@ -358,6 +358,15 @@ export const en = {
   'orders.settlementNote':
     'Nothing watches prices while the app is closed. A waiting order is checked whenever you open the chart for that asset, so it fills when you look rather than the instant the market crosses it.',
 
+  // ----- watchlist -----
+  'watchlist.title': 'Following',
+  'watchlist.subtitle': 'Tap one to open its chart.',
+  'watchlist.follow': 'Follow this asset',
+  'watchlist.unfollow': 'Stop following',
+  'watchlist.added': 'Following {ticker}',
+  'watchlist.removed': 'No longer following {ticker}',
+  'watchlist.error': 'Could not update the list.',
+
   // ----- portfolio -----
   'portfolio.title': 'Portfolio',
   'portfolio.subtitle': 'Virtual money. Open positions are marked at the latest price.',
