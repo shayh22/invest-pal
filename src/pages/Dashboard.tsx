@@ -1,4 +1,4 @@
-import { Star, TrendingDown, TrendingUp } from 'lucide-react'
+import { BellRing, Star, TrendingDown, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -14,11 +14,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
 import { usePositions } from '@/hooks/usePositions'
+import { useAlerts } from '@/hooks/useAlerts'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useQuotes } from '@/hooks/useQuotes'
 import { formatPercent, formatUsd } from '@/lib/format'
 import { accountEquity } from '@/lib/trading'
+import { acknowledgeAlerts } from '@/services/alerts'
+import { requireSupabase } from '@/services/supabase'
 
 export function Dashboard() {
   const { user, profile, portfolio } = useAuth()
@@ -32,6 +35,7 @@ export function Dashboard() {
     .map((position) => tickerFor(position.assetId))
     .filter((ticker): ticker is string => Boolean(ticker))
   const watchlist = useWatchlist(portfolio?.id ?? null)
+  const alerts = useAlerts(portfolio?.id ?? null)
   const watchedAssets = assets.filter((asset) => watchlist.watched.has(asset.id))
 
   // One request for both: the positions need marks and the watchlist needs
@@ -130,6 +134,55 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {alerts.unread.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BellRing className="size-4" aria-hidden />
+              {t('alerts.firedTitle')}
+            </CardTitle>
+            <CardDescription>{t('alerts.firedSubtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {alerts.unread.map((alert) => {
+              const asset = assets.find((a) => a.id === alert.assetId)
+              return (
+                <Link
+                  key={alert.id}
+                  to={`/markets?symbol=${encodeURIComponent(asset?.ticker ?? '')}`}
+                  className="hover:bg-muted/50 -mx-2 flex flex-wrap items-center gap-2 rounded-lg px-2 py-2 text-sm"
+                >
+                  <span className="font-medium">{asset?.ticker ?? '—'}</span>
+                  <Badge variant="outline">
+                    {t(
+                      alert.direction === 'ABOVE'
+                        ? 'alerts.above'
+                        : 'alerts.below',
+                    )}
+                  </Badge>
+                  <span className="tabular-nums">{alert.price}</span>
+                  <span className="text-muted-foreground ms-auto tabular-nums">
+                    {alert.triggeredPrice}
+                  </span>
+                </Link>
+              )
+            })}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                void acknowledgeAlerts(requireSupabase())
+                  .then(() => alerts.reload())
+                  .catch(() => {})
+              }}
+            >
+              {t('alerts.markSeen')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* What you are actually following, with today's move. Tapping one opens
           it on the Markets page rather than making you search for it again. */}

@@ -9,6 +9,7 @@ import type {
   AssetType,
   ExperienceLevel,
   OrderStatus,
+  AlertDirection,
   TradeDirection,
   TradeSide,
   TriggerType,
@@ -74,6 +75,22 @@ export interface Database {
           transaction_id: string | null
           created_at: string
           resolved_at: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          id: string
+          portfolio_id: string
+          asset_id: string
+          direction: AlertDirection
+          price: number
+          triggered_at: string | null
+          triggered_price: number | null
+          acknowledged: boolean
+          created_at: string
         }
         Insert: never
         Update: never
@@ -195,6 +212,25 @@ export interface Database {
           p_price: number
         }
         Returns: Database['public']['Tables']['transactions']['Row']
+      }
+      /** Watch a level and say so when it is reached. No trade involved. */
+      create_price_alert: {
+        Args: { p_asset_id: string; p_direction: AlertDirection; p_price: number }
+        Returns: Database['public']['Tables']['price_alerts']['Row']
+      }
+      delete_price_alert: {
+        Args: { p_alert_id: string }
+        Returns: boolean
+      }
+      /** Mark every fired alert read; returns how many. */
+      acknowledge_price_alerts: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      /** Fire whatever this price has reached; returns how many. */
+      settle_price_alerts: {
+        Args: { p_asset_id: string; p_price: number }
+        Returns: number
       }
       /** Follow an asset or stop following it. Returns the state after. */
       set_watched: {

@@ -366,6 +366,27 @@ export const he: Record<TranslationKey, string> = {
   'watchlist.removed': '{ticker} הוסר מהמעקב',
   'watchlist.error': 'לא ניתן לעדכן את הרשימה.',
 
+  // ----- התראות מחיר -----
+  'alerts.title': 'עדכנו אותי כש…',
+  'alerts.subtitle': 'לעקוב אחרי רמה בלי להתחייב לעסקה.',
+  'alerts.directionLabel': 'לעקוב אחרי',
+  'alerts.above': 'עלייה ל־',
+  'alerts.below': 'ירידה ל־',
+  'alerts.levelLabel': 'רמה',
+  'alerts.add': 'הגדרת התראה',
+  'alerts.remove': 'הסרה',
+  'alerts.onThisAsset': 'התראות על הנכס הזה',
+  'alerts.firedAt': 'הופעלה {when}',
+  'alerts.setToast': 'הוגדרה התראה על {ticker}',
+  'alerts.error': 'לא ניתן לעדכן את ההתראה.',
+  'alerts.firedToast_one': 'התראת מחיר אחת',
+  'alerts.firedToast_other': '{count} התראות מחיר',
+  'alerts.firedTitle': 'רמות שנפגשו',
+  'alerts.firedSubtitle': 'הקישו על אחת כדי לפתוח את הגרף.',
+  'alerts.markSeen': 'סימון הכול כנקרא',
+  'alerts.note':
+    'התראה מופעלת פעם אחת ואז נעצרת. כמו פקודה ממתינה, היא נבדקת כשפותחים את הנכס ולא ברגע שהשוק חוצה אותה.',
+
   // ----- תיק השקעות -----
   'portfolio.title': 'תיק השקעות',
   'portfolio.subtitle': 'כסף וירטואלי. פוזיציות פתוחות משוערכות לפי המחיר האחרון.',

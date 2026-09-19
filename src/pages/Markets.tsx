@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Star, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
+import { AlertPanel } from '@/components/trade/AlertPanel'
 import { AssetPicker } from '@/components/market/AssetPicker'
 import { GannSignalPanel } from '@/components/market/GannSignalPanel'
 import { MentorNote } from '@/components/market/MentorNote'
@@ -21,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useAssets } from '@/hooks/useAssets'
+import { useAlerts } from '@/hooks/useAlerts'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { usePositions } from '@/hooks/usePositions'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -30,6 +32,7 @@ import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent } from '@/lib/format'
 import { toast } from 'sonner'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
+import { settleAlerts } from '@/services/alerts'
 import { settleOrders } from '@/services/orders'
 import { setWatched } from '@/services/watchlist'
 import { requireSupabase, supabase } from '@/services/supabase'
@@ -101,6 +104,7 @@ export function Markets() {
 
   const { portfolio, refreshAccount } = useAuth()
   const watchlist = useWatchlist(portfolio?.id ?? null)
+  const alerts = useAlerts(portfolio?.id ?? null)
   const isWatched = selectedAsset
     ? watchlist.watched.has(selectedAsset.id)
     : false
@@ -164,7 +168,17 @@ export function Markets() {
       // Quiet on purpose: this runs off a price update, and the next price
       // will try again. An error here is not worth interrupting anyone with.
       .catch(() => {})
-  }, [selectedAsset?.id, data?.quote?.price, portfolio, tCount, positions, refreshAccount])
+
+    // Same price, same moment: an alert is the version of this that does not
+    // trade, so it has no reason to wait for a different one.
+    settleAlerts(client, assetId, livePrice)
+      .then((fired) => {
+        if (fired === 0) return
+        toast.info(tCount('alerts.firedToast', fired))
+        alerts.reload()
+      })
+      .catch(() => {})
+  }, [selectedAsset?.id, data?.quote?.price, portfolio, tCount, positions, refreshAccount, alerts])
 
   const activeRangeLabel =
     RANGES.find((option) => option.value === range)?.label ?? range
@@ -395,6 +409,7 @@ export function Markets() {
           stale={gann.stale}
           decimals={decimals}
         />
+        <div className="flex flex-col gap-4">
         <TradePanel
           asset={selectedAsset}
           price={quote?.price ?? null}
@@ -408,6 +423,17 @@ export function Markets() {
           }
           onTraded={positions.reload}
         />
+
+        <AlertPanel
+          asset={selectedAsset}
+          price={quote?.price ?? null}
+          decimals={decimals}
+          alerts={alerts.alerts.filter(
+            (alert) => alert.assetId === selectedAsset?.id,
+          )}
+          onChanged={alerts.reload}
+        />
+        </div>
       </div>
     </div>
   )

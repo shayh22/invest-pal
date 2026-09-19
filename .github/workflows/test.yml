@@ -50,7 +50,8 @@ jobs:
                    supabase/migrations/0006_netting_and_reset.sql \
                    supabase/migrations/0007_commission_profiles_and_assets.sql \
                    supabase/migrations/0008_pending_orders.sql \
-                   supabase/migrations/0009_watchlist.sql; do
+                   supabase/migrations/0009_watchlist.sql \
+                   supabase/migrations/0010_price_alerts.sql; do
             psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Trading engine tests
@@ -70,6 +71,9 @@ jobs:
 
       - name: Watchlist tests
         run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/watchlist_test.sql
+
+      - name: Price alert tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/price_alerts_test.sql
 
       # Runs last: its final section re-applies migration 0006 to exercise the
       # netting of legacy rows, so it leaves the schema rebuilt rather than as

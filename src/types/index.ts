@@ -47,6 +47,22 @@ export type TradeSide = 'BUY' | 'SELL'
  */
 export type TriggerType = 'LIMIT' | 'STOP' | 'TIME'
 
+/** Which way a price alert is watching. */
+export type AlertDirection = 'ABOVE' | 'BELOW'
+
+export interface PriceAlert {
+  id: string
+  assetId: string
+  direction: AlertDirection
+  /** The level being watched for. */
+  price: number
+  triggeredAt: string | null
+  /** What the price actually was when it fired, which is not the level. */
+  triggeredPrice: number | null
+  acknowledged: boolean
+  createdAt: string
+}
+
 export type OrderStatus =
   | 'PENDING'
   | 'FILLED'
