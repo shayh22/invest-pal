@@ -128,10 +128,6 @@ export const en = {
   'dashboard.closedCount': '{count} closed so far.',
   'dashboard.experience': 'Experience level',
   'dashboard.experienceHint': 'Tunes how much the AI mentor explains.',
-  'dashboard.upNext': 'Up next',
-  'dashboard.nextTitle': 'Phase 6 — The AI mentor',
-  'dashboard.nextBody':
-    'Plain-language explanations of each Gann signal, next to the trade buttons.',
   'dashboard.findTrade': 'Find a trade',
   'dashboard.viewPositions': 'View positions',
   'experience.beginner': 'beginner',
@@ -458,6 +454,22 @@ export const en = {
   'notFound.body': 'That route doesn’t exist yet.',
   'notFound.back': 'Back to overview',
   'placeholder.notBuilt': 'Not built yet.',
+  // ----- the Gann scanner -----
+  'scan.title': 'Where the geometry lines up',
+  'scan.subtitle':
+    'Ranks every asset the engine has measured, so you have somewhere to start.',
+  'scan.action': 'Scan the charts',
+  'scan.errorTitle': 'Could not rank the assets',
+  'scan.empty':
+    'Nothing has been scored yet. The engine measures every asset once a day; check back after the next run.',
+  'scan.biasLong': 'Above the 1x1',
+  'scan.biasShort': 'Below the 1x1',
+  'scan.room': 'Room above is {ratio}x the room below',
+  'scan.noRoom': 'No level on both sides of the price',
+  'scan.turnDue': 'a turn due in {days}d',
+  'scan.confidence': '{percent}% of the geometry resolved',
+  'scan.caveat':
+    'A ranking, not a recommendation. A high score means this chart\u2019s Gann geometry is unusually well arranged today — where price has turned before, not where it will turn. Practise with virtual money.',
 } as const
 
 export type TranslationKey = keyof typeof en

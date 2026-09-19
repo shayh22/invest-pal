@@ -47,6 +47,33 @@ export interface GannCycleData {
   projected_time: string
 }
 
+/** Which way the geometry leans: which side of the 1x1 the last close sits. */
+export type GannBias = 'LONG' | 'SHORT' | 'NONE'
+
+/**
+ * How one chart's geometry compares with every other one.
+ *
+ * Written by gann/opportunity.py during the nightly refresh. Every part is
+ * kept alongside the total, because a ranking nobody can interrogate is a
+ * ranking nobody should act on.
+ */
+export interface GannOpportunity {
+  /** 0 to 1. A ranking, not a probability. */
+  score: number
+  bias: GannBias
+  room_score: number
+  balance_score: number
+  cycle_score: number
+  confidence: number
+  /** Nearest Square of Nine level below the last close, if there is one. */
+  support: number | null
+  /** Nearest above. */
+  resistance: number | null
+  /** Room above divided by room below, uncapped as measured. */
+  reward_risk: number | null
+  days_to_cycle: number | null
+}
+
 export interface GannPayload {
   version: number
   symbol: string
@@ -65,6 +92,11 @@ export interface GannPayload {
   cycles: GannCycleData[]
   /** Caveats the engine wants shown, e.g. thin data or a tight square. */
   notes: string[]
+  /**
+   * Optional on purpose: rows cached before the scanner shipped do not carry
+   * it, and they stay readable rather than being treated as corrupt.
+   */
+  opportunity?: GannOpportunity
 }
 
 export interface GannSignal {

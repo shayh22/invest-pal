@@ -76,6 +76,17 @@ await section('Site', async () => {
       bundle.includes('Follow this asset') && bundle.includes('הוספה למעקב'),
     )
     check(
+      'the Gann scanner shipped',
+      bundle.includes('Where the geometry lines up') &&
+        bundle.includes('היכן הגאומטריה מסתדרת'),
+    )
+    check(
+      // The card that announced the next phase of the build outlived the
+      // phase it named. Nothing in the app should carry a roadmap.
+      'no build roadmap on the dashboard',
+      !bundle.includes('Phase 6') && !bundle.includes('dashboard.upNext'),
+    )
+    check(
       'buying by amount shipped',
       bundle.includes('Amount to spend') && bundle.includes('סכום להשקעה'),
     )

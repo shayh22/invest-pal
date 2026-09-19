@@ -129,10 +129,6 @@ export const he: Record<TranslationKey, string> = {
   'dashboard.closedCount': '{count} נסגרו עד כה.',
   'dashboard.experience': 'רמת ניסיון',
   'dashboard.experienceHint': 'מכוונן כמה פירוט יספק מנטור ה-AI.',
-  'dashboard.upNext': 'הבא בתור',
-  'dashboard.nextTitle': 'שלב 6 — מנטור ה-AI',
-  'dashboard.nextBody':
-    'הסבר בשפה פשוטה לכל איתות גאן, ממש ליד כפתורי המסחר.',
   'dashboard.findTrade': 'לאיתור עסקה',
   'dashboard.viewPositions': 'לצפייה בפוזיציות',
   'experience.beginner': 'מתחיל',
@@ -457,4 +453,20 @@ export const he: Record<TranslationKey, string> = {
   'notFound.body': 'הנתיב הזה עדיין לא קיים.',
   'notFound.back': 'חזרה לסקירה',
   'placeholder.notBuilt': 'עדיין לא נבנה.',
+  // ----- סורק גאן -----
+  'scan.title': 'היכן הגאומטריה מסתדרת',
+  'scan.subtitle':
+    'דירוג כל הנכסים שהמנוע מדד, כדי שיהיה מאיפה להתחיל.',
+  'scan.action': 'סריקת הגרפים',
+  'scan.errorTitle': 'לא ניתן לדרג את הנכסים',
+  'scan.empty':
+    'עדיין לא דורג דבר. המנוע מודד את כל הנכסים פעם ביום; אפשר לבדוק שוב אחרי ההרצה הבאה.',
+  'scan.biasLong': 'מעל ה־1x1',
+  'scan.biasShort': 'מתחת ל־1x1',
+  'scan.room': 'המרחב למעלה גדול פי {ratio} מזה שלמטה',
+  'scan.noRoom': 'אין רמה משני צידי המחיר',
+  'scan.turnDue': 'מפנה צפוי בעוד {days} ימים',
+  'scan.confidence': '{percent}% מהגאומטריה נפתרה',
+  'scan.caveat':
+    'זהו דירוג, לא המלצה. ציון גבוה אומר שגאומטריית גאן של הגרף הזה מסודרת היטב היום — היכן שהמחיר התהפך בעבר, לא היכן שיתהפך. תרגלו בכסף וירטואלי.',
 }

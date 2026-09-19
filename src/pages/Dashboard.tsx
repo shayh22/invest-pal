@@ -1,6 +1,7 @@
 import { BellRing, Star, TrendingDown, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { OpportunityScanner } from '@/components/market/OpportunityScanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -242,23 +243,23 @@ export function Dashboard() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <Badge variant="outline" className="w-fit">
-            {t('dashboard.upNext')}
-          </Badge>
-          <CardTitle className="text-lg">{t('dashboard.nextTitle')}</CardTitle>
-          <CardDescription>{t('dashboard.nextBody')}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button asChild size="sm">
-            <Link to="/markets">{t('dashboard.findTrade')}</Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/portfolio">{t('dashboard.viewPositions')}</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Which chart to look at, for the reader who does not already know.
+          Placed above the shortcuts because "where do I start" is the
+          question that comes first. */}
+      <OpportunityScanner />
+
+      {/* Just the two places to go next. This used to be a card announcing
+          the next phase of the build, which stayed on screen long after that
+          phase had shipped — a roadmap is not something a reader of the app
+          needs, and one that is out of date is worse than none. */}
+      <div className="flex flex-wrap gap-3">
+        <Button asChild size="sm">
+          <Link to="/markets">{t('dashboard.findTrade')}</Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to="/portfolio">{t('dashboard.viewPositions')}</Link>
+        </Button>
+      </div>
     </div>
   )
 }
