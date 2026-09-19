@@ -173,6 +173,41 @@ module and surfaced in the UI:
 None of this predicts anything, and the UI says so plainly. It reports where
 price has turned before and what the geometry from those turns looks like now.
 
+### Which asset to look at
+
+The engine could always say what Gann made of an asset you had already chosen.
+The harder question, and the one people actually start with, is *which* one to
+look at. `gann/opportunity.py` scores every analysis on the same four readings
+and the dashboard ranks them:
+
+| Reading | Weight | Why |
+| --- | --- | --- |
+| **Room versus risk** | 0.40 | Distance up to the nearest resistance against distance down to the nearest support. The only reading with a direct trading meaning: a support just underneath is a definable stop, and space above is somewhere to go. |
+| **Balance** | 0.25 | Where the close sits against the 1x1 — Gann's own trend test. Scored on *proximity*, because the 1x1 is where the decision is cheap and a price stretched far from it has already made its move. |
+| **A turn due** | 0.20 | Gann's central claim is that time turns markets. A projected cycle landing within three weeks scores; one months out does not. |
+| **Confidence** | 0.15 | Few pivots, no fan, a tight square. The engine already records these as notes, and a score built on thin data should say so rather than compete with one built on a clean chart. |
+
+The reward-to-risk ratio is **capped at 3.0** before it is scored. A ratio of
+forty means the nearest support happens to sit a rounding error away, not that
+the trade is forty times better than even.
+
+The weights are round numbers stated in one place. There is no backtest behind
+them and inventing one would be dishonest — they express which readings matter
+more, not a calibrated edge. Every part is kept alongside the total and shown
+in the UI, because a ranking nobody can interrogate is a ranking nobody should
+act on.
+
+Scoring runs in the engine rather than the browser so that the ranking and the
+panel explaining it cannot drift apart, and the result is written into the
+`opportunity` block of `gann_signals.payload` by the nightly refresh. The block
+is optional on the frontend: rows cached before the scanner shipped carry no
+score and are **skipped rather than ranked last**, because "not yet measured"
+and "measured and poor" are different things.
+
+The card sits behind a button. It is one request covering every scored asset,
+and a ranked list of things to buy should be something you went looking for
+rather than something the app greets you with.
+
 ### Tests
 
 ```bash
@@ -180,9 +215,15 @@ python -m venv .venv && .venv/bin/pip install pytest
 .venv/bin/pytest -q
 ```
 
-68 tests cover the maths directly — the Square of Nine's defining identity, fan
+100 tests cover the maths directly — the Square of Nine's defining identity, fan
 ratios and ordering, pivot edge cases, cycle clustering and projection — plus
 the payload contract shared with `src/types/gann.ts`.
+
+The opportunity tests are about **ordering** rather than absolute numbers: that
+a roomier chart outranks a cramped one, that a turn due sooner outranks one
+further out, that thin data loses to clean data, and that an absurd ratio is
+capped rather than allowed to dominate. Asserting the totals would only restate
+the weights.
 
 ## Languages
 

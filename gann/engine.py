@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from gann.angles import build_fan
 from gann.cycles import average_bar_duration, dominant_cycles
 from gann.models import Candle, GannAnalysis
+from gann.opportunity import score as score_opportunity
+from gann.opportunity import to_payload as opportunity_payload
 from gann.square_of_nine import square_of_nine_levels
 from gann.swings import find_swings, major_pivot, price_unit_per_bar
 
@@ -165,4 +167,8 @@ def to_payload(analysis: GannAnalysis, *, max_swings: int = 12) -> dict:
             for cycle in analysis.cycles
         ],
         "notes": analysis.notes,
+        # How this chart's geometry compares with every other one. Computed
+        # here rather than in the browser so that the ranking and the panel
+        # that explains it are reading the same numbers.
+        "opportunity": opportunity_payload(score_opportunity(analysis)),
     }

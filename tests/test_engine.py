@@ -145,6 +145,19 @@ def test_payload_shape_matches_the_frontend_contract():
         "square_of_nine",
         "cycles",
         "notes",
+        "opportunity",
+    }
+    assert set(payload["opportunity"]) == {
+        "score",
+        "bias",
+        "room_score",
+        "balance_score",
+        "cycle_score",
+        "confidence",
+        "support",
+        "resistance",
+        "reward_risk",
+        "days_to_cycle",
     }
     assert set(payload["angles"][0]) == {
         "name",
