@@ -1,0 +1,151 @@
+# Ship whatever is on main, in the one order that is safe.
+#
+# This exists because the gap between "merged" and "live" was invisible. Five
+# pull requests sat merged while production served a build from before the
+# first of them, and nothing anywhere said so. A merge that does not reach
+# users is not finished, so finishing it is a job rather than a habit.
+#
+# The order is the whole point:
+#
+#   1. migrate   the schema the new bundle expects
+#   2. deploy    the bundle
+#   3. verify    that what is now live actually works
+#
+# Never the other way round. The frontend selects columns that migrations add
+# — ship it first and the orders list breaks for everyone until the migration
+# lands. Migrations are additive and idempotent ("Safe to re-run" at the top of
+# every one), so re-applying all of them each time needs no bookkeeping and
+# costs a few seconds.
+#
+# It runs only after Tests has gone green on main, so a red build never
+# deploys.
+#
+# Required secrets (Settings -> Secrets and variables -> Actions):
+#   VERCEL_TOKEN          a Vercel access token
+#   SUPABASE_DB_URL       postgresql://... connection string for the project
+#   SUPABASE_URL          https://<ref>.supabase.co
+#   SUPABASE_ANON_KEY     the publishable key (also public in the bundle)
+#
+# Required variables (same page, Variables tab):
+#   VERCEL_ORG_ID         from .vercel/project.json
+#   VERCEL_PROJECT_ID     from .vercel/project.json
+#
+# If any of these are missing the job FAILS rather than skipping. A workflow
+# that reports success while doing nothing is how the Gann refresh went two
+# days without running, and a red mark is the only honest way to say "this
+# did not ship".
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['Tests']
+    types: [completed]
+    branches: [main]
+  # For deploying by hand: a rollback, or the first run after adding secrets.
+  workflow_dispatch:
+
+# One at a time. Two deploys racing would have the later migration run against
+# the earlier bundle.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    # A dispatch has no triggering run to inspect; a workflow_run must be green.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run checks out the default branch by default, which is
+          # what we want, but be explicit: this deploys main, not a PR head.
+          ref: main
+
+      - name: Check what is configured
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          missing=""
+          for name in VERCEL_TOKEN SUPABASE_DB_URL SUPABASE_URL SUPABASE_ANON_KEY \
+                      VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            # An `if` rather than `[ ... ] && ...`: the short form returns
+            # non-zero when the variable *is* set, and steps run under `bash
+            # -e`, so a fully configured repository would fail right here.
+            if [ -z "${!name}" ]; then
+              missing="$missing $name"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            {
+              echo "## Nothing was deployed"
+              echo
+              echo "These are not set, so this build is still not live:"
+              for name in $missing; do echo "- \`$name\`"; done
+              echo
+              echo "Add them under Settings → Secrets and variables → Actions."
+              echo "\`VERCEL_ORG_ID\` and \`VERCEL_PROJECT_ID\` go in the"
+              echo "**Variables** tab; the rest are secrets."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing:$missing" >&2
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------------
+      # 1. The schema, first
+      # ---------------------------------------------------------------------
+      - name: Apply migrations
+        env:
+          PGSSLMODE: require
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "--- $f"
+            psql "${{ secrets.SUPABASE_DB_URL }}" -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+          echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations." \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      # ---------------------------------------------------------------------
+      # 2. The bundle
+      # ---------------------------------------------------------------------
+      - name: Deploy to production
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          # Read by the CLI from the environment, so it never appears in a
+          # command line or a process listing.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          # Built on Vercel rather than here, so the build picks up the
+          # environment variables configured in the dashboard. A local build
+          # would bake in whatever this runner happened to have, which is how
+          # a localhost Supabase URL once reached production.
+          url=$(npx --yes vercel@latest deploy --prod --yes)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed $url" >> "$GITHUB_STEP_SUMMARY"
+
+      # ---------------------------------------------------------------------
+      # 3. Proof that it works, against the thing that is now live
+      # ---------------------------------------------------------------------
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sanity checks against production
+        env:
+          # The project's own domain, not the per-deployment URL: an alias that
+          # has not switched over yet would have us checking the old build.
+          BASE_URL: https://invest-pal.vercel.app
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node scripts/sanity.mjs

@@ -310,6 +310,38 @@ Edge Function answers on the same `/api/market` path the client already
 defaults to, so market data needs no configuration. Step by step, including
 the Supabase redirect URLs, in [SETUP.md](SETUP.md#deploying-to-vercel).
 
+### Shipping is a job, not a habit
+
+`.github/workflows/deploy.yml` runs after **Tests** goes green on `main` and
+does three things in the one order that is safe:
+
+1. **Migrate.** Every file in `supabase/migrations/`, in order. They are all
+   idempotent — "Safe to re-run" is the first comment in each — so re-applying
+   the whole set each time needs no bookkeeping and costs seconds.
+2. **Deploy.** `vercel deploy --prod`, built on Vercel rather than on the
+   runner, so the build picks up the dashboard's environment variables. A local
+   build bakes in whatever the runner had, which is how a `localhost` Supabase
+   URL once reached production.
+3. **Verify.** `scripts/sanity.mjs` against the live site.
+
+**Never the other way round.** The frontend selects columns that migrations
+add; ship the bundle first and the orders list breaks for everyone until the
+migration lands.
+
+This exists because the gap between "merged" and "live" was invisible. Five
+pull requests sat merged while production served a build from before the first
+of them, and nothing anywhere said so.
+
+It needs four secrets — `VERCEL_TOKEN`, `SUPABASE_DB_URL`, `SUPABASE_URL`,
+`SUPABASE_ANON_KEY` — and two variables, `VERCEL_ORG_ID` and
+`VERCEL_PROJECT_ID`, both from `.vercel/project.json`.
+
+**If any are missing the job fails.** It does not skip. A workflow that reports
+success while doing nothing is how the Gann refresh went two nights without
+once running the engine, green every time, while the signals on the site went
+stale. That job now fails on this repository too, and still skips quietly on a
+fork so a fresh clone is not spammed with red builds.
+
 ## The trading engine
 
 Opening and closing a position each move cash **and** write a row. Those two

@@ -11,8 +11,11 @@
 #   OPENROUTER_API_KEY           enables the AI mentor summaries
 #   OPENROUTER_MODEL             override the default model slug
 #
-# Until those exist the job skips instead of failing, so a fresh fork does not
-# email you about red builds.
+# On a fork the job skips quietly when they are absent, so a fresh clone does
+# not email anyone about red builds. On this repository it FAILS instead: the
+# silent skip meant this job reported success every night for two days while
+# never once running the engine, and the Gann data on the site quietly went
+# stale. A job that does nothing should not look like a job that worked.
 name: Refresh Gann signals
 
 on:
@@ -35,13 +38,27 @@ jobs:
         id: creds
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          IS_UPSTREAM: ${{ github.repository == 'shayh22/invest-pal' }}
         run: |
-          if [ -z "$SUPABASE_URL" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "SUPABASE_URL is not set; skipping." >> "$GITHUB_STEP_SUMMARY"
-          else
+          if [ -n "$SUPABASE_URL" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "## The engine did not run"
+            echo
+            echo "\`SUPABASE_URL\` is not set, so no signals were refreshed"
+            echo "and the cached ones are another day staler."
+            echo
+            echo "Add \`SUPABASE_URL\` and \`SUPABASE_SERVICE_ROLE_KEY\` under"
+            echo "Settings → Secrets and variables → Actions."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$IS_UPSTREAM" = "true" ]; then
+            echo "SUPABASE_URL is not set; the refresh did nothing." >&2
+            exit 1
+          fi
+          echo "SUPABASE_URL is not set; skipping (fork)."
 
       - name: Run the engine
         if: steps.creds.outputs.configured == 'true'
