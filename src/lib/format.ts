@@ -31,3 +31,22 @@ export function formatQuantity(value: number): string {
   const fixed = value.toFixed(8)
   return fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed
 }
+
+/**
+ * The date a signal was computed, for the badge that reports it.
+ *
+ * The year appears only when it is not the current one. Within this year it is
+ * noise on a badge that has to share a row with a ticker, a bias and a score;
+ * outside it, it is the whole point — an analysis from last December should
+ * not read as though it were from last week.
+ */
+export function formatSignalDate(iso: string, locale: string): string {
+  const when = new Date(iso)
+  return when.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    ...(when.getFullYear() === new Date().getFullYear()
+      ? {}
+      : { year: 'numeric' }),
+  })
+}

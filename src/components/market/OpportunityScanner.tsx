@@ -15,6 +15,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useOpportunities } from '@/hooks/useOpportunities'
 import { useTranslation } from '@/hooks/useTranslation'
+import { formatSignalDate } from '@/lib/format'
 import type { RankedOpportunity } from '@/services/gann'
 
 /** How many to show. Past this it stops being a shortlist and becomes a table. */
@@ -166,7 +167,11 @@ function TopPick({ row }: { row: RankedOpportunity }) {
             {t(long ? 'scan.biasLong' : 'scan.biasShort')}
           </Badge>
         )}
-        {row.stale && <Badge variant="secondary">{t('gann.stale')}</Badge>}
+        <Badge variant="outline" className="font-normal">
+          {t('gann.updatedOn', {
+            date: formatSignalDate(row.calculatedAt, locale),
+          })}
+        </Badge>
         <span className="ms-auto text-sm font-medium tabular-nums">
           {Math.round(o.score * 100)}
         </span>

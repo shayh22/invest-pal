@@ -96,6 +96,15 @@ await section('Site', async () => {
       !bundle.includes('Phase 6') && !bundle.includes('dashboard.upNext'),
     )
     check(
+      // A date beats a verdict: "Stale" said something was wrong without
+      // saying what to do, and a reader who knows it runs daily can judge
+      // two days old perfectly well on their own.
+      'signals report when they were computed, not a verdict',
+      bundle.includes('Updated {date}') &&
+        bundle.includes('עודכן {date}') &&
+        !bundle.includes('לא עדכני'),
+    )
+    check(
       'the text size control shipped',
       bundle.includes('Switch to {size}') && bundle.includes('מעבר ל{size}'),
     )

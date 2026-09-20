@@ -459,6 +459,22 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### A date, not a verdict
+
+Cached signals used to carry a **Stale** badge once their TTL passed. It told a
+reader that something was wrong without telling them what to do about it, and
+there is nothing they *can* do — the analysis is computed by the nightly job,
+never in the browser.
+
+The badge now reports **when the analysis was computed**, always, in both the
+signal panel and the scanner. That is true every day rather than only on bad
+ones, and someone who knows it runs daily can judge two days old perfectly well
+for themselves.
+
+`formatSignalDate()` omits the year within the current year and includes it
+otherwise. On a badge sharing a row with a ticker, a bias and a score, the year
+is noise; on an analysis from last December it is the whole point.
+
 ### The shape of a page
 
 The app is built on shadcn/ui (the radix-nova style, neutral base), which is

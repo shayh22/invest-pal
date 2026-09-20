@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useTranslation } from '@/hooks/useTranslation'
+import { formatSignalDate } from '@/lib/format'
 import { balanceReading } from '@/lib/gann-overlay'
 import type { GannSignal } from '@/types/gann'
 
@@ -26,7 +27,6 @@ interface GannSignalPanelProps {
   signal: GannSignal | null
   loading: boolean
   error: string | null
-  stale: boolean
   decimals: number
 }
 
@@ -52,10 +52,9 @@ export function GannSignalPanel({
   signal,
   loading,
   error,
-  stale,
   decimals,
 }: GannSignalPanelProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const formatDate = useFormatDate()
 
   if (loading) {
@@ -114,15 +113,21 @@ export function GannSignalPanel({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-lg">{t('gann.title')}</CardTitle>
             <div className="flex items-center gap-2">
-              {stale && <Badge variant="outline">{t('gann.stale')}</Badge>}
+              {/* The date, not a verdict. "Stale" told a reader something was
+                  wrong without telling them what to do about it, and the date
+                  is both more informative and true every day — someone who
+                  knows the analysis runs daily can judge two days old for
+                  themselves. */}
+              <Badge variant="outline" className="font-normal">
+                {t('gann.updatedOn', {
+                  date: formatSignalDate(signal.calculatedAt, locale),
+                })}
+              </Badge>
               <Badge variant="secondary">{payload.timeframe}</Badge>
             </div>
           </div>
           <CardDescription>
-            {t('gann.computedOn', {
-              date: formatDate(signal.calculatedAt),
-              timeframe: payload.timeframe,
-            })}
+            {t('gann.computedFrom', { timeframe: payload.timeframe })}
           </CardDescription>
         </CardHeader>
 

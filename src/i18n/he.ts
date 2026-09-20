@@ -170,8 +170,8 @@ export const he: Record<TranslationKey, string> = {
 
   // ----- ניתוח גאן -----
   'gann.title': 'ניתוח גאן',
-  'gann.stale': 'לא עדכני',
-  'gann.computedOn': 'חושב בתאריך {date} מנרות של {timeframe}.',
+  'gann.updatedOn': 'עודכן {date}',
+  'gann.computedFrom': 'מנרות של {timeframe}.',
   'gann.noSignalTitle': 'עדיין אין איתות שמור לנכס הזה.',
   'gann.noSignalBody':
     'האיתותים מחושבים על ידי מנוע הפייתון ונשמרים בבסיס הנתונים. הריצו אותו כדי למלא את הפאנל:',
