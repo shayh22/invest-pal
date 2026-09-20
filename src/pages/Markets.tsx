@@ -406,7 +406,6 @@ export function Markets() {
           signal={gann.signal}
           loading={gann.loading}
           error={gann.error}
-          stale={gann.stale}
           decimals={decimals}
         />
         <div className="flex flex-col gap-4">

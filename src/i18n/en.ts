@@ -169,8 +169,8 @@ export const en = {
 
   // ----- gann panel -----
   'gann.title': 'Gann analysis',
-  'gann.stale': 'Stale',
-  'gann.computedOn': 'Computed {date} from {timeframe} candles.',
+  'gann.updatedOn': 'Updated {date}',
+  'gann.computedFrom': 'From {timeframe} candles.',
   'gann.noSignalTitle': 'No signal cached for this asset yet.',
   'gann.noSignalBody':
     'Signals are computed by the Python engine and cached in the database. Run it to populate this panel:',
