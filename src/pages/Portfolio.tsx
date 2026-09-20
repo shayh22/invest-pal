@@ -12,13 +12,8 @@ import { ResetAccountDialog } from '@/components/trade/ResetAccountDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { StatCard } from '@/components/layout/StatCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -264,79 +259,44 @@ export function Portfolio() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.accountValue')}</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">
-              {portfolio ? formatUsd(equity) : <Skeleton className="h-7 w-28" />}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('portfolio.accountValueHint')}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.cash')}</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">
-              {portfolio ? formatUsd(cash) : <Skeleton className="h-7 w-28" />}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {cash < 0
-              ? t('portfolio.cashNegativeHint')
-              : t('portfolio.cashHint')}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.unrealised')}</CardDescription>
-            <CardTitle className="text-2xl">
-              <SignedValue value={openPnl} decimals={2} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {tCount('portfolio.openCount', positions.open.length)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.realised')}</CardDescription>
-            <CardTitle className="text-2xl">
-              <SignedValue value={realisedPnl} decimals={2} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('portfolio.closedCount', { count: positions.closed.length })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.totalReturn')}</CardDescription>
-            <CardTitle className="text-2xl">
-              <SignedValue value={totalReturnPct} decimals={2} suffix="%" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {portfolio
+      {/* Two across on a phone. Six of these stacked full width was about
+          twelve hundred pixels of scrolling before the first position — the
+          thing the page is actually for. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
+        <StatCard
+          label={t('portfolio.accountValue')}
+          value={portfolio ? formatUsd(equity) : <Skeleton className="h-6 w-24" />}
+          hint={t('portfolio.accountValueHint')}
+        />
+        <StatCard
+          label={t('portfolio.cash')}
+          value={portfolio ? formatUsd(cash) : <Skeleton className="h-6 w-24" />}
+          hint={t('portfolio.cashHint')}
+        />
+        <StatCard
+          label={t('portfolio.unrealised')}
+          value={<SignedValue value={openPnl} decimals={2} />}
+          hint={tCount('portfolio.openCount', positions.open.length)}
+        />
+        <StatCard
+          label={t('portfolio.realised')}
+          value={<SignedValue value={realisedPnl} decimals={2} />}
+          hint={t('portfolio.closedCount', { count: positions.closed.length })}
+        />
+        <StatCard
+          label={t('portfolio.totalReturn')}
+          value={<SignedValue value={totalReturnPct} decimals={2} suffix="%" />}
+          hint={
+            portfolio
               ? t('portfolio.startedWith', { amount: formatUsd(startingBalance) })
-              : ''}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('portfolio.costsPaid')}</CardDescription>
-            <CardTitle className="text-2xl tabular-nums">
-              {formatUsd(costsPaid)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('portfolio.costsPaidHint')}
-          </CardContent>
-        </Card>
+              : ''
+          }
+        />
+        <StatCard
+          label={t('portfolio.costsPaid')}
+          value={formatUsd(costsPaid)}
+          hint={t('portfolio.costsPaidHint')}
+        />
       </div>
 
       {cash < 0 && (

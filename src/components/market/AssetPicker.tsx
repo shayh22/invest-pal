@@ -88,11 +88,16 @@ export function AssetPicker({
           disabled={disabled}
           className="w-full justify-between font-normal sm:w-72"
         >
-          <span className="truncate">
-            {selected
-              ? `${selected.ticker} — ${selected.name}`
-              : t('markets.selectAsset')}
-          </span>
+          {/* The chosen asset is Latin; the placeholder is not. Only the
+              former gets an explicit direction, or the Hebrew prompt would be
+              laid out backwards. */}
+          {selected ? (
+            <span dir="ltr" className="truncate rtl:text-end">
+              {`${selected.ticker} — ${selected.name}`}
+            </span>
+          ) : (
+            <span className="truncate">{t('markets.selectAsset')}</span>
+          )}
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -128,7 +133,9 @@ export function AssetPicker({
                         )}
                       />
                       <span className="font-medium">{asset.ticker}</span>
-                      <span className="text-muted-foreground truncate">
+                      {/* Latin text in an RTL list: without a direction the
+                          trailing full stop is moved to the visual start. */}
+                      <span dir="ltr" className="text-muted-foreground truncate">
                         {asset.name}
                       </span>
                     </CommandItem>

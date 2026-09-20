@@ -459,6 +459,35 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### The shape of a page
+
+The app is built on shadcn/ui (the radix-nova style, neutral base), which is
+the modern, widely-used system it should be. The work was not replacing it but
+applying it consistently.
+
+**Two columns of figures on a phone, not one.** The dashboard's four summary
+cards and the portfolio's six were each stacked full width below `sm`. That put
+about eight hundred pixels of scrolling on the dashboard, and twelve hundred on
+the portfolio, ahead of the thing each page is actually for — the watchlist on
+one, the first position on the other. Two across cut the dashboard from 3342px
+to 2423px and the portfolio from 4738px to 3612px, with every figure visible at
+once.
+
+**One `StatCard`, not ten hand-rolled ones.** The two pages had written the same
+card twice and already drifted: the same kind of number was `text-3xl` on one
+page and `text-2xl` on the other. The type scale now steps down on a phone,
+because a headline-sized `$99,999.16` does not fit a 145px column.
+
+**The greeting is not a database field.** It fell back to the whole email
+address at headline size, which wrapped across three lines. The part before the
+`@` is what a person answers to.
+
+**Latin names carry `dir="ltr"`.** A trailing full stop is direction-neutral, so
+in an RTL paragraph the browser moves it to the visual start and "Apple Inc."
+renders as ".Apple Inc". Only the Latin strings are marked, not their
+containers — marking the container would lay the Hebrew placeholder out
+backwards.
+
 ### Being told what you can afford
 
 One Bitcoin fits in a $100,000 account and two do not. Without a number, that
