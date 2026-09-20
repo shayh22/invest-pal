@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { StatCard } from '@/components/layout/StatCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
@@ -58,15 +59,25 @@ export function Dashboard() {
     },
   )
 
+  /**
+   * Who to greet.
+   *
+   * The email is a fallback, but the whole address is not a name: rendered at
+   * headline size it wrapped across three lines and read as a database field
+   * rather than a greeting. The part before the @ is what a person would
+   * answer to, and it is what every other app shows.
+   */
   const greetingName =
-    profile?.displayName ?? user?.email ?? t('dashboard.fallbackName')
+    profile?.displayName ??
+    user?.email?.split('@')[0] ??
+    t('dashboard.fallbackName')
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        {/* The name falls back to the email address, which is one long
-            unbreakable word. Without this it sets the page width. */}
-        <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
+        {/* wrap-anywhere still stands: a display name can be one long word
+            too, and without it that word sets the page width. */}
+        <h1 className="text-xl font-semibold tracking-tight wrap-anywhere sm:text-2xl">
           {t('dashboard.greeting', { name: greetingName })}
         </h1>
         <p className="text-muted-foreground text-sm">
@@ -74,66 +85,50 @@ export function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('dashboard.accountValue')}</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {portfolio ? formatUsd(equity) : <Skeleton className="h-8 w-32" />}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('dashboard.accountValueHint')}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('dashboard.cash')}</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {portfolio ? (
-                formatUsd(portfolio.cashBalance)
-              ) : (
-                <Skeleton className="h-8 w-32" />
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('dashboard.cashHint')}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('dashboard.openPositions')}</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {positions.loading ? (
-                <Skeleton className="h-8 w-10" />
-              ) : (
-                positions.open.length
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('dashboard.closedCount', { count: positions.closed.length })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>{t('dashboard.experience')}</CardDescription>
-            <CardTitle className="text-xl capitalize">
-              {profile ? (
-                t(`experience.${profile.experienceLevel}`)
-              ) : (
-                <Skeleton className="h-6 w-24" />
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground text-xs">
-            {t('dashboard.experienceHint')}
-          </CardContent>
-        </Card>
+      {/* Two across on a phone, not one. Stacked full width these four cards
+          were eight hundred pixels of scrolling before anything you could act
+          on, and the portfolio's six were worse. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatCard
+          label={t('dashboard.accountValue')}
+          value={portfolio ? formatUsd(equity) : <Skeleton className="h-6 w-24" />}
+          hint={t('dashboard.accountValueHint')}
+        />
+        <StatCard
+          label={t('dashboard.cash')}
+          value={
+            portfolio ? (
+              formatUsd(portfolio.cashBalance)
+            ) : (
+              <Skeleton className="h-6 w-24" />
+            )
+          }
+          hint={t('dashboard.cashHint')}
+        />
+        <StatCard
+          label={t('dashboard.openPositions')}
+          value={
+            positions.loading ? (
+              <Skeleton className="h-6 w-8" />
+            ) : (
+              positions.open.length
+            )
+          }
+          hint={t('dashboard.closedCount', { count: positions.closed.length })}
+        />
+        <StatCard
+          label={t('dashboard.experience')}
+          value={
+            profile ? (
+              <span className="capitalize">
+                {t(`experience.${profile.experienceLevel}`)}
+              </span>
+            ) : (
+              <Skeleton className="h-6 w-20" />
+            )
+          }
+          hint={t('dashboard.experienceHint')}
+        />
       </div>
 
       {alerts.unread.length > 0 && (
@@ -208,7 +203,14 @@ export function Dashboard() {
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="font-medium">{asset.ticker}</span>
-                    <span className="text-muted-foreground truncate text-xs">
+                    {/* dir="ltr" because a company name is Latin and its
+                        trailing full stop is direction-neutral: in an RTL
+                        paragraph the browser moves it to the visual start,
+                        and "Apple Inc." renders as ".Apple Inc". */}
+                    <span
+                      dir="ltr"
+                      className="text-muted-foreground truncate text-xs rtl:text-end"
+                    >
                       {asset.name}
                     </span>
                   </span>

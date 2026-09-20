@@ -32,6 +32,10 @@ export const he: Record<TranslationKey, string> = {
   'common.notFinancialAdvice':
     'מסחר וירטואלי לימודי בכסף שאינו אמיתי. אין באמור ייעוץ השקעות.',
   'common.language': 'שפה',
+  'textSize.normal': 'טקסט רגיל',
+  'textSize.large': 'טקסט גדול',
+  'textSize.larger': 'טקסט גדול יותר',
+  'textSize.switchTo': 'מעבר ל{size}',
   'common.switchToHebrew': 'עברית',
   'common.switchToEnglish': 'English',
 
@@ -244,6 +248,8 @@ export const he: Record<TranslationKey, string> = {
   'trade.holdLong': '{quantity} בלונג',
   'trade.holdShort': '{quantity} בשורט',
   'trade.useAll': 'השתמשו בכל {quantity}',
+  'trade.useMax': 'המרבי שאפשר להרשות: {quantity}',
+  'trade.useAffordable': 'לקחת {quantity} {ticker} — המרבי שהיתרה מכסה',
   'trade.amountLabel': 'סכום להשקעה',
   'trade.switchToAmount': 'להזין סכום במקום',
   'trade.switchToShares': 'להזין כמות במקום',

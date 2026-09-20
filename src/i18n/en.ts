@@ -31,6 +31,10 @@ export const en = {
   'common.notFinancialAdvice':
     'Educational paper trading with virtual money. Nothing here is financial advice.',
   'common.language': 'Language',
+  'textSize.normal': 'normal text',
+  'textSize.large': 'large text',
+  'textSize.larger': 'larger text',
+  'textSize.switchTo': 'Switch to {size}',
   'common.switchToHebrew': 'עברית',
   'common.switchToEnglish': 'English',
 
@@ -243,6 +247,8 @@ export const en = {
   'trade.holdLong': '{quantity} long',
   'trade.holdShort': '{quantity} short',
   'trade.useAll': 'Use all {quantity}',
+  'trade.useMax': 'Most you can afford: {quantity}',
+  'trade.useAffordable': 'Use {quantity} {ticker} — the most this balance covers',
   'trade.amountLabel': 'Amount to spend',
   'trade.switchToAmount': 'enter an amount instead',
   'trade.switchToShares': 'enter a quantity instead',

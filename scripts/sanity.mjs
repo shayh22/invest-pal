@@ -96,6 +96,15 @@ await section('Site', async () => {
       !bundle.includes('Phase 6') && !bundle.includes('dashboard.upNext'),
     )
     check(
+      'the text size control shipped',
+      bundle.includes('Switch to {size}') && bundle.includes('מעבר ל{size}'),
+    )
+    check(
+      'the affordable ceiling is offered',
+      bundle.includes('Most you can afford') &&
+        bundle.includes('המרבי שאפשר להרשות'),
+    )
+    check(
       'buying by amount shipped',
       bundle.includes('Amount to spend') && bundle.includes('סכום להשקעה'),
     )

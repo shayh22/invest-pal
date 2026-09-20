@@ -459,6 +459,83 @@ prefix, beats a word inside the name, beats a substring. Without the exact-name
 band, searching "bitcoin" tied Bitcoin with Bitcoin Cash and the winner was
 whichever the query happened to return first.
 
+### The shape of a page
+
+The app is built on shadcn/ui (the radix-nova style, neutral base), which is
+the modern, widely-used system it should be. The work was not replacing it but
+applying it consistently.
+
+**Two columns of figures on a phone, not one.** The dashboard's four summary
+cards and the portfolio's six were each stacked full width below `sm`. That put
+about eight hundred pixels of scrolling on the dashboard, and twelve hundred on
+the portfolio, ahead of the thing each page is actually for — the watchlist on
+one, the first position on the other. Two across cut the dashboard from 3342px
+to 2423px and the portfolio from 4738px to 3612px, with every figure visible at
+once.
+
+**One `StatCard`, not ten hand-rolled ones.** The two pages had written the same
+card twice and already drifted: the same kind of number was `text-3xl` on one
+page and `text-2xl` on the other. The type scale now steps down on a phone,
+because a headline-sized `$99,999.16` does not fit a 145px column.
+
+**The greeting is not a database field.** It fell back to the whole email
+address at headline size, which wrapped across three lines. The part before the
+`@` is what a person answers to.
+
+**Latin names carry `dir="ltr"`.** A trailing full stop is direction-neutral, so
+in an RTL paragraph the browser moves it to the visual start and "Apple Inc."
+renders as ".Apple Inc". Only the Latin strings are marked, not their
+containers — marking the container would lay the Hebrew placeholder out
+backwards.
+
+### Being told what you can afford
+
+One Bitcoin fits in a $100,000 account and two do not. Without a number, that
+reads as the app refusing to let you buy more than one of anything — which is
+exactly how it was reported.
+
+The funds check was right; the panel was the problem. It now shows **the most
+this balance covers** beside the quantity field, before the refusal rather than
+only after it, and when a quantity is refused for funds the refusal carries a
+button that fills in that amount.
+
+`maxAffordableQuantity()` solves it by **bisection on `openingCost()`** rather
+than by inverting the fee formula. The algebra looks easy — notional plus a
+percentage plus a per-unit charge — but commission is rounded to whole cents,
+so the exact inverse lands a hair over the balance about as often as under it,
+and the minimum commission makes it two lines rather than one. An earlier
+algebraic version passed the obvious cases and silently returned **zero** for a
+$100,000 account on the per-share profile. Bisection needs neither case: cost
+rises with quantity, and every step is checked against the real function.
+
+Refusals carry a reason code rather than only a sentence, so the panel can tell
+"you cannot afford that" — the one refusal with an obvious next step — from the
+others without matching on translated text.
+
+### A text size that is one tap away
+
+`src/lib/text-size.ts`. Three steps, 100 / 112.5 / 125 percent, set as a font
+size on the document element and remembered.
+
+On the root rather than as bigger type classes: everything here is sized in rem
+— type, padding, gaps, icons — so moving the root moves all of it together and
+the layout stays in proportion, instead of large text colliding with boxes that
+did not grow. It is closer to a zoom than a font swap, which is what people
+mean when they say the text is too small.
+
+Applied in `main.tsx` before the first render rather than in an effect, so the
+page does not paint at one size and jump to another.
+
+One cycling button, not three or a menu: the signed-in header already carries
+three navigation links and an account menu, and at 320px there is no room for a
+control that spends 80px announcing itself. The glyph grows with the setting so
+the button shows its own state, and the accessible name says what pressing it
+will do next.
+
+Verified at the largest step on a 320px viewport in both languages, on every
+route, with the same per-element bounding-box walk the rest of the layout
+checks use.
+
 ### Spending an amount instead of counting shares
 
 Quantities were always `numeric(18, 8)`, so fractions worked from the first
