@@ -130,3 +130,51 @@ export function openingCost(
   const commission = commissionFor(notional, costs, quantity)
   return { fill, notional, commission, total: notional + commission }
 }
+
+/**
+ * The largest quantity a balance can open, after costs.
+ *
+ * Exists because "you cannot afford two" is a dead end without it. One
+ * Bitcoin fits in a $100,000 account and two do not, which reads as the app
+ * refusing to sell you more than one share until someone says the number you
+ * *can* have.
+ *
+ * Solved by bisection on openingCost() rather than by inverting it. The
+ * algebra looks easy — notional plus a percentage plus a per-unit charge —
+ * but the commission is rounded to whole cents, so the exact inverse lands a
+ * hair over the balance about as often as under it, and the minimum
+ * commission makes it two lines rather than one. Bisection needs neither
+ * case: cost rises with quantity, so the largest affordable quantity is
+ * whatever the search converges on, checked against the real function at
+ * every step.
+ *
+ * Truncated to the quantity column's eight places, because a quantity the
+ * database would round is not one the caller can actually place.
+ */
+export function maxAffordableQuantity(
+  balance: number,
+  midPrice: number,
+  direction: TradeDirection,
+  costs: TradingCosts,
+): number {
+  if (!(balance > 0) || !(midPrice > 0)) return 0
+
+  const affordable = (q: number) =>
+    openingCost(q, midPrice, direction, costs).total <= balance
+
+  // An upper bound that certainly does not fit: costs are never negative, so
+  // more than the balance buys at the raw price is always too much.
+  let low = 0
+  let high = balance / midPrice + 1
+  if (affordable(high)) return Math.floor(high * 1e8) / 1e8
+
+  // 60 halvings takes any starting range well past the eighth decimal.
+  for (let i = 0; i < 60; i += 1) {
+    const mid = (low + high) / 2
+    if (affordable(mid)) low = mid
+    else high = mid
+  }
+
+  const q = Math.floor(low * 1e8) / 1e8
+  return q > 0 && affordable(q) ? q : 0
+}

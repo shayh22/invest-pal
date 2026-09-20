@@ -26,7 +26,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTradingCosts } from '@/hooks/useTradingCosts'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatQuantity, formatUsd } from '@/lib/format'
-import { openingCost, positionPnl } from '@/lib/trading'
+import { maxAffordableQuantity, openingCost, positionPnl } from '@/lib/trading'
 import { placeOrder as restOrder } from '@/services/orders'
 import { setShortSelling, trade as fillNow } from '@/services/trading'
 import { requireSupabase } from '@/services/supabase'
@@ -146,20 +146,39 @@ export function TradePanel({
     return held !== 0 && (side === 'BUY') === held < 0
   }
 
-  function refusalFor(side: TradeSide): string | null {
+  /**
+   * Why a side cannot be placed, as a reason rather than a sentence.
+   *
+   * The code matters as much as the words: "you cannot afford that" is the one
+   * refusal with an obvious next step, and the panel offers it. Matching on
+   * the message to find out would break the moment someone edits the
+   * translation.
+   */
+  type Refusal = {
+    code: 'NOTHING_TO_SELL' | 'SHORTING_OFF' | 'MORE_THAN_HELD' | 'TOO_EXPENSIVE'
+    message: string
+  }
+
+  function refusalFor(side: TradeSide): Refusal | null {
     if (!asset) return null
     if (side === 'SELL' && held <= 0 && !shortingOn) {
       return held === 0
-        ? t('trade.nothingToSell', { ticker: asset.ticker })
-        : t('trade.shortingOff')
+        ? {
+            code: 'NOTHING_TO_SELL',
+            message: t('trade.nothingToSell', { ticker: asset.ticker }),
+          }
+        : { code: 'SHORTING_OFF', message: t('trade.shortingOff') }
     }
     if (!quantityValid) return null
     if (reduces(side)) {
       if (quantity > Math.abs(held)) {
-        return t('trade.moreThanHeld', {
-          held: formatQuantity(Math.abs(held)),
-          ticker: asset.ticker,
-        })
+        return {
+          code: 'MORE_THAN_HELD',
+          message: t('trade.moreThanHeld', {
+            held: formatQuantity(Math.abs(held)),
+            ticker: asset.ticker,
+          }),
+        }
       }
       return null
     }
@@ -173,10 +192,13 @@ export function TradePanel({
         costs,
       )
       if (cost.total > balance) {
-        return t('trade.tooExpensive', {
-          cost: formatUsd(cost.total),
-          balance: formatUsd(balance),
-        })
+        return {
+          code: 'TOO_EXPENSIVE',
+          message: t('trade.tooExpensive', {
+            cost: formatUsd(cost.total),
+            balance: formatUsd(balance),
+          }),
+        }
       }
     }
     return null
@@ -187,6 +209,19 @@ export function TradePanel({
       asset && price && quantityValid && triggerValid && refusalFor(side) === null,
     )
   }
+
+  /**
+   * The most this account could open in this asset right now.
+   *
+   * One Bitcoin fits in a $100,000 account and two do not, which without this
+   * number reads as the app refusing to let you buy more than one of anything.
+   * Shown as a figure and offered as a button, because the answer to "I cannot
+   * afford two" is a quantity, not an apology.
+   */
+  const affordable =
+    !resting && price && costs && !reduces('BUY')
+      ? maxAffordableQuantity(balance, price, 'LONG', costs)
+      : 0
 
   /**
    * What the commission comes to as a share of the order.
@@ -437,14 +472,31 @@ export function TradePanel({
             </p>
           )}
 
-          {held !== 0 && !byAmount && (
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-2"
-              onClick={() => setQuantityText(formatQuantity(Math.abs(held)))}
-            >
-              {t('trade.useAll', { quantity: formatQuantity(Math.abs(held)) })}
-            </button>
+          {/* The two shortcuts every trading app has: everything you hold,
+              and everything you can afford. Offered before the refusal rather
+              than only after it, so the ceiling is visible while you are
+              choosing rather than a correction afterwards. */}
+          {!byAmount && (held !== 0 || affordable > 0) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {held !== 0 && (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                  onClick={() => setQuantityText(formatQuantity(Math.abs(held)))}
+                >
+                  {t('trade.useAll', { quantity: formatQuantity(Math.abs(held)) })}
+                </button>
+              )}
+              {affordable > 0 && (
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                  onClick={() => setQuantityText(formatQuantity(affordable))}
+                >
+                  {t('trade.useMax', { quantity: formatQuantity(affordable) })}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -617,11 +669,41 @@ export function TradePanel({
           </Button>
         </div>
 
-        {/* A disabled button that will not say why is a dead end. */}
+        {/* A disabled button that will not say why is a dead end. Both sides
+            are shown when both refuse, because "nothing to sell" sitting alone
+            under a Buy button reads as though buying is what was refused. */}
         {asset && (buyRefusal || sellRefusal) && (
-          <p className="text-muted-foreground text-xs">
-            {buyRefusal ?? sellRefusal}
-          </p>
+          <div className="flex flex-col gap-2">
+            {[buyRefusal, sellRefusal]
+              .filter((r): r is Refusal => r !== null)
+              // Both sides can hit the same wall; say it once.
+              .filter((r, i, all) => all.findIndex((o) => o.code === r.code) === i)
+              .map((refusal) => (
+                <p key={refusal.code} className="text-muted-foreground text-xs leading-relaxed">
+                  {refusal.message}
+                </p>
+              ))}
+
+            {/* The one refusal with an answer. An account that cannot afford
+                two of something can afford some amount of it, and that number
+                is more use than the word "no". */}
+            {buyRefusal?.code === 'TOO_EXPENSIVE' && affordable > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setEntryMode('SHARES')
+                  setQuantityText(formatQuantity(affordable))
+                }}
+              >
+                {t('trade.useAffordable', {
+                  quantity: formatQuantity(affordable),
+                  ticker: asset.ticker,
+                })}
+              </Button>
+            )}
+          </div>
         )}
 
         {/* Offered only where it is the thing standing in the way. */}

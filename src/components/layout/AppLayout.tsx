@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LanguageToggle } from '@/components/layout/LanguageToggle'
+import { TextSizeToggle } from '@/components/layout/TextSizeToggle'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from '@/hooks/useTranslation'
 import { cn } from '@/lib/utils'
@@ -84,6 +85,7 @@ export function AppLayout() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-1">
+            <TextSizeToggle />
             <LanguageToggle />
             {user ? (
               <DropdownMenu>
