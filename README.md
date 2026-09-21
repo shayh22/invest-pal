@@ -342,6 +342,66 @@ once running the engine, green every time, while the signals on the site went
 stale. That job now fails on this repository too, and still skips quietly on a
 fork so a fresh clone is not spammed with red builds.
 
+## Installing it as an app
+
+The site is a PWA, which is the foundation an Android build sits on. A
+**Trusted Web Activity** was chosen over a bundled native shell for a specific
+reason: a TWA renders the live site, so there is one release path and no
+version skew. A bundled build would put old app versions in users' hands
+against a moving database — exactly the failure mode migration `0011` would
+have caused, where a bundle that predates a migration queries columns that do
+not exist yet.
+
+It is also not a one-way door: a Capacitor build can replace the TWA under the
+same package name later, if push notifications on price alerts ever justify the
+extra release step.
+
+### What was needed
+
+- **A manifest and real icons** (192, 512, and a maskable 512 whose artwork
+  sits inside the central 78% so a launcher can crop it to a circle). Rendered
+  from SVG with headless Chromium, since this container has no image toolchain.
+- **`viewport-fit=cover` plus safe-area padding.** Installed apps paint edge to
+  edge; without the padding the header sits under the status bar and the
+  disclaimer under the gesture bar. The horizontal inset goes on the outer
+  shell, which has no padding of its own — put on an element that already has
+  `px-4`, both would set `padding-inline` and whichever won the cascade would
+  decide whether the page keeps its gutter.
+- **A service worker**, configured for the risk rather than for offline
+  completeness: `autoUpdate` with `skipWaiting` and `clientsClaim` so a stale
+  build lasts one visit, precaching only content-hashed output, and prices,
+  database and auth pinned to `NetworkOnly`. A cached price is a lie and a
+  cached auth response is a security bug.
+- **`/.well-known/assetlinks.json`**, which ties the domain to the Play listing.
+  Without it Chrome keeps its address bar visible over every screen.
+
+### CORS on the market proxy
+
+`api/market/chart.ts` now sends `Access-Control-Allow-Origin: *` and answers
+preflights. A TWA does not need this — it runs on the site's own origin — but a
+Capacitor build serves the app from `https://localhost`, where every price
+request is cross-origin and would be blocked. It costs nothing and removes the
+trap from the route that stays open.
+
+The header is `*` rather than an allowlist because there is nothing to protect:
+the endpoint takes no credentials, reads no cookies, and forwards public market
+data that Yahoo serves to anyone.
+
+### Finishing the asset links
+
+The committed fingerprint is a placeholder and will not verify. It cannot be
+filled in from the repository: with Play App Signing, Google holds the release
+key and only reveals its fingerprint once the app exists in the console.
+
+1. Play Console → **Test and release → Setup → App signing**
+2. Copy the **app signing key** SHA-256 fingerprint — not the upload key, which
+   is a different key and the wrong one
+3. Replace the placeholder, and `package_name` if it is not `app.investpal.twa`
+4. Deploy, then `curl -s https://invest-pal.vercel.app/.well-known/assetlinks.json`
+
+Android caches the verification, so a device that checked before the file was
+right may need the app reinstalled.
+
 ## The trading engine
 
 Opening and closing a position each move cash **and** write a row. Those two

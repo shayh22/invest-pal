@@ -47,8 +47,11 @@ export function AppLayout() {
     .toUpperCase()
 
   return (
-    <div className="bg-background text-foreground flex min-h-svh flex-col">
-      <header className="border-border/60 bg-background/80 sticky top-0 z-10 border-b backdrop-blur">
+    <div className="bg-background text-foreground px-safe flex min-h-svh flex-col">
+      {/* pt-safe and the side insets: with viewport-fit=cover the page paints
+          under the status bar and behind the rounded corners, so the shell has
+          to put that space back or the nav ends up under the clock. */}
+      <header className="border-border/60 bg-background/80 pt-safe sticky top-0 z-10 border-b backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-6 sm:px-4">
           <Link
             to={user ? '/dashboard' : '/'}
@@ -123,7 +126,10 @@ export function AppLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-border/60 text-muted-foreground border-t py-4 text-center text-xs">
+      {/* pb-safe clears Android's gesture bar, which otherwise sits on top of
+          the disclaimer — the one line on the page that should never be
+          half-covered. */}
+      <footer className="border-border/60 text-muted-foreground pb-safe border-t py-4 text-center text-xs">
         {t('common.notFinancialAdvice')}
       </footer>
     </div>

@@ -171,3 +171,34 @@
         display: block;
     }
 }
+
+/*
+ * Safe-area helpers.
+ *
+ * index.html sets viewport-fit=cover so an installed app paints edge to edge,
+ * the way a native one does. That is only correct if the shell then pads
+ * itself back out: without these the header sits under the status bar and the
+ * footer under the gesture bar.
+ *
+ * They add to whatever padding an element already has rather than replacing
+ * it, and on a device with no insets env() resolves to 0 — so these are inert
+ * in a desktop browser and cost nothing there.
+ */
+@utility pt-safe {
+  padding-top: calc(env(safe-area-inset-top, 0px));
+}
+
+@utility pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+}
+
+/*
+ * Applied to the outermost shell only, which carries no padding of its own.
+ * Put on an element that already has px-4 it would be a coin toss which
+ * declaration wins — both set padding-inline — and losing that toss removes
+ * the page gutter on every device, since the inset is 0 in portrait.
+ */
+@utility px-safe {
+  padding-inline-start: env(safe-area-inset-left, 0px);
+  padding-inline-end: env(safe-area-inset-right, 0px);
+}

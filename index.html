@@ -3,7 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- viewport-fit=cover lets the page paint under the notch and the gesture
+         bar, which is what an installed app should do. It only looks right
+         because the layout pads itself back out with env(safe-area-inset-*);
+         without that padding this line puts the header under the status bar. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <!-- Two, so the system bars match whichever mode the device is in. -->
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#ffffff"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#0b1120"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta
+      name="description"
+      content="Practise trading with virtual money. Gann analysis explained in plain language, in English and Hebrew."
+    />
     <title>invest-pal — Educational Paper Trading</title>
   </head>
   <body>
