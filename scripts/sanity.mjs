@@ -55,6 +55,42 @@ await section('Site', async () => {
   const asset = html.match(/\/assets\/index-[^"]+\.js/)?.[0]
   check('index.html references a hashed bundle', Boolean(asset), asset ?? 'none found')
 
+  // Installability. A Trusted Web Activity is built on these four files, and
+  // each one fails differently: no manifest and Bubblewrap cannot build, no
+  // icons and the launcher shows a blank square, no service worker and the app
+  // is not installable, no asset links and Chrome keeps its address bar over
+  // every screen.
+  const manifestRes = await fetch(`${BASE_URL}/manifest.webmanifest`)
+  check('the web app manifest is served', manifestRes.status === 200,
+    `HTTP ${manifestRes.status}`)
+  const manifest = await manifestRes.json().catch(() => null)
+  check('it declares a standalone app', manifest?.display === 'standalone',
+    String(manifest?.display))
+  check('with an icon at both sizes and a maskable one',
+    ['192x192', '512x512'].every((size) =>
+      (manifest?.icons ?? []).some((i) => i.sizes === size)) &&
+    (manifest?.icons ?? []).some((i) => i.purpose === 'maskable'),
+    `${(manifest?.icons ?? []).length} icons`)
+
+  for (const icon of manifest?.icons ?? []) {
+    const res = await fetch(`${BASE_URL}/${icon.src.replace(/^\//, '')}`)
+    check(`icon ${icon.sizes}${icon.purpose ? ' ' + icon.purpose : ''} is real`,
+      res.status === 200 && (res.headers.get('content-type') ?? '').includes('png'),
+      `HTTP ${res.status}`)
+  }
+
+  const sw = await fetch(`${BASE_URL}/sw.js`)
+  check('a service worker is served', sw.status === 200, `HTTP ${sw.status}`)
+  const swBody = sw.status === 200 ? await sw.text() : ''
+  check('and it never caches prices or the database',
+    swBody.includes('NetworkOnly') || swBody.includes('NetworkOnlyPlugin') ||
+      swBody.includes('supabase'),
+    'no NetworkOnly rule found')
+
+  const links = await fetch(`${BASE_URL}/.well-known/assetlinks.json`)
+  check('asset links are served for the Android build', links.status === 200,
+    `HTTP ${links.status}`)
+
   if (asset) {
     const bundle = await (await fetch(`${BASE_URL}${asset}`)).text()
     check('English strings shipped', bundle.includes('Learn the markets'))

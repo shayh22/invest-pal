@@ -25,12 +25,34 @@ const ALLOWED_RANGES = new Set(['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y
 const ALLOWED_INTERVALS = new Set(['5m', '15m', '30m', '1h', '1d', '1wk', '1mo'])
 
 /** Shaped like Yahoo's own error body, so the client has one error path. */
+/**
+ * Headers that let a non-web client call this.
+ *
+ * On the website the browser and this function share an origin, so CORS never
+ * came up. An Android build does not: a WebView serves the app from
+ * https://localhost or a custom scheme, and every price request becomes
+ * cross-origin. Without these the app installs, opens, and shows no prices at
+ * all — which is a much worse failure than not building.
+ *
+ * `*` rather than a list of origins because there is nothing here to protect:
+ * the endpoint takes no credentials, reads no cookies, and forwards public
+ * market data that Yahoo serves to anyone. An allowlist would be security
+ * theatre that breaks every future client.
+ */
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
+}
+
 function chartError(code: string, description: string, status: number): Response {
   return new Response(
     JSON.stringify({ chart: { result: null, error: { code, description } } }),
     {
       status,
       headers: {
+        ...CORS_HEADERS,
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
       },
@@ -39,6 +61,11 @@ function chartError(code: string, description: string, status: number): Response
 }
 
 export default async function handler(request: Request): Promise<Response> {
+  // The preflight a cross-origin client sends before the real request.
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS })
+  }
+
   if (request.method !== 'GET') {
     return chartError('Method Not Allowed', 'Use GET.', 405)
   }
@@ -73,6 +100,7 @@ export default async function handler(request: Request): Promise<Response> {
     return new Response(response.body, {
       status: response.status,
       headers: {
+        ...CORS_HEADERS,
         'Content-Type': 'application/json; charset=utf-8',
         // Matches Yahoo's own short window: cheap repeat views, no stale prices.
         'Cache-Control': 'public, max-age=30, s-maxage=30',
