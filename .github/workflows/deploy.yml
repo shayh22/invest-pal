@@ -100,16 +100,96 @@ jobs:
             exit 1
           fi
 
+      # Set is not the same as right. "Network is unreachable" and "password
+      # authentication failed" both say what psql could not do and nothing
+      # about which part of the URL is wrong, so read the URL first and name
+      # the part. The password is described by length and character classes
+      # only; everything else in a connection string is not secret.
+      - name: Check the database URL
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          from urllib.parse import urlsplit, unquote
+
+          raw = os.environ.get("DATABASE_URL", "")
+          problems = []
+
+          # Checked before parsing: square brackets mean an IPv6 address to a URL
+          # parser, so a password still wrapped in Supabase's [YOUR-PASSWORD] brackets
+          # does not fail as a bad password, it fails as a nonsense host.
+          credentials = raw.split("://", 1)[-1].rpartition("@")[0]
+          if "[" in credentials or "]" in credentials:
+              print("PROBLEM: the password still has the [ ] from Supabase's "
+                    "[YOUR-PASSWORD] placeholder. Replace the brackets too, not just "
+                    "the words inside them.")
+              sys.exit(1)
+
+          try:
+              u = urlsplit(raw)
+              user = unquote(u.username or "")
+              password = unquote(u.password or "")
+              host = u.hostname or ""
+              port = u.port
+              db = (u.path or "").lstrip("/")
+          except ValueError as e:
+              print(f"SUPABASE_DB_URL does not parse as a URL: {e}")
+              sys.exit(1)
+
+          if u.scheme not in ("postgres", "postgresql"):
+              problems.append(f"it starts with '{u.scheme}://', not 'postgresql://'")
+          if host.startswith("db.") and host.endswith(".supabase.co"):
+              problems.append("the host is the direct one (db.<ref>.supabase.co), which has no "
+                              "IPv4 address; GitHub runners cannot reach it. Use the Session "
+                              "pooler host (…pooler.supabase.com)")
+          if "pooler.supabase.com" in host and "." not in user:
+              problems.append(f"the pooler needs the user 'postgres.<project-ref>', not '{user}'")
+          if "pooler.supabase.com" in host and port == 6543:
+              problems.append("port 6543 is transaction mode, which cannot run every migration; use 5432")
+          if not password:
+              problems.append("there is no password in it")
+          if "YOUR-PASSWORD" in password.upper() or "YOUR_PASSWORD" in password.upper():
+              problems.append("the password is still the placeholder text")
+          if password != password.strip():
+              problems.append("the password has spaces at its start or end")
+
+          # Everything here is safe to print: user, host, port and database are not
+          # secret, and the password is described only by its length and the kinds of
+          # character in it — enough to compare against the one you meant, nothing more.
+          kinds = []
+          if any(c.isalpha() for c in password): kinds.append("letters")
+          if any(c.isdigit() for c in password): kinds.append("digits")
+          specials = sorted({c for c in password if not c.isalnum()})
+          print(f"user     {user}")
+          print(f"host     {host}")
+          print(f"port     {port}")
+          print(f"database {db}")
+          print(f"password {len(password)} characters: {', '.join(kinds) or 'none'}"
+                + (", and symbols" if specials else ", no symbols"))
+
+          if problems:
+              print()
+              for p in problems:
+                  print(f"PROBLEM: {p}")
+              sys.exit(1)
+          PY
+
       # ---------------------------------------------------------------------
       # 1. The schema, first
       # ---------------------------------------------------------------------
       - name: Apply migrations
         env:
           PGSSLMODE: require
+          # Through the environment, never pasted into the script: an
+          # expression is substituted into the shell text before bash runs,
+          # so a password with $ or a backtick in it was being rewritten by
+          # the shell — and failed as a wrong password.
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           for f in supabase/migrations/*.sql; do
             echo "--- $f"
-            psql "${{ secrets.SUPABASE_DB_URL }}" -v ON_ERROR_STOP=1 -q -f "$f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
           done
           echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations." \
             >> "$GITHUB_STEP_SUMMARY"
