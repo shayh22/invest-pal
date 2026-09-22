@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Direction } from 'radix-ui'
 
 import {
   LanguageContext,
@@ -63,7 +64,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language, dir, locale, setLanguage],
   )
 
+  // Radix reads direction from its own provider, not from the document, and
+  // without one it stamps dir="ltr" onto everything it portals out of the tree
+  // — every dropdown, select and popover was laying itself out left to right
+  // on a right to left page. The document element is still the source of
+  // truth; this just tells Radix what it says.
   return (
-    <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
+    <Direction.DirectionProvider dir={dir}>
+      <LanguageContext.Provider value={value}>
+        {children}
+      </LanguageContext.Provider>
+    </Direction.DirectionProvider>
   )
 }

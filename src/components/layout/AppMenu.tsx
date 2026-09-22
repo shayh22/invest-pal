@@ -231,9 +231,18 @@ export function AppMenu() {
       <SheetContent side="inline-start">
         <SheetHeader>
           <SheetTitle>{t('common.appName')}</SheetTitle>
-          <SheetDescription className="truncate">
-            {profile?.displayName ?? user?.email ?? t('nav.signedOut')}
-          </SheetDescription>
+          {/* Only the address gets dir="ltr": a display name may well be
+              Hebrew, and forcing it the other way would be the same bug in
+              reverse. */}
+          {profile?.displayName ? (
+            <SheetDescription className="truncate">
+              {profile.displayName}
+            </SheetDescription>
+          ) : (
+            <SheetDescription dir="ltr" className="truncate rtl:text-end">
+              {user?.email ?? t('nav.signedOut')}
+            </SheetDescription>
+          )}
         </SheetHeader>
 
         {/* Closed with onClick rather than <SheetClose asChild>: Slot merges a

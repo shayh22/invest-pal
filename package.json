@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint && node scripts/check-i18n.mjs",
+    "lint": "oxlint && node scripts/check-i18n.mjs && node scripts/check-rtl.mjs",
     "preview": "vite preview",
     "check:i18n": "node scripts/check-i18n.mjs",
-    "sanity": "node scripts/sanity.mjs"
+    "sanity": "node scripts/sanity.mjs",
+    "check:rtl": "node scripts/check-rtl.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

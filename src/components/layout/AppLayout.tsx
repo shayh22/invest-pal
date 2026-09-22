@@ -65,7 +65,13 @@ export function AppLayout() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel className="max-w-56 truncate font-normal">
+                  {/* dir="ltr" so it truncates from the end: an address is
+                      Latin, and in an RTL box the ellipsis eats the local part
+                      — the half that says which account this is. */}
+                  <DropdownMenuLabel
+                    dir="ltr"
+                    className="max-w-56 truncate font-normal rtl:text-end"
+                  >
                     {user.email}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

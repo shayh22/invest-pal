@@ -7,7 +7,7 @@ export const LANGUAGES: Record<
   Language,
   { label: string; flag: string; dir: 'ltr' | 'rtl'; locale: string }
 > = {
-  en: { label: 'English', flag: '🇬🇧', dir: 'ltr', locale: 'en-US' },
+  en: { label: 'English', flag: '🇺🇸', dir: 'ltr', locale: 'en-US' },
   he: { label: 'עברית', flag: '🇮🇱', dir: 'rtl', locale: 'he-IL' },
 }
 

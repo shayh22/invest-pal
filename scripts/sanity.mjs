@@ -95,7 +95,7 @@ await section('Site', async () => {
     const bundle = await (await fetch(`${BASE_URL}${asset}`)).text()
     check('English strings shipped', bundle.includes('Learn the markets'))
     check('Hebrew strings shipped', bundle.includes('ללמוד את השוק'))
-    check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇬🇧'))
+    check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇺🇸'))
     // No order settles without being agreed to first, in either language.
     // The landing page describes the product, not the build. A "Phase 3" here
     // would mean development scaffolding shipped to readers again.
