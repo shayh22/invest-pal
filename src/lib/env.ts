@@ -14,6 +14,13 @@ export const env = {
    * market-data Edge Function in production.
    */
   marketProxyUrl: import.meta.env.VITE_MARKET_PROXY_URL ?? '/api/market',
+  /**
+   * Shown on the privacy page as the address for deletion requests, and the
+   * one Google Play asks for in the listing. Not committed: publishing a
+   * personal address is the owner's call, so it is set in the Vercel
+   * dashboard. Unset, the page says so rather than printing a broken link.
+   */
+  contactEmail: import.meta.env.VITE_CONTACT_EMAIL ?? '',
 }
 
 export function isSupabaseConfigured(): boolean {

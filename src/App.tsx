@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthProvider'
 import { LanguageProvider } from '@/contexts/LanguageProvider'
 import { Auth } from '@/pages/Auth'
+import { Privacy } from '@/pages/Privacy'
 import { Dashboard } from '@/pages/Dashboard'
 import { Home } from '@/pages/Home'
 import { Markets } from '@/pages/Markets'
@@ -21,6 +22,9 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<Home />} />
               <Route path="auth" element={<Auth />} />
+              {/* Outside ProtectedRoute on purpose: a store listing links
+                  straight here, and a reviewer will not have an account. */}
+              <Route path="privacy" element={<Privacy />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />

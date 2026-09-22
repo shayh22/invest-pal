@@ -52,22 +52,24 @@ export function AppLayout() {
           under the status bar and behind the rounded corners, so the shell has
           to put that space back or the nav ends up under the clock. */}
       <header className="border-border/60 bg-background/80 pt-safe sticky top-0 z-10 border-b backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-3 sm:gap-6 sm:px-4">
+        {/* Three tabs and three controls do not fit one 360px row: "Portfolio"
+            came out as "Portf". Below sm the header wraps into two rows — brand
+            and controls, then the tabs across the full width — which also buys
+            back enough space to show the wordmark on a phone. */}
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 sm:h-14 sm:flex-nowrap sm:gap-6 sm:px-4 sm:py-0">
           <Link
             to={user ? '/dashboard' : '/'}
-            className="flex shrink-0 items-center gap-2 font-semibold"
+            className="order-1 flex shrink-0 items-center gap-2 font-semibold"
           >
             <LineChart className="size-5 shrink-0" />
-            {/* The wordmark is the first thing to give up its space on a
-                phone; the icon still identifies the app. */}
-            <span className="hidden sm:inline">{t('common.appName')}</span>
+            <span>{t('common.appName')}</span>
           </Link>
 
           {/* min-w-0 lets this shrink below its content width, and the
               overflow keeps any spill inside the nav instead of widening the
               page. The scrollbar is hidden because it would sit across the
               links on a 56px-tall header. */}
-          <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden">
+          <nav className="order-3 flex w-full min-w-0 items-center gap-0.5 overflow-x-auto text-sm [scrollbar-width:none] sm:order-2 sm:w-auto sm:flex-1 sm:gap-1 [&::-webkit-scrollbar]:hidden">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -87,7 +89,7 @@ export function AppLayout() {
             ))}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="order-2 ms-auto flex shrink-0 items-center gap-1 sm:order-3 sm:ms-0">
             <TextSizeToggle />
             <LanguageToggle />
             {user ? (
@@ -129,8 +131,14 @@ export function AppLayout() {
       {/* pb-safe clears Android's gesture bar, which otherwise sits on top of
           the disclaimer — the one line on the page that should never be
           half-covered. */}
-      <footer className="border-border/60 text-muted-foreground pb-safe border-t py-4 text-center text-xs">
-        {t('common.notFinancialAdvice')}
+      {/* The policy link lives here because a store listing points straight at
+          /privacy and a reviewer arrives without an account — it has to be
+          reachable from anywhere, signed in or not. */}
+      <footer className="border-border/60 text-muted-foreground pb-safe flex flex-col items-center gap-1 border-t py-4 text-center text-xs">
+        <span>{t('common.notFinancialAdvice')}</span>
+        <Link to="/privacy" className="underline underline-offset-2">
+          {t('common.privacy')}
+        </Link>
       </footer>
     </div>
   )
