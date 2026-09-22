@@ -34,7 +34,6 @@ export const en = {
   'textSize.normal': 'normal text',
   'textSize.large': 'large text',
   'textSize.larger': 'larger text',
-  'textSize.switchTo': 'Switch to {size}',
   'common.switchToHebrew': 'עברית',
   'common.switchToEnglish': 'English',
 
@@ -540,6 +539,24 @@ export const en = {
     'Questions about this policy, or a request to delete your account: {email}',
   'privacy.contactUnset':
     'Use the developer contact shown on this app\u2019s store listing for questions about this policy, or to ask for your account to be deleted.',
+  'nav.menu': 'Menu',
+  'nav.openMenu': 'Open menu',
+  'nav.signedOut': 'Not signed in',
+  'settings.title': 'Settings',
+  'settings.appearance': 'Appearance',
+  'settings.modeSystem': 'System',
+  'settings.modeLight': 'Light',
+  'settings.modeDark': 'Dark',
+  'settings.palette': 'Colour',
+  'settings.paletteNeutral': 'Neutral',
+  'settings.paletteBlue': 'Blue',
+  'settings.paletteTeal': 'Teal',
+  'settings.paletteViolet': 'Violet',
+  'settings.paletteAmber': 'Amber',
+  'settings.textSize': 'Text size',
+  'settings.language': 'Language',
+  'settings.reduceMotion': 'Reduce motion',
+  'settings.reduceMotionHint': 'Turns off sliding and fading.',
   'common.privacy': 'Privacy',
 } as const
 

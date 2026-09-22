@@ -202,3 +202,112 @@
   padding-inline-start: env(safe-area-inset-left, 0px);
   padding-inline-end: env(safe-area-inset-right, 0px);
 }
+
+/*
+ * Colour palettes.
+ *
+ * Only the primary role and the focus ring move: those are what "an accent
+ * colour" means to a reader, and they are the two roles whose contrast is easy
+ * to keep honest. Surfaces, borders and text stay neutral in every palette, so
+ * no choice here can make the app unreadable — which is the whole risk of
+ * letting people pick colours.
+ *
+ * Each palette carries its own pair per mode rather than one colour dimmed for
+ * dark: a hue that reads well on white is too dark on a near-black card, and
+ * its foreground has to flip with it. Light-mode lightness sits near 0.50 so
+ * white text clears 4.5:1; amber cannot reach that at any usable chroma, so it
+ * goes the other way and takes dark text instead.
+ *
+ * The values are named once here and used twice — by the palette the reader
+ * picked, and by every swatch in the settings menu, which has to paint its own
+ * colour rather than the active one so the row shows what each choice does.
+ */
+:root {
+    --palette-neutral: oklch(0.205 0 0);
+    --palette-neutral-on: oklch(0.985 0 0);
+    --palette-blue: oklch(0.5 0.19 260);
+    --palette-blue-on: oklch(0.985 0 0);
+    --palette-teal: oklch(0.5 0.11 184);
+    --palette-teal-on: oklch(0.985 0 0);
+    --palette-violet: oklch(0.5 0.21 295);
+    --palette-violet-on: oklch(0.985 0 0);
+    --palette-amber: oklch(0.72 0.16 65);
+    --palette-amber-on: oklch(0.22 0.04 65);
+}
+
+.dark {
+    --palette-neutral: oklch(0.922 0 0);
+    --palette-neutral-on: oklch(0.205 0 0);
+    --palette-blue: oklch(0.72 0.15 258);
+    --palette-blue-on: oklch(0.18 0.04 258);
+    --palette-teal: oklch(0.74 0.11 184);
+    --palette-teal-on: oklch(0.16 0.03 184);
+    --palette-violet: oklch(0.73 0.16 295);
+    --palette-violet-on: oklch(0.18 0.05 295);
+    --palette-amber: oklch(0.79 0.15 70);
+    --palette-amber-on: oklch(0.18 0.04 70);
+}
+
+/* `neutral` is the default and sets nothing: it is what :root already says. */
+:root[data-palette='blue'] {
+    --primary: var(--palette-blue);
+    --primary-foreground: var(--palette-blue-on);
+    --ring: var(--palette-blue);
+}
+
+:root[data-palette='teal'] {
+    --primary: var(--palette-teal);
+    --primary-foreground: var(--palette-teal-on);
+    --ring: var(--palette-teal);
+}
+
+:root[data-palette='violet'] {
+    --primary: var(--palette-violet);
+    --primary-foreground: var(--palette-violet-on);
+    --ring: var(--palette-violet);
+}
+
+:root[data-palette='amber'] {
+    --primary: var(--palette-amber);
+    --primary-foreground: var(--palette-amber-on);
+    --ring: var(--palette-amber);
+}
+
+/* Swatches. Not `bg-primary`: that would paint every swatch the colour that is
+   already selected, so the row would offer five identical dots. */
+[data-swatch='neutral'] { background-color: var(--palette-neutral); }
+[data-swatch='blue'] { background-color: var(--palette-blue); }
+[data-swatch='teal'] { background-color: var(--palette-teal); }
+[data-swatch='violet'] { background-color: var(--palette-violet); }
+[data-swatch='amber'] { background-color: var(--palette-amber); }
+
+/*
+ * Reduced motion.
+ *
+ * The media query is the operating system's answer and is honoured for
+ * everyone; the attribute is the reader overriding it for this app alone,
+ * which is the case the OS setting cannot cover — a phone set to full motion
+ * by someone who still finds a sliding panel unpleasant here.
+ *
+ * Near-zero rather than `none` because a duration of exactly 0 stops some
+ * transition-end events firing, and Radix waits for them before unmounting.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+:root[data-reduce-motion='on'] *,
+:root[data-reduce-motion='on'] *::before,
+:root[data-reduce-motion='on'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}

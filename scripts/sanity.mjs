@@ -95,7 +95,7 @@ await section('Site', async () => {
     const bundle = await (await fetch(`${BASE_URL}${asset}`)).text()
     check('English strings shipped', bundle.includes('Learn the markets'))
     check('Hebrew strings shipped', bundle.includes('ללמוד את השוק'))
-    check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇬🇧'))
+    check('language toggle shipped', bundle.includes('🇮🇱') && bundle.includes('🇺🇸'))
     // No order settles without being agreed to first, in either language.
     // The landing page describes the product, not the build. A "Phase 3" here
     // would mean development scaffolding shipped to readers again.
@@ -154,8 +154,13 @@ await section('Site', async () => {
       !bundle.includes('VITE_CONTACT_EMAIL'),
     )
     check(
-      'the text size control shipped',
-      bundle.includes('Switch to {size}') && bundle.includes('מעבר ל{size}'),
+      // Navigation and settings live behind one button now, so the check that
+      // the text size control shipped is a check that the menu did.
+      'the menu and its settings shipped',
+      bundle.includes('Reduce motion') &&
+        bundle.includes('הפחתת תנועה') &&
+        bundle.includes('Open menu') &&
+        bundle.includes('פתיחת התפריט'),
     )
     check(
       'the affordable ceiling is offered',
