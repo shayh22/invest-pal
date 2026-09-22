@@ -154,8 +154,13 @@ await section('Site', async () => {
       !bundle.includes('VITE_CONTACT_EMAIL'),
     )
     check(
-      'the text size control shipped',
-      bundle.includes('Switch to {size}') && bundle.includes('מעבר ל{size}'),
+      // Navigation and settings live behind one button now, so the check that
+      // the text size control shipped is a check that the menu did.
+      'the menu and its settings shipped',
+      bundle.includes('Reduce motion') &&
+        bundle.includes('הפחתת תנועה') &&
+        bundle.includes('Open menu') &&
+        bundle.includes('פתיחת התפריט'),
     )
     check(
       'the affordable ceiling is offered',
