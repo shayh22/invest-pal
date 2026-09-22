@@ -45,7 +45,7 @@ async function section(title, fn) {
 
 // ---------------------------------------------------------------- the site
 await section('Site', async () => {
-  for (const path of ['/', '/markets', '/portfolio', '/dashboard', '/auth']) {
+  for (const path of ['/', '/markets', '/portfolio', '/dashboard', '/auth', '/privacy']) {
     const res = await fetch(`${BASE_URL}${path}`)
     // Every route must serve the app shell; a 404 here means the SPA rewrite
     // is missing and deep links are broken.
@@ -139,6 +139,19 @@ await section('Site', async () => {
       bundle.includes('Updated {date}') &&
         bundle.includes('עודכן {date}') &&
         !bundle.includes('לא עדכני'),
+    )
+    check(
+      // Play will not review the listing without a reachable policy URL, and
+      // the link in the listing points straight at this page. A reviewer
+      // arrives signed out, so the copy has to be in the shipped bundle.
+      'the privacy policy shipped in both languages',
+      bundle.includes('What is not stored') && bundle.includes('מה לא נשמר'),
+    )
+    check(
+      // The fallback shown when no contact address is configured is read by
+      // reviewers, not by whoever deploys — it must never name a variable.
+      'the privacy page never asks a reader to set an environment variable',
+      !bundle.includes('VITE_CONTACT_EMAIL'),
     )
     check(
       'the text size control shipped',

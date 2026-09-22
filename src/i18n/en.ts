@@ -500,6 +500,47 @@ export const en = {
   'scan.roomShort': '{ratio}x room',
   'scan.caveat':
     'A ranking, not advice. A high score means this chart\u2019s Gann geometry is unusually well arranged today \u2014 where price has turned before, not where it will turn. Practise with virtual money.',
+  // ----- privacy policy -----
+  'privacy.title': 'Privacy',
+  'privacy.updated': 'Last updated 22 September 2026.',
+  'privacy.intro':
+    'invest-pal is a teaching tool. The money in it is imaginary, and so is most of what an app like this would normally want to know about you. This page lists what is actually stored, why, and what is not stored at all.',
+  'privacy.collectTitle': 'What is stored',
+  'privacy.dataEmail': 'Your email address',
+  'privacy.dataEmailWhy':
+    'So you can sign back in and reach your own account. It is never shown to anyone else.',
+  'privacy.dataName': 'A display name, if you give one',
+  'privacy.dataNameWhy': 'Used to greet you on the dashboard. Optional.',
+  'privacy.dataExperience': 'The experience level you pick at signup',
+  'privacy.dataExperienceWhy':
+    'Decides how much the AI mentor explains. Nothing else reads it.',
+  'privacy.dataTrades': 'Your virtual trades, positions, orders and alerts',
+  'privacy.dataTradesWhy':
+    'This is the portfolio itself — without it there is no app. All of it is imaginary money.',
+  'privacy.dataPrefs': 'Your watchlist, language and text size',
+  'privacy.dataPrefsWhy':
+    'So the app looks the same next time. Language and text size never leave your own browser.',
+  'privacy.notCollectTitle': 'What is not stored',
+  'privacy.noTracking':
+    'No analytics, no tracking pixels, no advertising or behavioural profile.',
+  'privacy.noAds': 'No advertising networks, and no third party is sent your data.',
+  'privacy.noLocation': 'No location, device identifiers or contacts.',
+  'privacy.noContacts': 'No access to your photos, files, camera or microphone.',
+  'privacy.noPayments':
+    'No payment details — there is nothing to pay for, and no real money moves.',
+  'privacy.noSelling': 'Nothing is sold or shared. There is no one to sell it to.',
+  'privacy.whereTitle': 'Where it is kept',
+  'privacy.whereBody':
+    'In a Supabase (PostgreSQL) database, protected by row-level security so one account cannot read another\u2019s rows. Market prices are fetched from Yahoo Finance through a proxy that forwards only a ticker symbol — your identity is not part of that request.',
+  'privacy.deleteTitle': 'Deleting your data',
+  'privacy.deleteBody':
+    '"Start over" on the portfolio page erases every trade, order and alert on your account immediately. To delete the account itself, email the address below and it will be removed along with everything attached to it.',
+  'privacy.contactTitle': 'Contact',
+  'privacy.contactBody':
+    'Questions about this policy, or a request to delete your account: {email}',
+  'privacy.contactUnset':
+    'Use the developer contact shown on this app\u2019s store listing for questions about this policy, or to ask for your account to be deleted.',
+  'common.privacy': 'Privacy',
 } as const
 
 export type TranslationKey = keyof typeof en
