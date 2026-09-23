@@ -29,7 +29,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from gann.engine import analyze, to_payload
-from gann.mentor import MentorError, summarise
+from gann.mentor import MentorError, QuotaExhausted, summarise
 from gann.supabase_io import SupabaseError, SupabaseRest
 from gann.yahoo import MarketDataError, fetch_candles
 
@@ -117,6 +117,16 @@ def refresh(
             for language in languages:
                 try:
                     summaries[language] = summarise(analysis, language=language)
+                except QuotaExhausted as error:
+                    # Every later call would fail the same way until the
+                    # allowance resets, so stop asking. The signals themselves
+                    # still refresh; only the notes stop here.
+                    print(
+                        f"  {ticker}: {error} — no more mentor notes this run",
+                        file=sys.stderr,
+                    )
+                    want_summary = False
+                    break
                 except MentorError as error:
                     print(
                         f"  {ticker}: no {language} summary — {error}",

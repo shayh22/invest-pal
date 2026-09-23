@@ -5,11 +5,20 @@ local stand-in for OpenRouter, since hitting the real API in a unit test costs
 money and needs a key.
 """
 
+import json
+import urllib.error
+
 import pytest
 
 from gann import mentor
 from gann.engine import analyze
-from gann.mentor import MentorError, _normalise, build_user_prompt, summarise
+from gann.mentor import (
+    MentorError,
+    QuotaExhausted,
+    _normalise,
+    build_user_prompt,
+    summarise,
+)
 from tests.conftest import make_candles
 
 
@@ -137,8 +146,139 @@ def test_model_is_chosen_explicit_then_env_then_default(monkeypatch):
     assert seen == [mentor.DEFAULT_MODEL, "vendor/from-env", "vendor/explicit"]
 
 
-def test_the_default_model_is_a_small_one():
-    """The engine has already done the reasoning; the model only rephrases
-    numbers. Reaching for a frontier model here costs about eight times as much
-    for the same two sentences, so a change of default should be deliberate."""
-    assert mentor.DEFAULT_MODEL == "anthropic/claude-haiku-4.5"
+def test_the_default_model_is_the_free_router():
+    """The mentor is meant to cost nothing. A change of default to a paid model
+    is a change to what the app costs to run, so it should be deliberate."""
+    assert mentor.DEFAULT_MODEL == "openrouter/free"
+    assert mentor.is_free(mentor.DEFAULT_MODEL)
+    assert mentor.is_free("qwen/qwen3.8-27b:free")
+    assert not mentor.is_free("anthropic/claude-haiku-4.5")
+
+
+# --- The free tier: rate limits, the daily cap, and the wrong language -------
+
+
+class FakeHTTPError(urllib.error.HTTPError):
+    def __init__(self, code, body, headers=None):
+        super().__init__("https://openrouter.test", code, "error", headers or {}, None)
+        self._body = body.encode("utf-8")
+
+    def read(self, *args):
+        return self._body
+
+
+class FakeResponse:
+    def __init__(self, payload):
+        self._payload = json.dumps(payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return self._payload
+
+
+def completion(text):
+    return FakeResponse({"choices": [{"message": {"content": text}}]})
+
+
+@pytest.fixture
+def openrouter(monkeypatch):
+    """Serves queued responses to _request and records every sleep."""
+    queue: list = []
+    sleeps: list[float] = []
+
+    def urlopen(request, timeout):
+        item = queue.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    monkeypatch.setattr(mentor.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(mentor, "_sleep", sleeps.append)
+    monkeypatch.setattr(mentor, "_next_free_call", 0.0)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    return queue, sleeps
+
+
+def test_free_models_are_spaced_under_twenty_a_minute(openrouter):
+    queue, sleeps = openrouter
+    queue += [completion("One. Two."), completion("One. Two.")]
+
+    summarise(analysis())
+    summarise(analysis())
+
+    # The second call waited out most of the interval; the first did not wait.
+    assert len(sleeps) == 1
+    assert 3.0 < sleeps[0] <= mentor.FREE_MIN_INTERVAL
+
+
+def test_paid_models_are_not_slowed_down(openrouter):
+    queue, sleeps = openrouter
+    queue += [completion("One. Two."), completion("One. Two.")]
+
+    summarise(analysis(), model="anthropic/claude-haiku-4.5")
+    summarise(analysis(), model="anthropic/claude-haiku-4.5")
+
+    assert sleeps == []
+
+
+def test_the_daily_cap_is_not_retried(openrouter):
+    """Retrying cannot succeed until tomorrow, so it has to stop at once —
+    three attempts per note would spend a whole run's failures on nothing."""
+    queue, _ = openrouter
+    queue += [
+        FakeHTTPError(
+            429,
+            '{"error":{"message":"Rate limit exceeded: free-models-per-day."}}',
+        ),
+        completion("never reached"),
+    ]
+
+    with pytest.raises(QuotaExhausted):
+        summarise(analysis())
+    assert len(queue) == 1
+
+
+def test_a_per_minute_429_waits_as_told_and_retries(openrouter):
+    queue, sleeps = openrouter
+    queue += [
+        FakeHTTPError(429, "slow down", {"Retry-After": "7"}),
+        completion("One. Two."),
+    ]
+
+    assert summarise(analysis()) == "One. Two."
+    assert 7.0 in sleeps
+
+
+def test_a_429_in_the_body_is_treated_like_one_in_the_status(openrouter):
+    queue, sleeps = openrouter
+    queue += [
+        FakeResponse({"error": {"code": 429, "message": "upstream busy"}}),
+        completion("One. Two."),
+    ]
+
+    assert summarise(analysis()) == "One. Two."
+    assert mentor.BACKOFF_SECONDS[0] in sleeps
+
+
+def test_a_hebrew_note_written_in_english_is_asked_for_again(openrouter):
+    queue, _ = openrouter
+    queue += [
+        completion("TEST sits above its balance line. Momentum is steady."),
+        completion("TEST נמצא מעל קו האיזון. המומנטום יציב."),
+    ]
+
+    assert summarise(analysis(), language="he").startswith("TEST נמצא")
+
+
+def test_a_model_that_never_writes_hebrew_gives_no_note(openrouter):
+    queue, _ = openrouter
+    queue += [completion("English again.")] * 3
+
+    with pytest.raises(MentorError, match="Hebrew"):
+        summarise(analysis(), language="he")
