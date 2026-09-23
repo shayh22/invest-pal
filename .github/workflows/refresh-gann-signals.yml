@@ -69,4 +69,6 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
         # The engine has no dependencies, so there is nothing to install.
-        run: python -m gann.refresh --ttl-hours 26
+        # --lang lists every language the app ships in: the engine defaults to
+        # English alone, and a Hebrew reader then gets the English note.
+        run: python -m gann.refresh --ttl-hours 26 --lang en,he
