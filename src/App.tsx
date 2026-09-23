@@ -12,6 +12,7 @@ import { Home } from '@/pages/Home'
 import { Markets } from '@/pages/Markets'
 import { NotFound } from '@/pages/NotFound'
 import { Portfolio } from '@/pages/Portfolio'
+import { TimeMachine } from '@/pages/TimeMachine'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="markets" element={<Markets />} />
                 <Route path="portfolio" element={<Portfolio />} />
+                <Route path="time-machine" element={<TimeMachine />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
