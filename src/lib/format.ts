@@ -1,4 +1,27 @@
 /**
+ * Keep a run of numbers and signs in left-to-right order inside any paragraph.
+ *
+ * A minus, a plus, a percent sign, a comma and a colon have no direction of
+ * their own, so in a Hebrew sentence the bidi algorithm lays them out
+ * right to left along with everything else: −0.51 is drawn as 0.51−,
+ * "+0.77 (+0.23%)" as "(0.23%+) 0.77+", and a timestamp's comma lands on the
+ * wrong side of the date. U+2066 and U+2069 (left-to-right isolate, pop
+ * isolate) fence the run so it is laid out on its own, left to right, while
+ * the paragraph around it keeps its direction and alignment.
+ *
+ * The sign has to be inside the fence. The isolate as a whole counts as one
+ * more neutral character to the paragraph outside it, so a sign left outside
+ * is still moved to the wrong end.
+ *
+ * Not for anything that is parsed back: the marks are invisible but real, and
+ * a number with them in it is not a number. formatQuantity is used to fill
+ * the quantity field, and is never signed, so it does not use this.
+ */
+export function ltr(text: string): string {
+  return `\u2066${text}\u2069`
+}
+
+/**
  * Deliberately en-US in every language: he-IL wraps USD in invisible RTL marks
  * (U+200F) that reorder text when a price sits inside a sentence. Dates are
  * localised; money is not.
@@ -10,11 +33,16 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
 })
 
 export function formatUsd(value: number): string {
-  return usdFormatter.format(value)
+  return ltr(usdFormatter.format(value))
 }
 
 export function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+  return ltr(`${value >= 0 ? '+' : ''}${value.toFixed(2)}%`)
+}
+
+/** A date and time in the reader's locale, laid out left to right. */
+export function formatDateTime(value: string | number | Date, locale: string): string {
+  return ltr(new Date(value).toLocaleString(locale))
 }
 
 /**

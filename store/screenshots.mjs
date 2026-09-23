@@ -32,7 +32,9 @@ await page.waitForTimeout(6000)
 await page.getByRole('tab', { name: 'Create account' }).click({ timeout: 90000 })
 // A display name, or the dashboard greets the throwaway account by the
 // generated half of its email address and the listing looks like a test build.
-await page.locator('#signup-name').fill(lang === 'he' ? 'יעל' : 'Alex')
+// The avatar shows the first letter, so the Hebrew name must not start with
+// a yod: "יעל" put a mark in the header that read as a stray apostrophe.
+await page.locator('#signup-name').fill(lang === 'he' ? 'נועה' : 'Alex')
 await page.locator('#signup-email').fill(`shot${Date.now()}@example.com`)
 await page.locator('#signup-password').fill('supersecret123')
 await page.getByRole('button', { name: /^Create account$/ }).click()
@@ -62,6 +64,9 @@ const shots = [
   { route: '/markets?symbol=AAPL', name: 'markets', wait: 17000, at: 'top' },
   { route: '/dashboard', name: 'scanner', wait: 9000, at: 'scanner' },
   { route: '/portfolio', name: 'portfolio', wait: 9000, at: 'top' },
+  // The settings live behind the menu button, so a listing that never opens
+  // it would never show dark mode, the palettes or the text sizes.
+  { route: '/dashboard', name: 'settings', wait: 9000, at: 'menu' },
 ]
 let n = 1
 for (const { route, name, wait, at } of shots) {
@@ -80,6 +85,10 @@ for (const { route, name, wait, at } of shots) {
       if (heading) window.scrollTo({ top: window.scrollY + heading.getBoundingClientRect().top - 72 })
     })
     await page.waitForTimeout(900)
+  } else if (at === 'menu') {
+    await page.evaluate(() => window.scrollTo({ top: 0 }))
+    await page.getByRole('button', { name: lang === 'he' ? 'פתיחת התפריט' : 'Open menu' }).click()
+    await page.waitForTimeout(1200)
   } else {
     await page.evaluate(() => window.scrollTo({ top: 0 }))
     await page.waitForTimeout(600)

@@ -29,7 +29,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
-import { formatPercent } from '@/lib/format'
+import { formatPercent, ltr } from '@/lib/format'
 import { toast } from 'sonner'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
 import { settleAlerts } from '@/services/alerts'
@@ -316,9 +316,11 @@ export function Markets() {
                   ) : (
                     <TrendingDown className="size-4" aria-hidden />
                   )}
-                  {rising ? '+' : '−'}
-                  {Math.abs(quote.change).toFixed(decimals)} (
-                  {formatPercent(quote.changePercent)})
+                  {ltr(
+                    `${rising ? '+' : '−'}${Math.abs(quote.change).toFixed(
+                      decimals,
+                    )} (${formatPercent(quote.changePercent)})`,
+                  )}
                   <span className="sr-only">
                     {rising ? t('chart.up') : t('chart.down')}
                   </span>
@@ -372,9 +374,11 @@ export function Markets() {
             label={t('markets.rangeChange', { range: activeRangeLabel })}
             value={
               data
-                ? `${data.rangeChange >= 0 ? '+' : '−'}${Math.abs(
-                    data.rangeChange,
-                  ).toFixed(decimals)} (${formatPercent(data.rangeChangePercent)})`
+                ? ltr(
+                    `${data.rangeChange >= 0 ? '+' : '−'}${Math.abs(
+                      data.rangeChange,
+                    ).toFixed(decimals)} (${formatPercent(data.rangeChangePercent)})`,
+                  )
                 : '—'
             }
           />

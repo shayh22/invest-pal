@@ -24,6 +24,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { createAlert, deleteAlert } from '@/services/alerts'
 import { requireSupabase } from '@/services/supabase'
 import type { AlertDirection, Asset, PriceAlert } from '@/types'
+import { formatDateTime } from '@/lib/format'
 
 interface AlertPanelProps {
   asset: Asset | null
@@ -154,7 +155,7 @@ export function AlertPanel({
                 {alert.triggeredAt && (
                   <span className="text-muted-foreground text-xs">
                     {t('alerts.firedAt', {
-                      when: new Date(alert.triggeredAt).toLocaleString(locale),
+                      when: formatDateTime(alert.triggeredAt, locale),
                     })}
                   </span>
                 )}

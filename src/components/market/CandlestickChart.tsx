@@ -17,6 +17,7 @@ import { useChartColors } from '@/lib/chart-theme'
 import { angleLine, nearestLevels, selectAngles } from '@/lib/gann-overlay'
 import type { Candle } from '@/types'
 import type { GannPayload } from '@/types/gann'
+import { formatDateTime } from '@/lib/format'
 
 interface CandlestickChartProps {
   candles: Candle[]
@@ -299,7 +300,7 @@ export function CandlestickChart({
         {readout ? (
           <>
             <span>
-              {new Date(readout.time * 1000).toLocaleString(locale)}
+              {formatDateTime(readout.time * 1000, locale)}
             </span>
             <span>
               O <span className="text-foreground">{readout.open.toFixed(priceDecimals)}</span>
