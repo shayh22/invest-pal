@@ -52,7 +52,8 @@ jobs:
                    supabase/migrations/0008_pending_orders.sql \
                    supabase/migrations/0009_watchlist.sql \
                    supabase/migrations/0010_price_alerts.sql \
-                   supabase/migrations/0011_trailing_stops.sql; do
+                   supabase/migrations/0011_trailing_stops.sql \
+                   supabase/migrations/0012_restore_functions_after_replay.sql; do
             psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
           done
       - name: Trading engine tests
@@ -84,6 +85,45 @@ jobs:
       # the earlier suites found it.
       - name: Netting and reset tests
         run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/netting_test.sql
+
+  # The production database is not in the state the job above builds. A
+  # deploy replayed 0001-0003 over a schema already at 0011, putting back
+  # the trading functions from before execution costs and the signup
+  # function from before starting balances; 0012 restores them. This job
+  # builds that exact history — including the replay — and runs the two
+  # suites the replay breaks, so the repair is proven on the schema it is
+  # actually for. Without 0012 both suites fail here.
+  database-after-replay:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    env:
+      PGPASSWORD: postgres
+      DB: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the schema production has
+        run: |
+          psql "$DB" -q -v ON_ERROR_STOP=1 -f supabase/tests/harness.sql
+          for f in $(ls supabase/migrations/00{01..11}_*.sql) \
+                   $(ls supabase/migrations/000{1,2,3}_*.sql); do
+            psql "$DB" -q -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Apply the repair
+        run: psql "$DB" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0012_restore_functions_after_replay.sql
+      - name: Execution cost tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/execution_costs_test.sql
+      - name: Starting balance tests
+        run: psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/starting_balance_test.sql
 
   engine:
     runs-on: ubuntu-latest

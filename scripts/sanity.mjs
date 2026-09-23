@@ -51,15 +51,43 @@ await section('Site', async () => {
     // is missing and deep links are broken.
     check(`GET ${path}`, res.status === 200, `HTTP ${res.status}`)
   }
-  const html = await (await fetch(`${BASE_URL}/`)).text()
-  const asset = html.match(/\/assets\/index-[^"]+\.js/)?.[0]
+  // Right after a deploy the alias can briefly hand out the previous
+  // index.html, which names a bundle the new deployment does not have. Wait
+  // until the page and its bundle agree — the bundle really is JavaScript —
+  // rather than judging a half-switched site. Two minutes is generous; a
+  // settled site answers on the first try.
+  let asset
+  let bundleIsScript = false
+  let bundleType = ''
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const html = await (await fetch(`${BASE_URL}/`, { cache: 'no-store' })).text()
+    asset = html.match(/\/assets\/index-[^"]+\.js/)?.[0]
+    if (asset) {
+      const head = await fetch(`${BASE_URL}${asset}`, { cache: 'no-store' })
+      bundleType = head.headers.get('content-type') ?? ''
+      bundleIsScript = head.ok && bundleType.includes('javascript')
+      if (bundleIsScript) break
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10_000))
+  }
   check('index.html references a hashed bundle', Boolean(asset), asset ?? 'none found')
+  // A missing asset used to come back as index.html with HTTP 200, which
+  // made every "this shipped" check below fail at once for no stated reason.
+  check('and that bundle is served as JavaScript', bundleIsScript,
+    `${asset ?? 'no bundle'}: ${bundleType || 'no response'}`)
 
   // Installability. A Trusted Web Activity is built on these four files, and
   // each one fails differently: no manifest and Bubblewrap cannot build, no
   // icons and the launcher shows a blank square, no service worker and the app
   // is not installable, no asset links and Chrome keeps its address bar over
   // every screen.
+  // The SPA rewrite used to catch /assets/ too, so a bundle that does not
+  // exist answered 200 with the HTML page — under the year-long immutable
+  // cache header that /assets/ carries.
+  const ghost = await fetch(`${BASE_URL}/assets/index-doesnotexist.js`)
+  check('a missing asset is a 404, not the app shell', ghost.status === 404,
+    `HTTP ${ghost.status} ${ghost.headers.get('content-type') ?? ''}`)
+
   const manifestRes = await fetch(`${BASE_URL}/manifest.webmanifest`)
   check('the web app manifest is served', manifestRes.status === 200,
     `HTTP ${manifestRes.status}`)
@@ -91,7 +119,7 @@ await section('Site', async () => {
   check('asset links are served for the Android build', links.status === 200,
     `HTTP ${links.status}`)
 
-  if (asset) {
+  if (asset && bundleIsScript) {
     const bundle = await (await fetch(`${BASE_URL}${asset}`)).text()
     check('English strings shipped', bundle.includes('Learn the markets'))
     check('Hebrew strings shipped', bundle.includes('ללמוד את השוק'))

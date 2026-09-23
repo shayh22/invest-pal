@@ -13,16 +13,18 @@
 #
 # Never the other way round. The frontend selects columns that migrations add
 # — ship it first and the orders list breaks for everyone until the migration
-# lands. Migrations are additive and idempotent ("Safe to re-run" at the top of
-# every one), so re-applying all of them each time needs no bookkeeping and
-# costs a few seconds.
+# lands. Only migrations not yet recorded in supabase_migrations.schema_migrations
+# run. Each one says "Safe to re-run" and is, on its own schema — but not on a
+# later one: 0004 defines trading_costs() with a return type a later migration
+# changed, and replaying it fails. The first version of this file replayed
+# everything and found that out on its first real run.
 #
 # It runs only after Tests has gone green on main, so a red build never
 # deploys.
 #
 # Required secrets (Settings -> Secrets and variables -> Actions):
 #   VERCEL_TOKEN          a Vercel access token
-#   SUPABASE_DB_URL       postgresql://... connection string for the project
+#   SUPABASE_ACCESS_TOKEN a Supabase personal access token, for migrations
 #   SUPABASE_URL          https://<ref>.supabase.co
 #   SUPABASE_ANON_KEY     the publishable key (also public in the bundle)
 #
@@ -69,15 +71,15 @@ jobs:
       - name: Check what is configured
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           missing=""
-          for name in VERCEL_TOKEN SUPABASE_DB_URL SUPABASE_URL SUPABASE_ANON_KEY \
-                      VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+          for name in VERCEL_TOKEN SUPABASE_ACCESS_TOKEN SUPABASE_URL \
+                      SUPABASE_ANON_KEY VERCEL_ORG_ID VERCEL_PROJECT_ID; do
             # An `if` rather than `[ ... ] && ...`: the short form returns
             # non-zero when the variable *is* set, and steps run under `bash
             # -e`, so a fully configured repository would fail right here.
@@ -103,16 +105,157 @@ jobs:
       # ---------------------------------------------------------------------
       # 1. The schema, first
       # ---------------------------------------------------------------------
+      # Through the Management API: HTTPS with a bearer token. A direct
+      # Postgres connection from a runner failed four different ways — the
+      # direct host is IPv6-only, the pooler wants its own user format, and a
+      # password has to survive URL encoding and match the one the dashboard
+      # last saved. The API has none of that, and it is how every migration
+      # in this project had been applied by hand.
+      #
+      # Only migrations not yet recorded run. Replaying all of them on every
+      # deploy was the first design, and it cannot work: migrations are
+      # history, not state — 0004 creates trading_costs() with a return type
+      # a later one changed, and Postgres will not change it back.
       - name: Apply migrations
         env:
-          PGSSLMODE: require
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
-          for f in supabase/migrations/*.sql; do
-            echo "--- $f"
-            psql "${{ secrets.SUPABASE_DB_URL }}" -v ON_ERROR_STOP=1 -q -f "$f"
-          done
-          echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations." \
-            >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY'
+          import glob, json, os, re, sys, urllib.error, urllib.request
+
+          API = os.environ.get("SUPABASE_API_URL", "https://api.supabase.com")
+          MIGRATIONS = os.environ.get("MIGRATIONS_DIR", "supabase/migrations")
+
+          # Applied by hand, through this same API, before this workflow could reach
+          # the database — so the live project is at this version with nothing recorded.
+          # 0011 created public.trailing_stop_level; finding it, with no migration of
+          # ours recorded, is what identifies that state. Only ever used once: after
+          # the first run every version is recorded and this plays no part.
+          BASELINE = "0011"
+
+          token = os.environ["SUPABASE_ACCESS_TOKEN"].strip()
+          match = re.match(r"https://([a-z0-9]+)\.supabase\.co", os.environ.get("SUPABASE_URL", ""))
+          if not match:
+              print("PROBLEM: SUPABASE_URL is not https://<project-ref>.supabase.co, "
+                    "so the project to migrate cannot be worked out from it.")
+              sys.exit(1)
+          ref = match.group(1)
+
+
+          def query(sql, label):
+              request = urllib.request.Request(
+                  f"{API}/v1/projects/{ref}/database/query",
+                  data=json.dumps({"query": sql}).encode(),
+                  method="POST",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                      # The API sits behind a bot filter that turns away urllib's
+                      # default user agent with an HTML page instead of an answer.
+                      "User-Agent": "invest-pal-deploy",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=180) as response:
+                      body = response.read().decode("utf-8", "replace")
+              except urllib.error.HTTPError as error:
+                  body = error.read().decode("utf-8", "replace")
+                  try:
+                      detail = json.loads(body).get("message", body)
+                  except ValueError:
+                      detail = body
+                  hint = {
+                      401: "the token is not valid: revoked, expired, or pasted incompletely",
+                      403: "the token belongs to an account that cannot manage this project",
+                      404: f"no project '{ref}' is visible to this token",
+                  }.get(error.code, "the database rejected it")
+                  print(f"--- {label}: HTTP {error.code}, {hint}")
+                  print(str(detail)[:2000])
+                  sys.exit(1)
+              try:
+                  return json.loads(body) if body.strip() else []
+              except ValueError:
+                  return []
+
+
+          def literal(text):
+              return "'" + text.replace("'", "''") + "'"
+
+
+          migrations = []
+          for path in sorted(glob.glob(f"{MIGRATIONS}/*.sql")):
+              version, _, name = os.path.basename(path)[:-4].partition("_")
+              migrations.append((version, name, path))
+
+          # The table the Supabase CLI keeps, so the dashboard and the CLI agree with
+          # this workflow about what has been applied.
+          query(
+              "create schema if not exists supabase_migrations;"
+              " create table if not exists supabase_migrations.schema_migrations"
+              " (version text primary key);"
+              " alter table supabase_migrations.schema_migrations"
+              " add column if not exists name text;",
+              "migration history",
+          )
+          recorded = {row["version"] for row in
+                      query("select version from supabase_migrations.schema_migrations;",
+                            "migration history")}
+
+          ours = {version for version, _, _ in migrations}
+          if not recorded & ours:
+              state = query(
+                  "select"
+                  " to_regclass('public.profiles') is not null as has_schema,"
+                  " exists (select 1 from pg_proc p"
+                  "   join pg_namespace n on n.oid = p.pronamespace"
+                  "   where n.nspname = 'public' and p.proname = 'trailing_stop_level')"
+                  " as at_baseline;",
+                  "database state",
+              )[0]
+              if state["at_baseline"]:
+                  known = [(v, n) for v, n, _ in migrations if v <= BASELINE]
+                  query(
+                      "insert into supabase_migrations.schema_migrations (version, name) values "
+                      + ", ".join(f"({literal(v)}, {literal(n)})" for v, n in known)
+                      + " on conflict (version) do nothing;",
+                      "baseline",
+                  )
+                  recorded |= {v for v, _ in known}
+                  print(f"Recorded {len(known)} migrations up to {BASELINE} as already applied: "
+                        "the database was migrated by hand before this history existed.")
+              elif state["has_schema"]:
+                  print("PROBLEM: the database has tables but no record of which migrations "
+                        "made them, and it is not at the known hand-applied version "
+                        f"({BASELINE}). Replaying from 0001 would fail or undo later changes, "
+                        "so nothing was run. Record the applied versions in "
+                        "supabase_migrations.schema_migrations, then deploy again.")
+                  sys.exit(1)
+
+          pending = [(v, n, p) for v, n, p in migrations if v not in recorded]
+          for version, name, path in pending:
+              # One request, one transaction: the migration and the record of it
+              # commit together or not at all, so a failure leaves nothing half-done
+              # and nothing wrongly marked as applied.
+              query(
+                  "begin;\n"
+                  + open(path, encoding="utf-8").read()
+                  + "\n;\ninsert into supabase_migrations.schema_migrations (version, name)"
+                  f" values ({literal(version)}, {literal(name)})"
+                  " on conflict (version) do nothing;\ncommit;",
+                  os.path.basename(path),
+              )
+              print(f"--- {os.path.basename(path)}: applied")
+
+          if pending:
+              print(f"Applied {len(pending)} new migration(s); "
+                    f"{len(migrations) - len(pending)} were already in place.")
+          else:
+              print(f"Nothing to apply: all {len(migrations)} migrations are already in place.")
+          PY
+          # No pipe into tee or the like: under bash -e without pipefail, a
+          # failed migration would exit 0 through the pipe and the deploy
+          # would go ahead over a broken schema.
 
       # ---------------------------------------------------------------------
       # 2. The bundle
