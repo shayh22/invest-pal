@@ -1,6 +1,7 @@
 import {
   BellRing,
   ChevronRight,
+  Hourglass,
   Star,
   TrendingDown,
   TrendingUp,
@@ -220,6 +221,21 @@ export function Dashboard() {
           Markets and Portfolio — which the header already does. The roadmap
           is gone and so are they; what is left is the button that actually
           decides something, and the paragraphs explaining what it decided. */}
+      {/* One line and a button: the game explains itself once you are in
+          it, and the dashboard is not the place for the rules. */}
+      <Card size="sm">
+        <CardContent className="flex items-center gap-3">
+          <Hourglass className="text-primary size-5 shrink-0" aria-hidden />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="font-medium">{t('tm.title')}</span>
+            <span className="text-muted-foreground text-xs">{t('tm.ctaBody')}</span>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/time-machine">{t('tm.ctaPlay')}</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <OpportunityScanner />
 
     </div>

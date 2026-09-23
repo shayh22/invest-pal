@@ -23,6 +23,7 @@ export function Privacy() {
     ['privacy.dataExperience', 'privacy.dataExperienceWhy'],
     ['privacy.dataTrades', 'privacy.dataTradesWhy'],
     ['privacy.dataPrefs', 'privacy.dataPrefsWhy'],
+    ['privacy.dataGame', 'privacy.dataGameWhy'],
   ] as const
 
   return (

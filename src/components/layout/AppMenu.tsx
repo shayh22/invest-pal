@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import {
   CandlestickChart,
   Home,
+  Hourglass,
   Languages,
   LayoutDashboard,
   LogIn,
@@ -79,6 +80,7 @@ const signedInNav: NavItem[] = [
   { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/markets', labelKey: 'nav.markets', icon: CandlestickChart },
   { to: '/portfolio', labelKey: 'nav.portfolio', icon: Wallet },
+  { to: '/time-machine', labelKey: 'nav.timeMachine', icon: Hourglass },
 ]
 
 const MODE_ICON: Record<ThemeMode, typeof Sun> = {
