@@ -133,21 +133,9 @@ def refresh(
                         file=sys.stderr,
                     )
                     continue
-
-                # The prompt forbids advice and prediction. A model can still
-                # slip, and a summary beside a Buy button is the wrong place to
-                # find out quietly — so say so rather than storing it silently.
-                slipped = [
-                    word
-                    for word in ("should", "will ", "recommend", "expect", "predict")
-                    if word in summaries[language].lower()
-                ]
-                if slipped:
-                    print(
-                        f"  {ticker}: WARNING {language} summary used {slipped}"
-                        " — review it",
-                        file=sys.stderr,
-                    )
+                # summarise() refuses notes with advice or prediction in them,
+                # so nothing here needs a second look. It used to warn and
+                # store them anyway, which put "should" beside a Buy button.
 
         # ai_summary is the deprecated single-language column; keep it holding
         # English so anything still reading it stays correct.
