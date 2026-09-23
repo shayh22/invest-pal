@@ -708,9 +708,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
     // A floor, not every row. The notes come from OpenRouter's free models,
     // and on the first run 12 of 74 Hebrew notes were refused — empty replies,
-    // or English — so a few gaps are the expected state, and the panel falls
-    // back to English for them. What this catches is a language that has
-    // stopped being written at all.
+    // or English — so a few gaps are the expected state, and for those the
+    // mentor card builds a note from the analysis in the reader's language.
+    // What this catches is a language that has stopped being written at all.
     const COVERAGE_FLOOR = 0.75
     const covered = (lang) => signals.filter((s) => s.ai_summaries?.[lang]).length
     for (const [lang, label] of [['en', 'English'], ['he', 'Hebrew']]) {
