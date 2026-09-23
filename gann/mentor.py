@@ -194,7 +194,25 @@ plainly and say what they show.
 - Keep each sentence short enough to read in one breath.
 - No preamble, no bullet points, no headings. Two sentences only.
 - Write in {language}, and in nothing else. Ticker symbols stay as they are.\
-"""
+{style}"""
+
+#: Per-language house style, appended to the rules. The numbers arrive with
+#: English labels, and without this a Hebrew note came back with "Gann 1x1
+#: balance line" and "Square of Nine" left in English, "ברים" for bars and
+#: dates as 2026-10-05 — Hebrew grammar around English jargon. The terms here
+#: are the ones the app's own panels and glossary use, so a note's words link
+#: to the glossary and match the labels beside it.
+STYLE = {
+    "en": "",
+    "he": """
+- Use these Hebrew terms, never the English ones: "קו האיזון 1x1 של גאן" \
+(the 1x1 balance line), "ריבוע התשע" (Square of Nine), "תמיכה" (support), \
+"התנגדות" (resistance), "מחזור זמן" (time cycle), "נרות" (bars or candles), \
+"שפל" and "שיא" (low and high).
+- Write dates in Hebrew words, for example "5 באוקטובר", not 2026-10-05.
+- Do not open with the ticker symbol.\
+""",
+}
 
 
 def build_user_prompt(analysis: GannAnalysis) -> str:
@@ -252,7 +270,8 @@ def _request(
     prompt: str, *, api_key: str, model: str, timeout: float, language: str
 ) -> str:
     system = SYSTEM_PROMPT.format(
-        language=LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["en"])
+        language=LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["en"]),
+        style=STYLE.get(language, ""),
     )
     body = json.dumps(
         {
