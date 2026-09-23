@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import { useTradingCosts } from '@/hooks/useTradingCosts'
 import { useTranslation } from '@/hooks/useTranslation'
-import { formatQuantity, formatUsd } from '@/lib/format'
+import { formatDateTime, formatQuantity, formatUsd, ltr } from '@/lib/format'
 import { maxAffordableQuantity, openingCost, positionPnl } from '@/lib/trading'
 import { placeOrder as restOrder } from '@/services/orders'
 import { setShortSelling, trade as fillNow } from '@/services/trading'
@@ -815,7 +815,7 @@ export function TradePanel({
                                 : t('orders.priceLabel'),
                             value:
                               orderType === 'TIME'
-                                ? new Date(whenText).toLocaleString(locale)
+                                ? formatDateTime(whenText, locale)
                                 : triggerPrice.toFixed(decimals),
                             emphasis: true,
                           },
@@ -823,7 +823,7 @@ export function TradePanel({
                     {
                       label: t('orders.expiryLabel'),
                       value: expiryText
-                        ? new Date(expiryText).toLocaleString(locale)
+                        ? formatDateTime(expiryText, locale)
                         : t('orders.noExpiry'),
                     },
                   ]
@@ -839,9 +839,11 @@ export function TradePanel({
                     },
                     {
                       label: t('confirm.resultSoFar'),
-                      value: `${(confirmPnl ?? 0) >= 0 ? '+' : '−'}${formatUsd(
-                        Math.abs(confirmPnl ?? 0),
-                      )}`,
+                      value: ltr(
+                        `${(confirmPnl ?? 0) >= 0 ? '+' : '−'}${formatUsd(
+                          Math.abs(confirmPnl ?? 0),
+                        )}`,
+                      ),
                       emphasis: true,
                     },
                   ]

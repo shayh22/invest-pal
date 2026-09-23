@@ -30,7 +30,7 @@ import { usePendingOrders } from '@/hooks/usePendingOrders'
 import { usePositions } from '@/hooks/usePositions'
 import { useQuotes } from '@/hooks/useQuotes'
 import { useTranslation } from '@/hooks/useTranslation'
-import { formatPercent, formatQuantity, formatUsd } from '@/lib/format'
+import { formatPercent, formatQuantity, formatUsd, ltr } from '@/lib/format'
 import {
   accountEquity,
   pnlPercent,
@@ -70,9 +70,11 @@ function SignedValue({
           : { color: rounded > 0 ? 'var(--chart-up)' : 'var(--chart-down)' }
       }
     >
-      {flat ? '' : rounded > 0 ? '+' : '−'}
-      {Math.abs(rounded).toFixed(decimals)}
-      {suffix}
+      {ltr(
+        `${flat ? '' : rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(
+          decimals,
+        )}${suffix}`,
+      )}
     </span>
   )
 }
@@ -749,7 +751,7 @@ export function Portfolio() {
                 { label: t('common.price'), value: mark.toFixed(decimals) },
                 {
                   label: t('confirm.resultSoFar'),
-                  value: `${pnl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pnl))}`,
+                  value: ltr(`${pnl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pnl))}`),
                   emphasis: true,
                 },
               ]}
