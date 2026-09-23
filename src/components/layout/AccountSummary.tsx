@@ -2,6 +2,7 @@ import { Fragment, useId, useState, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 import { SignedValue } from '@/components/layout/SignedValue'
+import { useBackgroundMood } from '@/contexts/background-mood'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/hooks/useTranslation'
@@ -53,6 +54,13 @@ export function AccountSummary({
     equity !== null && startingBalance > 0
       ? ((equity - startingBalance) / startingBalance) * 100
       : 0
+
+  // The backdrop takes the account's colour on the pages that show it. Flat
+  // at two decimals is flat, so a fresh account is not painted a colour.
+  const rounded = Number(totalReturnPct.toFixed(2))
+  useBackgroundMood(
+    equity === null || rounded === 0 ? 'neutral' : rounded > 0 ? 'up' : 'down',
+  )
 
   const context: ReactNode[] = []
   if (equity !== null && startingBalance > 0) {

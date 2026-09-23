@@ -311,3 +311,153 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
 }
+
+/*
+ * The backdrop behind every page (AppBackground).
+ *
+ * Two soft glows drift slowly, and a Square of Nine spiral turns once every
+ * four minutes in the corner, with a Gann fan opposite it — the app's own
+ * geometry, faint enough to sit behind a table of numbers without competing
+ * with it. The glows take the colour of the moment: green while the asset on
+ * screen is up on the day, red while it is down, the chosen palette
+ * otherwise.
+ *
+ * All of it is transforms and opacity, which the compositor animates without
+ * repainting the page. The glows are radial gradients rather than blurred
+ * boxes: a large filter: blur() is the one thing here a phone would feel.
+ */
+@property --mood {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+.app-bg {
+    /* The calm colour: the chosen palette, or a soft indigo when the palette
+       is the neutral one, whose primary is near-black and would glow grey. */
+    --bg-accent: var(--primary);
+    --mood: var(--bg-accent);
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--foreground);
+    /* Registered above as a colour, so a change of mood fades rather than
+       snapping. */
+    transition: --mood 1.6s ease;
+}
+
+:root:not([data-palette]) .app-bg,
+:root[data-palette='neutral'] .app-bg {
+    --bg-accent: oklch(0.62 0.13 268);
+}
+
+.app-bg[data-mood='up'] {
+    --mood: var(--chart-up);
+}
+
+.app-bg[data-mood='down'] {
+    --mood: var(--chart-down);
+}
+
+.app-bg__glow {
+    position: absolute;
+    width: 75vmax;
+    height: 75vmax;
+    border-radius: 50%;
+    background: radial-gradient(
+        closest-side,
+        color-mix(in oklch, var(--mood) 20%, transparent),
+        transparent
+    );
+    will-change: transform;
+}
+
+.dark .app-bg__glow {
+    background: radial-gradient(
+        closest-side,
+        color-mix(in oklch, var(--mood) 26%, transparent),
+        transparent
+    );
+}
+
+.app-bg__glow--a {
+    top: -32vmax;
+    inset-inline-start: -24vmax;
+    animation: app-bg-drift-a 34s ease-in-out infinite alternate;
+}
+
+/* The second glow keeps the palette's colour whatever the mood, so the page
+   never turns entirely red on a bad day. */
+.app-bg__glow--b {
+    bottom: -38vmax;
+    inset-inline-end: -30vmax;
+    background: radial-gradient(
+        closest-side,
+        color-mix(in oklch, var(--bg-accent) 14%, transparent),
+        transparent
+    );
+    animation: app-bg-drift-b 44s ease-in-out infinite alternate;
+}
+
+.app-bg__spiral {
+    position: absolute;
+    width: 90vmax;
+    height: 90vmax;
+    bottom: -45vmax;
+    inset-inline-end: -45vmax;
+    opacity: 0.08;
+    animation: app-bg-turn 240s linear infinite;
+    will-change: transform;
+}
+
+.app-bg__fan {
+    position: absolute;
+    width: 55vmax;
+    height: 55vmax;
+    bottom: 0;
+    inset-inline-start: 0;
+    opacity: 0.05;
+    color: var(--mood);
+}
+
+/* The fan opens away from the reading edge in both directions. */
+[dir='rtl'] .app-bg__fan {
+    transform: scaleX(-1);
+}
+
+.dark .app-bg__spiral {
+    opacity: 0.1;
+}
+
+.dark .app-bg__fan {
+    opacity: 0.08;
+}
+
+@keyframes app-bg-drift-a {
+    to {
+        transform: translate3d(14vmax, 10vmax, 0) scale(1.12);
+    }
+}
+
+@keyframes app-bg-drift-b {
+    to {
+        transform: translate3d(-12vmax, -14vmax, 0) scale(0.92);
+    }
+}
+
+@keyframes app-bg-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+:root[data-background='still'] .app-bg *,
+:root[data-background='still'] .app-bg {
+    animation: none;
+}
+
+:root[data-background='off'] .app-bg {
+    display: none;
+}

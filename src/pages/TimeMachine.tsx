@@ -25,6 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
+import { useBackgroundMood } from '@/contexts/background-mood'
 import { useTranslation } from '@/hooks/useTranslation'
 import type { TranslationKey } from '@/i18n'
 import { ltr } from '@/lib/format'
@@ -214,6 +215,8 @@ export function TimeMachine() {
   const judgement = verdict(rows)
   const last = phase === 'done' ? history.at(-1) : undefined
   const lastCorrect = last ? last.call === last.result : false
+  // The verdict, in colour, until the next round starts.
+  useBackgroundMood(!last ? 'neutral' : lastCorrect ? 'up' : 'down')
 
   const levelLabel = (direction: 'up' | 'down') => {
     if (!round) return ''

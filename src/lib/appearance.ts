@@ -6,6 +6,7 @@
  *
  *   mode          light, dark, or follow the operating system
  *   palette       which hue the primary buttons and focus rings use
+ *   background    the backdrop behind the pages: moving, still, or none
  *   reduceMotion  whether transitions and animations run at all
  *
  * They live on `<html>` because that is where the CSS that reads them lives —
@@ -32,15 +33,25 @@ export type ThemeMode = (typeof THEME_MODES)[number]
 export const PALETTES = ['neutral', 'blue', 'teal', 'violet', 'amber'] as const
 export type Palette = (typeof PALETTES)[number]
 
+/**
+ * The backdrop behind the pages. Moving by default: it is part of what makes
+ * the app feel alive, and it costs a few transforms on the compositor. Still
+ * keeps the colour and drops the motion; off is a plain page.
+ */
+export const BACKGROUNDS = ['moving', 'still', 'off'] as const
+export type Background = (typeof BACKGROUNDS)[number]
+
 export interface Appearance {
   mode: ThemeMode
   palette: Palette
+  background: Background
   reduceMotion: boolean
 }
 
 const MODE_KEY = 'invest-pal.theme-mode'
 const PALETTE_KEY = 'invest-pal.palette'
 const MOTION_KEY = 'invest-pal.reduce-motion'
+const BACKGROUND_KEY = 'invest-pal.background'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
@@ -70,12 +81,18 @@ export function isPalette(value: unknown): value is Palette {
   return PALETTES.includes(value as Palette)
 }
 
+export function isBackground(value: unknown): value is Background {
+  return BACKGROUNDS.includes(value as Background)
+}
+
 export function storedAppearance(): Appearance {
   const mode = read(MODE_KEY)
   const palette = read(PALETTE_KEY)
+  const background = read(BACKGROUND_KEY)
   return {
     mode: isThemeMode(mode) ? mode : 'system',
     palette: isPalette(palette) ? palette : 'neutral',
+    background: isBackground(background) ? background : 'moving',
     // Unset means "whatever the system says", which the CSS handles on its
     // own; only an explicit choice is stored.
     reduceMotion: read(MOTION_KEY) === 'true',
@@ -102,6 +119,7 @@ export function applyAppearance(appearance: Appearance): void {
   root.classList.toggle('dark', resolved === 'dark')
   root.dataset.themeMode = appearance.mode
   root.dataset.palette = appearance.palette
+  root.dataset.background = appearance.background
 
   // Tells the browser which way round its own furniture goes: scrollbars, form
   // controls and the flash of background before the stylesheet lands.
@@ -127,6 +145,7 @@ export function rememberAppearance(appearance: Appearance): void {
   applyAppearance(appearance)
   write(MODE_KEY, appearance.mode)
   write(PALETTE_KEY, appearance.palette)
+  write(BACKGROUND_KEY, appearance.background)
   write(MOTION_KEY, String(appearance.reduceMotion))
 }
 

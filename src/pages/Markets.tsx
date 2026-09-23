@@ -43,6 +43,7 @@ import { useWatchlist } from '@/hooks/useWatchlist'
 import { usePositions } from '@/hooks/usePositions'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
+import { useBackgroundMood } from '@/contexts/background-mood'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent, ltr } from '@/lib/format'
@@ -234,6 +235,8 @@ export function Markets() {
   const quote = data?.quote ?? null
   const decimals = quote ? decimalsFor(quote.price) : 2
   const rising = (quote?.change ?? 0) >= 0
+  // The backdrop follows the asset on screen: its day, not the account's.
+  useBackgroundMood(!quote || quote.change === 0 ? 'neutral' : rising ? 'up' : 'down')
 
   const assetAlerts = alerts.alerts.filter(
     (alert) => alert.assetId === selectedAsset?.id,
