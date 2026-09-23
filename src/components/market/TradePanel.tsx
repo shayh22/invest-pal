@@ -37,6 +37,7 @@ import type {
   TrailUnit,
   TriggerType,
 } from '@/types'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 interface TradePanelProps {
   asset: Asset | null
@@ -358,7 +359,7 @@ export function TradePanel({
         {asset && (
           <div className="bg-muted/50 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm">
             <span className="text-muted-foreground">
-              {t('trade.youHold', { ticker: asset.ticker })}
+              <GlossaryText>{t('trade.youHold', { ticker: asset.ticker })}</GlossaryText>
             </span>
             <span className="tabular-nums">
               {held === 0
@@ -396,7 +397,7 @@ export function TradePanel({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {t(
+            <GlossaryText>{t(
               orderType === 'NOW'
                 ? 'orders.hintNow'
                 : orderType === 'LIMIT'
@@ -406,7 +407,7 @@ export function TradePanel({
                     : orderType === 'TRAILING'
                       ? 'orders.hintTrailing'
                       : 'orders.hintTime',
-            )}
+            )}</GlossaryText>
           </p>
         </div>
 
@@ -456,10 +457,10 @@ export function TradePanel({
 
           {byAmount && quantityValid && asset && (
             <p className="text-muted-foreground text-xs">
-              {t('trade.amountBuys', {
+              <GlossaryText>{t('trade.amountBuys', {
                 quantity: formatQuantity(quantity),
                 ticker: asset.ticker,
-              })}
+              })}</GlossaryText>
             </p>
           )}
 
@@ -468,7 +469,7 @@ export function TradePanel({
               plainly rather than left for the reader to work out. */}
           {feeShare !== null && feeShare >= 2 && (
             <p className="text-xs" style={{ color: 'var(--chart-down)' }}>
-              {t('trade.feeHeavy', { percent: feeShare.toFixed(1) })}
+              <GlossaryText>{t('trade.feeHeavy', { percent: feeShare.toFixed(1) })}</GlossaryText>
             </p>
           )}
 
@@ -551,15 +552,15 @@ export function TradePanel({
             </div>
             {price && trailValid ? (
               <p className="text-muted-foreground text-xs leading-relaxed">
-                {t('orders.trailPreview', {
+                <GlossaryText>{t('orders.trailPreview', {
                   price: price.toFixed(decimals),
                   down: (stopFor('SELL') ?? 0).toFixed(decimals),
                   up: (stopFor('BUY') ?? 0).toFixed(decimals),
-                })}
+                })}</GlossaryText>
               </p>
             ) : (
               <p className="text-muted-foreground text-xs leading-relaxed">
-                {t('orders.trailHint')}
+                <GlossaryText>{t('orders.trailHint')}</GlossaryText>
               </p>
             )}
           </div>
@@ -587,14 +588,14 @@ export function TradePanel({
               onChange={(event) => setExpiryText(event.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              {t('orders.expiryHint')}
+              <GlossaryText>{t('orders.expiryHint')}</GlossaryText>
             </p>
           </div>
         )}
 
         <dl className="text-sm">
           <div className="flex items-center justify-between py-1">
-            <dt className="text-muted-foreground">{t('common.price')}</dt>
+            <dt className="text-muted-foreground"><GlossaryText>{t('common.price')}</GlossaryText></dt>
             <dd className="tabular-nums">
               {price ? price.toFixed(decimals) : '—'}
             </dd>
@@ -603,7 +604,7 @@ export function TradePanel({
             <>
               <div className="flex items-center justify-between py-1">
                 <dt className="text-muted-foreground">
-                  {t('trade.estimatedFill')}
+                  <GlossaryText>{t('trade.estimatedFill')}</GlossaryText>
                 </dt>
                 <dd className="tabular-nums">
                   {estimate.fill.toFixed(decimals)}
@@ -611,7 +612,7 @@ export function TradePanel({
               </div>
               <div className="flex items-center justify-between py-1">
                 <dt className="text-muted-foreground">
-                  {t('trade.commission')}
+                  <GlossaryText>{t('trade.commission')}</GlossaryText>
                 </dt>
                 <dd className="tabular-nums">
                   {formatUsd(estimate.commission)}
@@ -619,14 +620,14 @@ export function TradePanel({
               </div>
               <div className="flex items-center justify-between py-1">
                 <dt className="text-muted-foreground">
-                  {t('trade.cashRequired')}
+                  <GlossaryText>{t('trade.cashRequired')}</GlossaryText>
                 </dt>
                 <dd className="tabular-nums">{formatUsd(estimate.total)}</dd>
               </div>
             </>
           )}
           <div className="flex items-center justify-between border-t py-1">
-            <dt className="text-muted-foreground">{t('common.cash')}</dt>
+            <dt className="text-muted-foreground"><GlossaryText>{t('common.cash')}</GlossaryText></dt>
             <dd className="tabular-nums">{formatUsd(balance)}</dd>
           </div>
         </dl>
@@ -637,7 +638,7 @@ export function TradePanel({
           </p>
         )}
 
-        <p className="text-muted-foreground text-xs">{t('trade.costsNote')}</p>
+        <p className="text-muted-foreground text-xs"><GlossaryText>{t('trade.costsNote')}</GlossaryText></p>
 
         <div className="grid grid-cols-2 gap-3">
           <Button
@@ -714,7 +715,7 @@ export function TradePanel({
                 {t('trade.allowShorting')}
               </Label>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                {t('trade.allowShortingBody')}
+                <GlossaryText>{t('trade.allowShortingBody')}</GlossaryText>
               </p>
             </div>
             <Switch
@@ -731,7 +732,7 @@ export function TradePanel({
             <TriangleAlert className="size-4" />
             <AlertTitle>{t('trade.shortWarningTitle')}</AlertTitle>
             <AlertDescription className="flex flex-col items-start gap-2">
-              {t('trade.shortWarningBody')}
+              <GlossaryText>{t('trade.shortWarningBody')}</GlossaryText>
               <Button
                 size="sm"
                 variant="outline"

@@ -101,14 +101,14 @@ def test_missing_key_is_a_clear_error(monkeypatch):
 
 
 def test_prompt_language_is_explicit_in_the_system_prompt():
-    from gann.mentor import LANGUAGE_NAMES, SYSTEM_PROMPT
+    from gann.mentor import LANGUAGE_NAMES, STYLE, SYSTEM_PROMPT
 
-    hebrew = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["he"])
+    hebrew = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["he"], style=STYLE["he"])
     assert "Write in Hebrew" in hebrew
     # Tickers must survive translation, or the summary stops matching the chart.
     assert "Ticker symbols stay as they are" in hebrew
 
-    english = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["en"])
+    english = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["en"], style=STYLE["en"])
     assert "Write in English" in english
 
 
@@ -152,7 +152,7 @@ def test_the_default_model_is_the_free_router():
     assert mentor.DEFAULT_MODEL == "openrouter/free"
     assert mentor.is_free(mentor.DEFAULT_MODEL)
     assert mentor.is_free("qwen/qwen3.8-27b:free")
-    assert not mentor.is_free("anthropic/claude-haiku-4.5")
+    assert not mentor.is_free("openai/gpt-5-mini")
 
 
 # --- The free tier: rate limits, the daily cap, and the wrong language -------
@@ -209,8 +209,8 @@ def test_free_models_are_spaced_under_twenty_a_minute(openrouter):
     queue, sleeps = openrouter
     queue += [completion("TEST sits above its balance line, with support holding at 98."), completion("TEST sits above its balance line, with support holding at 98.")]
 
-    summarise(analysis())
-    summarise(analysis())
+    summarise(analysis(), model="openrouter/free")
+    summarise(analysis(), model="openrouter/free")
 
     # The second call waited out most of the interval; the first did not wait.
     assert len(sleeps) == 1
@@ -322,3 +322,35 @@ def test_a_model_that_keeps_breaking_the_brief_gives_no_note(openrouter):
 
     with pytest.raises(MentorError, match="forbidden"):
         summarise(analysis())
+
+
+def test_the_request_asks_for_brief_reasoning(monkeypatch):
+    sent = []
+
+    def urlopen(request, timeout):
+        sent.append(json.loads(request.data))
+        return completion("TEST sits above its balance line, with support holding at 98.")
+
+    monkeypatch.setattr(mentor.urllib.request, "urlopen", urlopen)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+
+    summarise(analysis(), language="en")
+
+    assert sent[0]["model"] == mentor.DEFAULT_MODEL
+    # Brief, and kept out of the reply so it can never be stored as the note.
+    assert sent[0]["reasoning"] == {"effort": "low", "exclude": True}
+
+
+def test_hebrew_notes_are_asked_for_in_hebrew_terms():
+    from gann.mentor import LANGUAGE_NAMES, STYLE, SYSTEM_PROMPT
+
+    hebrew = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["he"], style=STYLE["he"])
+    # The terms the panels and the glossary use, so the note matches them.
+    for term in ("ריבוע התשע", "קו האיזון 1x1 של גאן", "תמיכה", "התנגדות", "נרות"):
+        assert term in hebrew
+    assert "באוקטובר" in hebrew
+
+    english = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES["en"], style=STYLE["en"])
+    assert "ריבוע" not in english
+    assert english.rstrip().endswith("Ticker symbols stay as they are.")

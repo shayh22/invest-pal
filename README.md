@@ -899,28 +899,35 @@ summary, and the panel says how to get one.
 ### Model
 
 Defaults to `openrouter/free`, OpenRouter's free router, which hands each
-request to one of its free models. Override with `OPENROUTER_MODEL`, using
+request to one of its free models: the mentor costs nothing. Override with
+`OPENROUTER_MODEL` (a repository variable for the scheduled workflow), using
 OpenRouter's slugs (`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
 
 Free comes with limits, and the mentor is built around them:
 
-- **20 requests a minute.** Calls to a free model are spaced 3.2 seconds apart,
-  and a 429 waits for its `Retry-After` (or 5, 15, then 30 seconds) before
-  trying again.
+- **20 requests a minute.** Calls to a free model are spaced 3.2 seconds
+  apart, and a 429 waits for its `Retry-After` (or 5, 15, then 30 seconds).
 - **50 requests a day**, or 1,000 once the account has bought $10 of credits.
-  A refresh of 74 assets in two languages wants 148. When the day's allowance
-  runs out the refresh stops asking for notes and carries on without them:
-  every signal still refreshes, and the assets after that point have no note
-  until the next run. With credits on the account, all of them get one.
-- **A different model each time.** Some answer a Hebrew prompt in English. A
-  Hebrew note with no Hebrew letters in it is rejected and asked for again, up
-  to three attempts, and after that the asset has no Hebrew note (the panel
-  falls back to the English one).
+  When the day's allowance runs out the refresh stops asking for notes;
+  every signal still refreshes.
+- **Refusals.** A note is refused and asked for again if it uses a forbidden
+  word, reads as the model's own working, is outside 8–70 words, or — for
+  Hebrew — has no Hebrew in it. After three refusals the asset has no AI note
+  that day, and the mentor card builds one from the analysis instead. On the
+  first strict run 54 of 74 assets got an AI note in Hebrew.
+- **Speed.** A full refresh takes about two hours.
 
-The paid option that was measured is `anthropic/claude-haiku-4.5`: 16 clean
-summaries out of 16 across eight assets in both languages, at about $0.00085
-each, with no daily cap. Set `OPENROUTER_MODEL` to it (a repository variable
-for the scheduled workflow) to switch back.
+Hebrew notes are asked for in the Hebrew terms the app's panels and glossary
+use (ריבוע התשע, קו האיזון, תמיכה…), with dates in words.
+
+Paid alternatives that were measured:
+
+- `openai/gpt-5-mini`: Hebrew for every asset it reached, about $2 a month,
+  but about 40 seconds a call. A reasoning model; each request asks for
+  brief reasoning (`reasoning: {effort: "low", exclude: true}`), which models
+  that do not reason ignore.
+- `anthropic/claude-haiku-4.5`: 16 clean notes out of 16 across eight assets
+  in both languages, about $5 a month.
 
 If you would rather call Anthropic directly and skip OpenRouter's margin,
 `_request` in `gann/mentor.py` is the only function that needs replacing.

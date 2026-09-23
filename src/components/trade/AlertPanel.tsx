@@ -25,6 +25,7 @@ import { createAlert, deleteAlert } from '@/services/alerts'
 import { requireSupabase } from '@/services/supabase'
 import type { AlertDirection, Asset, PriceAlert } from '@/types'
 import { formatDateTime } from '@/lib/format'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 interface AlertPanelProps {
   asset: Asset | null
@@ -92,7 +93,7 @@ export function AlertPanel({
           <Bell className="size-4" aria-hidden />
           {t('alerts.title')}
         </CardTitle>
-        <CardDescription>{t('alerts.subtitle')}</CardDescription>
+        <CardDescription><GlossaryText>{t('alerts.subtitle')}</GlossaryText></CardDescription>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
@@ -173,7 +174,7 @@ export function AlertPanel({
         )}
 
         <p className="text-muted-foreground text-xs leading-relaxed">
-          {t('alerts.note')}
+          <GlossaryText>{t('alerts.note')}</GlossaryText>
         </p>
       </CardContent>
     </Card>

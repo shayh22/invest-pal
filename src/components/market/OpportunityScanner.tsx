@@ -17,6 +17,7 @@ import { useOpportunities } from '@/hooks/useOpportunities'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatSignalDate } from '@/lib/format'
 import type { RankedOpportunity } from '@/services/gann'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 /** How many to show. Past this it stops being a shortlist and becomes a table. */
 const SHORTLIST = 5
@@ -72,7 +73,7 @@ export function OpportunityScanner() {
           <Compass className="size-4" aria-hidden />
           {t('scan.title')}
         </CardTitle>
-        <CardDescription>{t('scan.subtitle')}</CardDescription>
+        <CardDescription><GlossaryText>{t('scan.subtitle')}</GlossaryText></CardDescription>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
@@ -88,7 +89,7 @@ export function OpportunityScanner() {
             {/* Said before the press, not after: a button that moves you
                 somewhere should say where it is going. */}
             <p className="text-muted-foreground text-xs leading-relaxed">
-              {t('scan.beforeYouPress')}
+              <GlossaryText>{t('scan.beforeYouPress')}</GlossaryText>
             </p>
           </>
         )}
@@ -128,7 +129,7 @@ export function OpportunityScanner() {
 
         {top && (
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {t('scan.caveat')}
+            <GlossaryText>{t('scan.caveat')}</GlossaryText>
           </p>
         )}
       </CardContent>
@@ -182,17 +183,17 @@ function TopPick({ row }: { row: RankedOpportunity }) {
         <div>
           <dt className="font-medium">{t('scan.whyHeading')}</dt>
           <dd className="text-muted-foreground">
-            {t(
+            <GlossaryText>{t(
               o.bias === 'NONE'
                 ? 'scan.whyNone'
                 : long
                   ? 'scan.whyLong'
                   : 'scan.whyShort',
               { ticker: row.symbol },
-            )}{' '}
-            {o.reward_risk !== null
+            )}</GlossaryText>{' '}
+            <GlossaryText>{o.reward_risk !== null
               ? t('scan.whyRoom', { ratio: o.reward_risk.toFixed(1) })
-              : t('scan.noRoom')}
+              : t('scan.noRoom')}</GlossaryText>
           </dd>
         </div>
 
@@ -200,13 +201,13 @@ function TopPick({ row }: { row: RankedOpportunity }) {
         <div>
           <dt className="font-medium">{t('scan.whatHeading')}</dt>
           <dd className="text-muted-foreground">
-            {o.support !== null && o.resistance !== null
+            <GlossaryText>{o.support !== null && o.resistance !== null
               ? t(long ? 'scan.whatLong' : 'scan.whatShort', {
                   price: formatLevel(price, price),
                   support: formatLevel(o.support, price),
                   resistance: formatLevel(o.resistance, price),
                 })
-              : t('scan.whatNoLevels')}
+              : t('scan.whatNoLevels')}</GlossaryText>
           </dd>
         </div>
 
@@ -214,9 +215,9 @@ function TopPick({ row }: { row: RankedOpportunity }) {
         <div>
           <dt className="font-medium">{t('scan.whenHeading')}</dt>
           <dd className="text-muted-foreground">
-            {turnDate !== null && turnDays !== null
+            <GlossaryText>{turnDate !== null && turnDays !== null
               ? t('scan.whenDate', { date: turnDate, days: turnDays })
-              : t('scan.whenNone')}
+              : t('scan.whenNone')}</GlossaryText>
           </dd>
         </div>
       </dl>

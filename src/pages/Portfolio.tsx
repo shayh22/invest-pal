@@ -42,6 +42,7 @@ import { expireOrders } from '@/services/orders'
 import { closePosition, resetPortfolio } from '@/services/trading'
 import { requireSupabase, supabase } from '@/services/supabase'
 import type { Asset, StartingBalance, Transaction } from '@/types'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 function decimalsFor(price: number): number {
   return price >= 1 ? 2 : 6
@@ -348,7 +349,7 @@ export function Portfolio() {
                           />
                           <div className="flex items-center justify-between border-t py-1">
                             <dt className="text-muted-foreground">
-                              {t('portfolio.pnl')}
+                              <GlossaryText>{t('portfolio.pnl')}</GlossaryText>
                             </dt>
                             <dd>
                               {pnl === null ? (
@@ -389,9 +390,9 @@ export function Portfolio() {
                       <TableHead>{t('common.asset')}</TableHead>
                       <TableHead>{t('common.direction')}</TableHead>
                       <TableHead className="text-end">{t('common.quantity')}</TableHead>
-                      <TableHead className="text-end">{t('common.entry')}</TableHead>
-                      <TableHead className="text-end">{t('portfolio.mark')}</TableHead>
-                      <TableHead className="text-end">{t('portfolio.pnl')}</TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('common.entry')}</GlossaryText></TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('portfolio.mark')}</GlossaryText></TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('portfolio.pnl')}</GlossaryText></TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -538,7 +539,7 @@ export function Portfolio() {
                           />
                           <div className="flex items-center justify-between border-t py-1">
                             <dt className="text-muted-foreground">
-                              {t('portfolio.pnl')}
+                              <GlossaryText>{t('portfolio.pnl')}</GlossaryText>
                             </dt>
                             <dd>
                               <SignedValue value={pnl} decimals={2} />
@@ -559,10 +560,10 @@ export function Portfolio() {
                       <TableHead>{t('common.asset')}</TableHead>
                       <TableHead>{t('common.direction')}</TableHead>
                       <TableHead className="text-end">{t('common.quantity')}</TableHead>
-                      <TableHead className="text-end">{t('common.entry')}</TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('common.entry')}</GlossaryText></TableHead>
                       <TableHead className="text-end">{t('common.exit')}</TableHead>
-                      <TableHead className="text-end">{t('portfolio.fees')}</TableHead>
-                      <TableHead className="text-end">{t('portfolio.pnl')}</TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('portfolio.fees')}</GlossaryText></TableHead>
+                      <TableHead className="text-end"><GlossaryText>{t('portfolio.pnl')}</GlossaryText></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -727,7 +728,7 @@ export function Portfolio() {
 function CardRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1">
-      <dt className="text-muted-foreground">{label}</dt>
+      <dt className="text-muted-foreground"><GlossaryText>{label}</GlossaryText></dt>
       <dd className="tabular-nums">{value}</dd>
     </div>
   )

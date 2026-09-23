@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from '@/hooks/useTranslation'
 import type { TranslationKey } from '@/i18n'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 /**
  * What is actually in the app, in the order a newcomer meets it: the chart
@@ -49,7 +50,7 @@ export function Home() {
           {t('home.title')}
         </h1>
         <p className="text-muted-foreground max-w-2xl text-base leading-relaxed">
-          {t('home.subtitle')}
+          <GlossaryText>{t('home.subtitle')}</GlossaryText>
         </p>
         <div className="flex flex-wrap items-center gap-3">
           {user ? (
@@ -90,7 +91,7 @@ export function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-muted-foreground text-sm leading-relaxed">
-                {t(`home.feature.${key}.body` as TranslationKey)}
+                <GlossaryText>{t(`home.feature.${key}.body` as TranslationKey)}</GlossaryText>
               </CardContent>
             </Card>
           ))}
@@ -114,7 +115,7 @@ export function Home() {
                 {t(`home.step.${step}.title` as TranslationKey)}
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                {t(`home.step.${step}.body` as TranslationKey)}
+                <GlossaryText>{t(`home.step.${step}.body` as TranslationKey)}</GlossaryText>
               </p>
             </li>
           ))}

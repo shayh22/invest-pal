@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageProvider'
 import { Auth } from '@/pages/Auth'
 import { Privacy } from '@/pages/Privacy'
 import { Dashboard } from '@/pages/Dashboard'
+import { Glossary } from '@/pages/Glossary'
 import { Home } from '@/pages/Home'
 import { Markets } from '@/pages/Markets'
 import { NotFound } from '@/pages/NotFound'
@@ -26,6 +27,7 @@ export default function App() {
               {/* Outside ProtectedRoute on purpose: a store listing links
                   straight here, and a reviewer will not have an account. */}
               <Route path="privacy" element={<Privacy />} />
+              <Route path="glossary" element={<Glossary />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />

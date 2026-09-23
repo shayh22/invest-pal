@@ -156,9 +156,8 @@ python -m gann.refresh
 Get one at [openrouter.ai/keys](https://openrouter.ai/keys). It is optional —
 without it everything works except the summary, and the app tells you so. The
 default model is OpenRouter's free router, so no credits are needed; a free
-account allows 50 requests a day, which covers about 25 assets in both
-languages. Buying $10 of credits raises that to 1,000 a day while the calls
-stay free.
+account allows 50 requests a day (1,000 with $10 of credits bought). For
+stronger Hebrew, `OPENROUTER_MODEL=openai/gpt-5-mini` costs about $2 a month.
 
 Like the service role key, this is server-side only. Never give it a `VITE_`
 prefix: anything `VITE_*` is compiled into the JavaScript your users download.

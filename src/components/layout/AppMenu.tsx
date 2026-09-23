@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   Ban,
+  BookOpen,
   CandlestickChart,
   Home,
   Image,
@@ -422,6 +423,15 @@ export function AppMenu() {
             follow the settings on a short one, rather than pinning them over
             the content. */}
         <div className="mt-auto flex flex-col gap-0.5">
+          <Link
+            to="/glossary"
+            onClick={() => setOpen(false)}
+            className={cn(itemClass, quietItemClass)}
+          >
+            <BookOpen className="size-4 shrink-0" />
+            <span>{t('nav.glossary')}</span>
+          </Link>
+
           <Link
             to="/privacy"
             onClick={() => setOpen(false)}

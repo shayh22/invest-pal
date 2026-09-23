@@ -48,6 +48,7 @@ import {
 import { cn } from '@/lib/utils'
 import { marketData } from '@/services/marketData'
 import type { Asset } from '@/types'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 type Phase = 'loading' | 'choosing' | 'playing' | 'done' | 'error'
 
@@ -371,7 +372,7 @@ export function TimeMachine() {
                     </span>
                   </div>
                   <p className="text-muted-foreground col-span-2 text-xs">
-                    {t('tm.levelsNote', { degrees: round.levels.degrees })}
+                    <GlossaryText>{t('tm.levelsNote', { degrees: round.levels.degrees })}</GlossaryText>
                   </p>
                 </div>
               </>
@@ -381,7 +382,7 @@ export function TimeMachine() {
               <div className="flex flex-col gap-4">
                 <fieldset className="flex flex-col gap-2">
                   <legend className="mb-2 text-sm font-medium">
-                    {t('tm.question', { horizon: HORIZON })}
+                    <GlossaryText>{t('tm.question', { horizon: HORIZON })}</GlossaryText>
                   </legend>
                   <div className="grid grid-cols-3 gap-2">
                     {CALLS.map(({ value, key, icon: Icon }) => (
@@ -498,7 +499,7 @@ export function TimeMachine() {
                   })}
                 </p>
                 <p className="text-muted-foreground bg-muted/50 rounded-lg p-3 text-sm">
-                  {t(lesson())}
+                  <GlossaryText>{t(lesson())}</GlossaryText>
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button className="flex-1" onClick={() => void startRound()}>
@@ -522,7 +523,7 @@ export function TimeMachine() {
           <CardHeader>
             <CardTitle className="text-lg">{t('tm.calibrationTitle')}</CardTitle>
             <CardDescription>
-              {judgement.kind === 'early'
+              <GlossaryText>{judgement.kind === 'early'
                 ? t('tm.verdictEarly', { min: VERDICT_MIN_ROUNDS })
                 : judgement.kind === 'calibrated'
                   ? t('tm.verdictCalibrated')
@@ -535,7 +536,7 @@ export function TimeMachine() {
                         actual: percent(judgement.hitRate),
                         claimed: percent(judgement.confidence),
                       },
-                    )}
+                    )}</GlossaryText>
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
@@ -573,7 +574,7 @@ export function TimeMachine() {
                 </div>
               </div>
             ))}
-            <p className="text-muted-foreground text-xs">{t('tm.calibrationKey')}</p>
+            <p className="text-muted-foreground text-xs"><GlossaryText>{t('tm.calibrationKey')}</GlossaryText></p>
           </CardContent>
         </Card>
       )}
@@ -593,7 +594,7 @@ export function TimeMachine() {
         </button>
         {showHow && (
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {t('tm.howBody')}
+            <GlossaryText>{t('tm.howBody')}</GlossaryText>
           </p>
         )}
       </div>

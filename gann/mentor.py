@@ -32,20 +32,28 @@ def api_url() -> str:
 # Slugs are OpenRouter's ("anthropic/claude-haiku-4.5", not "claude-haiku-4.5").
 # Override with OPENROUTER_MODEL.
 #
-# The default is OpenRouter's free router, which picks one of its free models
-# per request, so the mentor costs nothing. What that buys and costs:
+# The default is OpenRouter's free router, which hands each request to one of
+# its free models, so the mentor costs nothing. What that costs instead:
 #
 # - A cap. Free models allow 20 requests a minute and 50 a day (1,000 a day
-#   once the account has bought $10 of credits). A refresh of 74 assets in two
-#   languages wants 148, so on the base allowance most assets go without a
-#   note; the refresh stops asking once the day's allowance is spent.
-# - A different model per call. Some answer a Hebrew prompt in English, so a
-#   Hebrew note without Hebrew in it is rejected and asked for again.
+#   once the account has bought $10 of credits). The mentor spaces its calls
+#   and stops asking once the day's allowance is spent.
+# - Refusals. Some replies are empty, English, the model's own working or a
+#   safety classifier's verdict; they are refused and asked for again, and an
+#   asset left without a note gets one built from the analysis on screen. On
+#   the first strict run 54 of 74 assets got an AI note in Hebrew.
+# - Speed: a full refresh takes about two hours.
 #
-# The paid alternative that was measured: anthropic/claude-haiku-4.5 wrote 16
-# clean summaries out of 16 across eight assets in both languages, at about
-# $0.00085 each. Set OPENROUTER_MODEL to it to go back.
+# Set OPENROUTER_MODEL to override. Measured alternatives: openai/gpt-5-mini
+# wrote Hebrew for every asset it reached (about $2 a month, ~40 seconds a
+# call); anthropic/claude-haiku-4.5 wrote 16 clean notes out of 16 in both
+# languages (about $5 a month).
 DEFAULT_MODEL = "openrouter/free"
+
+#: Sent with every request. Models that do not reason ignore it; for those that
+#: do, a short pass is plenty for two sentences, and the reasoning text is kept
+#: out of the reply so it can never be stored as the note.
+REASONING = {"effort": "low", "exclude": True}
 
 #: Retried; anything else fails fast.
 RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
@@ -189,7 +197,25 @@ plainly and say what they show.
 - Keep each sentence short enough to read in one breath.
 - No preamble, no bullet points, no headings. Two sentences only.
 - Write in {language}, and in nothing else. Ticker symbols stay as they are.\
-"""
+{style}"""
+
+#: Per-language house style, appended to the rules. The numbers arrive with
+#: English labels, and without this a Hebrew note came back with "Gann 1x1
+#: balance line" and "Square of Nine" left in English, "ברים" for bars and
+#: dates as 2026-10-05 — Hebrew grammar around English jargon. The terms here
+#: are the ones the app's own panels and glossary use, so a note's words link
+#: to the glossary and match the labels beside it.
+STYLE = {
+    "en": "",
+    "he": """
+- Use these Hebrew terms, never the English ones: "קו האיזון 1x1 של גאן" \
+(the 1x1 balance line), "ריבוע התשע" (Square of Nine), "תמיכה" (support), \
+"התנגדות" (resistance), "מחזור זמן" (time cycle), "נרות" (bars or candles), \
+"שפל" and "שיא" (low and high).
+- Write dates in Hebrew words, for example "5 באוקטובר", not 2026-10-05.
+- Do not open with the ticker symbol.\
+""",
+}
 
 
 def build_user_prompt(analysis: GannAnalysis) -> str:
@@ -247,7 +273,8 @@ def _request(
     prompt: str, *, api_key: str, model: str, timeout: float, language: str
 ) -> str:
     system = SYSTEM_PROMPT.format(
-        language=LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["en"])
+        language=LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["en"]),
+        style=STYLE.get(language, ""),
     )
     body = json.dumps(
         {
@@ -257,12 +284,12 @@ def _request(
                 {"role": "user", "content": prompt},
             ],
             # Two sentences; the cap is a backstop, not the shaping mechanism.
-            # Generous because the free router can hand the prompt to a
-            # reasoning model, whose thinking counts against the cap too; at
-            # 300 it could run out before writing a word, which would read as
-            # an empty completion.
-            "max_tokens": 1200,
+            # Generous because a reasoning model's thinking counts against the
+            # cap too; at 300 it could run out before writing a word, which
+            # would read as an empty completion. Only tokens used are billed.
+            "max_tokens": 2000,
             "temperature": 0.3,
+            "reasoning": REASONING,
         }
     ).encode("utf-8")
 

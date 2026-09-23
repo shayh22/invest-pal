@@ -18,6 +18,7 @@ import { angleLine, nearestLevels, selectAngles } from '@/lib/gann-overlay'
 import type { Candle } from '@/types'
 import type { GannPayload } from '@/types/gann'
 import { formatDateTime } from '@/lib/format'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 interface CandlestickChartProps {
   candles: Candle[]
@@ -386,7 +387,7 @@ function LegendKey({
         className="inline-block h-0 w-4 border-t-2"
         style={{ borderColor: color, borderStyle: dashed ? 'dashed' : 'solid' }}
       />
-      {label}
+      <GlossaryText>{label}</GlossaryText>
     </span>
   )
 }

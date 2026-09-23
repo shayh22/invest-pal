@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatUsd } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 export interface SummaryDetail {
   label: string
@@ -80,7 +81,7 @@ export function AccountSummary({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-muted-foreground text-xs">
-              {t('summary.accountValue')}
+              <GlossaryText>{t('summary.accountValue')}</GlossaryText>
             </span>
             <span className="text-2xl font-semibold tabular-nums sm:text-3xl">
               {equity === null ? (
@@ -100,7 +101,9 @@ export function AccountSummary({
           {context.map((part, index) => (
             <Fragment key={index}>
               {index > 0 && <span aria-hidden>·</span>}
-              <span>{part}</span>
+              <span>
+                {typeof part === 'string' ? <GlossaryText>{part}</GlossaryText> : part}
+              </span>
             </Fragment>
           ))}
         </p>
@@ -131,12 +134,12 @@ export function AccountSummary({
                 {details.map((detail) => (
                   <div key={detail.label} className="flex min-w-0 flex-col gap-0.5">
                     <dt className="text-muted-foreground text-xs">
-                      {detail.label}
+                      <GlossaryText>{detail.label}</GlossaryText>
                     </dt>
                     <dd className="font-medium tabular-nums">{detail.value}</dd>
                     {detail.hint && (
                       <dd className="text-muted-foreground text-xs leading-snug">
-                        {detail.hint}
+                        <GlossaryText>{detail.hint}</GlossaryText>
                       </dd>
                     )}
                   </div>
