@@ -11,7 +11,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/hooks/useTranslation'
 
 interface MentorNoteProps {
+  /** The AI note in the reader's language, if there is one. */
   summary: string | null
+  /**
+   * A note built from the analysis numbers, shown when the AI note is missing
+   * in the reader's language. Never the other language's AI note.
+   */
+  fallback?: string | null
   loading?: boolean
   /** True when a signal exists but nothing has generated a summary for it. */
   hasSignal: boolean
@@ -31,7 +37,12 @@ interface MentorNoteProps {
  * nothing rather than an empty card that invites the reader to imagine what
  * it would have said.
  */
-export function MentorNote({ summary, loading, hasSignal }: MentorNoteProps) {
+export function MentorNote({
+  summary,
+  fallback = null,
+  loading,
+  hasSignal,
+}: MentorNoteProps) {
   const { t } = useTranslation()
 
   if (loading) {
@@ -46,6 +57,28 @@ export function MentorNote({ summary, loading, hasSignal }: MentorNoteProps) {
         <CardContent className="flex flex-col gap-2">
           <Skeleton className="h-3 w-full" />
           <Skeleton className="h-3 w-4/5" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!summary && fallback) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="size-4" aria-hidden />
+            {t('mentor.title')}
+          </CardTitle>
+          <CardDescription>{t('mentor.heading')}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm leading-relaxed">{fallback}</p>
+          {/* Said plainly, because the card is titled "AI mentor" and this
+              paragraph was not written by one. */}
+          <p className="text-muted-foreground text-xs">
+            {t('mentor.fallbackCaption')}
+          </p>
         </CardContent>
       </Card>
     )

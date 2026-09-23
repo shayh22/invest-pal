@@ -46,6 +46,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { formatPercent, ltr } from '@/lib/format'
+import { fallbackNote } from '@/lib/mentor-fallback'
 import { toast } from 'sonner'
 import { defaultIntervalFor, type ChartRange } from '@/services/marketData'
 import { settleAlerts } from '@/services/alerts'
@@ -177,12 +178,14 @@ export function Markets() {
   }
   const positions = usePositions(portfolio?.id ?? null)
 
-  // Prefer the active language; fall back to English, then to the
-  // deprecated single-language column.
+  // The note in the reader's language, and only that. Falling back to the
+  // English note put an English paragraph under the chart on a Hebrew page;
+  // when the Hebrew note is missing, MentorNote builds one from the numbers
+  // instead. The deprecated single-language column is English, so it only
+  // stands in for English.
   const mentorSummary =
     gann.signal?.aiSummaries?.[language] ??
-    gann.signal?.aiSummaries?.en ??
-    gann.signal?.aiSummary ??
+    (language === 'en' ? gann.signal?.aiSummary : null) ??
     null
 
   // Nothing watches prices between visits, so a fresh quote is the moment a
@@ -475,6 +478,9 @@ export function Markets() {
         <TabsContent value="learn" className="mt-3 flex flex-col gap-4">
           <MentorNote
             summary={mentorSummary}
+            fallback={
+              gann.signal ? fallbackNote(gann.signal.payload, t, decimals) : null
+            }
             loading={gann.loading}
             hasSignal={gann.signal !== null}
           />
