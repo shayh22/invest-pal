@@ -17,7 +17,7 @@ Everything here is virtual money and educational content — not financial advic
 | Charts | Lightweight Charts (TradingView) |
 | Market data | Yahoo Finance (no key), behind a proxy |
 | Gann engine | Python 3 (standard library only) |
-| AI mentor | OpenRouter (Claude models) |
+| AI mentor | OpenRouter (free router by default) |
 
 ## Getting started
 
@@ -876,8 +876,8 @@ It runs **inside the refresh job**, not in the browser and not in an edge
 function. The analysis is already in hand at that point, the API key sits
 alongside the service role key rather than in a second place, and the result is
 cached in `gann_signals.ai_summary` — so it costs one model call per asset per
-refresh instead of one per page view. At eight assets on a daily schedule that
-is a few cents a month.
+refresh instead of one per page view. On the default free router it costs
+nothing.
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...
@@ -890,29 +890,37 @@ Summaries live in `gann_signals.ai_summaries`, a jsonb map keyed by language
 code (migration `0003`), and the panel picks the active language with an English
 fallback. The older single-language `ai_summary` column is kept holding English.
 
-About $0.00085 per summary on the default model, so both languages across eight
-assets is roughly **$0.014 a run** — about **$0.40 a month** on the daily
-schedule in `.github/workflows/refresh-gann-signals.yml`.
+The scheduled workflow, `.github/workflows/refresh-gann-signals.yml`, asks for
+both languages.
 
 Without a key the signals are still computed and cached, just without the
 summary, and the panel says how to get one.
 
 ### Model
 
-Defaults to `anthropic/claude-haiku-4.5`. Note these are OpenRouter's slugs, not
-Anthropic's — `anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`. Override with
-`OPENROUTER_MODEL`.
+Defaults to `openrouter/free`, OpenRouter's free router, which hands each
+request to one of its free models. Override with `OPENROUTER_MODEL`, using
+OpenRouter's slugs (`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
 
-A small model is the right tool here: the engine has already done the reasoning,
-and the prompt hands over a handful of numbers to rephrase. Measured across all
-eight seeded assets in both languages, the default produced 16 clean summaries
-out of 16 for $0.0136 a run, against $0.1124 for the largest model.
+Free comes with limits, and the mentor is built around them:
 
-Free models were tried and rejected. Across 18 calls to three of OpenRouter's
-free-tier models, one usable summary came back; the rest were 429s and empty
-completions. The cheapest paid models are cheaper still, but the ones tested
-answered a Hebrew prompt in English, which fails half of what this app asks for.
-If you only need English, they are worth revisiting.
+- **20 requests a minute.** Calls to a free model are spaced 3.2 seconds apart,
+  and a 429 waits for its `Retry-After` (or 5, 15, then 30 seconds) before
+  trying again.
+- **50 requests a day**, or 1,000 once the account has bought $10 of credits.
+  A refresh of 74 assets in two languages wants 148. When the day's allowance
+  runs out the refresh stops asking for notes and carries on without them:
+  every signal still refreshes, and the assets after that point have no note
+  until the next run. With credits on the account, all of them get one.
+- **A different model each time.** Some answer a Hebrew prompt in English. A
+  Hebrew note with no Hebrew letters in it is rejected and asked for again, up
+  to three attempts, and after that the asset has no Hebrew note (the panel
+  falls back to the English one).
+
+The paid option that was measured is `anthropic/claude-haiku-4.5`: 16 clean
+summaries out of 16 across eight assets in both languages, at about $0.00085
+each, with no daily cap. Set `OPENROUTER_MODEL` to it (a repository variable
+for the scheduled workflow) to switch back.
 
 If you would rather call Anthropic directly and skip OpenRouter's margin,
 `_request` in `gann/mentor.py` is the only function that needs replacing.

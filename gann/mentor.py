@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import time
 import urllib.error
 import urllib.request
 
@@ -27,31 +29,100 @@ def api_url() -> str:
     """Endpoint to call. Overridable for a proxy, a gateway, or a test double."""
     return os.environ.get("OPENROUTER_BASE_URL") or DEFAULT_API_URL
 
-# Slugs are OpenRouter's, not Anthropic's ("anthropic/claude-haiku-4.5", not
-# "claude-haiku-4.5"). Override with OPENROUTER_MODEL.
+# Slugs are OpenRouter's ("anthropic/claude-haiku-4.5", not "claude-haiku-4.5").
+# Override with OPENROUTER_MODEL.
 #
-# A small model is the right tool here: the engine has already done the
-# reasoning, and the prompt hands over a handful of numbers to rephrase. Measured
-# across all eight seeded assets in both languages, this default produced 16
-# clean summaries out of 16 for $0.0136 a run, against $0.1124 for the largest
-# model — the same job at an eighth of the price.
+# The default is OpenRouter's free router, which picks one of its free models
+# per request, so the mentor costs nothing. What that buys and costs:
 #
-# OpenRouter's free tier was tried and rejected: across 18 calls to three free
-# models it returned 1 usable summary, the rest 429s and empty completions. The
-# cheapest paid models are cheaper still, but the ones tested could not write
-# Hebrew, which is half of what this app asks for.
-DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
+# - A cap. Free models allow 20 requests a minute and 50 a day (1,000 a day
+#   once the account has bought $10 of credits). A refresh of 74 assets in two
+#   languages wants 148, so on the base allowance most assets go without a
+#   note; the refresh stops asking once the day's allowance is spent.
+# - A different model per call. Some answer a Hebrew prompt in English, so a
+#   Hebrew note without Hebrew in it is rejected and asked for again.
+#
+# The paid alternative that was measured: anthropic/claude-haiku-4.5 wrote 16
+# clean summaries out of 16 across eight assets in both languages, at about
+# $0.00085 each. Set OPENROUTER_MODEL to it to go back.
+DEFAULT_MODEL = "openrouter/free"
 
 #: Retried; anything else fails fast.
 RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+
+#: OpenRouter allows free models 20 requests a minute. Spacing calls a little
+#: wider than 3s keeps a whole run under that rather than meeting it as 429s.
+FREE_MIN_INTERVAL = 3.2
+
+#: How long a 429 without a Retry-After waits before the next attempt.
+BACKOFF_SECONDS = (5.0, 15.0, 30.0)
+MAX_BACKOFF_SECONDS = 60.0
+
+#: Seam for tests, which should not sleep.
+_sleep = time.sleep
+_next_free_call = 0.0
+
+
+def is_free(model: str) -> bool:
+    return model == "openrouter/free" or model.endswith(":free")
 
 
 class MentorError(RuntimeError):
     """Raised when a summary could not be generated."""
 
 
-class EmptyCompletion(MentorError):
+class Retryable(MentorError):
+    """Transient: the same request may well succeed if sent again."""
+
+
+class RateLimited(Retryable):
+    """A 429 that is not the daily cap. Worth a retry after a pause."""
+
+    def __init__(self, message: str, *, retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class EmptyCompletion(Retryable):
     """The model returned no text. Transient — worth retrying."""
+
+
+class WrongLanguage(Retryable):
+    """The model answered in a language other than the one asked for.
+
+    Retryable because the free router picks a model per request, and the next
+    one usually does write the language asked for.
+    """
+
+
+class QuotaExhausted(MentorError):
+    """The account's daily allowance of free-model requests is spent.
+
+    Nothing will succeed again until it resets, so the caller should stop
+    asking for the rest of the run rather than spend a failure on every asset.
+    """
+
+
+# OpenRouter names the limit in the error text: "free-models-per-day".
+_DAILY_CAP = re.compile(r"per[-_ ]day", re.IGNORECASE)
+
+#: A letter of the language's own script. A summary without one was not
+#: written in that language, whatever else it is. English has no entry: Latin
+#: letters are no evidence either way, since tickers are Latin in every note.
+SCRIPT = {"he": re.compile(r"[\u05d0-\u05ea]")}
+
+
+def _rate_limited(message: str, retry_after: float | None = None) -> MentorError:
+    if _DAILY_CAP.search(message):
+        return QuotaExhausted(f"Daily free-model allowance spent: {message}")
+    return RateLimited(f"Rate limited: {message}", retry_after=retry_after)
+
+
+def _retry_after(value: str | None) -> float | None:
+    try:
+        return max(0.0, float(value)) if value else None
+    except ValueError:
+        return None
 
 
 #: Languages the mentor can write in, matching the frontend's language toggle.
@@ -141,7 +212,11 @@ def _request(
                 {"role": "user", "content": prompt},
             ],
             # Two sentences; the cap is a backstop, not the shaping mechanism.
-            "max_tokens": 300,
+            # Generous because the free router can hand the prompt to a
+            # reasoning model, whose thinking counts against the cap too; at
+            # 300 it could run out before writing a word, which would read as
+            # an empty completion.
+            "max_tokens": 1200,
             "temperature": 0.3,
         }
     ).encode("utf-8")
@@ -159,13 +234,34 @@ def _request(
         method="POST",
     )
 
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    global _next_free_call
+    if is_free(model):
+        wait = _next_free_call - time.monotonic()
+        if wait > 0:
+            _sleep(wait)
+        _next_free_call = time.monotonic() + FREE_MIN_INTERVAL
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        if error.code != 429:
+            raise
+        detail = error.read().decode("utf-8", errors="replace")[:300]
+        raise _rate_limited(
+            detail, _retry_after(error.headers.get("Retry-After"))
+        ) from error
 
     choices = payload.get("choices") or []
     if not choices:
-        # OpenRouter reports upstream problems in the body with a 200.
-        detail = (payload.get("error") or {}).get("message", "no choices returned")
+        # OpenRouter reports upstream problems in the body with a 200. On the
+        # free router that is mostly a busy upstream, which is worth a retry.
+        error = payload.get("error") or {}
+        detail = error.get("message", "no choices returned")
+        if error.get("code") == 429:
+            raise _rate_limited(detail)
+        if error.get("code") in RETRY_STATUSES:
+            raise Retryable(f"OpenRouter returned no completion: {detail}")
         raise MentorError(f"OpenRouter returned no completion: {detail}")
 
     content = (choices[0].get("message") or {}).get("content") or ""
@@ -209,7 +305,7 @@ def summarise(
 
     for attempt in range(attempts):
         try:
-            return _normalise(
+            text = _normalise(
                 _request(
                     prompt,
                     api_key=key,
@@ -218,6 +314,12 @@ def summarise(
                     language=language,
                 )
             )
+            script = SCRIPT.get(language)
+            if script and not script.search(text):
+                raise WrongLanguage(
+                    f"Asked for {LANGUAGE_NAMES[language]}, got: {text[:80]}"
+                )
+            return text
         except EmptyCompletion as error:
             # Observed in practice: a completion arrives with finish_reason
             # "stop" and no content at all. Retrying the same prompt returns a
@@ -226,6 +328,14 @@ def summarise(
                 raise MentorError(
                     f"The model returned an empty summary {attempts} times."
                 ) from error
+            last_error = error
+        except Retryable as error:
+            if attempt == attempts - 1:
+                raise MentorError(f"{error} ({attempts} attempts)") from error
+            if isinstance(error, RateLimited):
+                backoff = BACKOFF_SECONDS[min(attempt, len(BACKOFF_SECONDS) - 1)]
+                wait = error.retry_after if error.retry_after is not None else backoff
+                _sleep(min(wait, MAX_BACKOFF_SECONDS))
             last_error = error
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")[:300]
