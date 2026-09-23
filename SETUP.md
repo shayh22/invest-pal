@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | [Supabase](https://supabase.com/dashboard) | Accounts, portfolios, trades | Free tier is plenty | **Now (Phase 2)** |
 | A market data API | Not needed — Yahoo Finance requires no key | free | — |
-| [OpenRouter](https://openrouter.ai) | AI mentor explanations | Free (free-model router; 50 requests a day) | Optional |
+| [OpenRouter](https://openrouter.ai) | AI mentor explanations | About $2 a month on the default model | Optional |
 
 Right now you only need **Supabase**. The app runs without it — it just shows
 setup instructions instead of the sign-in form.
@@ -155,10 +155,9 @@ python -m gann.refresh
 
 Get one at [openrouter.ai/keys](https://openrouter.ai/keys). It is optional —
 without it everything works except the summary, and the app tells you so. The
-default model is OpenRouter's free router, so no credits are needed; a free
-account allows 50 requests a day, which covers about 25 assets in both
-languages. Buying $10 of credits raises that to 1,000 a day while the calls
-stay free.
+default model is GPT-5 mini, which needs credits on the account: about $2 a
+month for every asset in both languages. `OPENROUTER_MODEL=openrouter/free`
+costs nothing instead, with weaker Hebrew and a 50-requests-a-day cap.
 
 Like the service role key, this is server-side only. Never give it a `VITE_`
 prefix: anything `VITE_*` is compiled into the JavaScript your users download.

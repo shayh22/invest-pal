@@ -17,7 +17,7 @@ Everything here is virtual money and educational content — not financial advic
 | Charts | Lightweight Charts (TradingView) |
 | Market data | Yahoo Finance (no key), behind a proxy |
 | Gann engine | Python 3 (standard library only) |
-| AI mentor | OpenRouter (free router by default) |
+| AI mentor | OpenRouter (GPT-5 mini by default) |
 
 ## Getting started
 
@@ -876,8 +876,8 @@ It runs **inside the refresh job**, not in the browser and not in an edge
 function. The analysis is already in hand at that point, the API key sits
 alongside the service role key rather than in a second place, and the result is
 cached in `gann_signals.ai_summary` — so it costs one model call per asset per
-refresh instead of one per page view. On the default free router it costs
-nothing.
+refresh instead of one per page view. On the default model that is about $2 a
+month.
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...
@@ -898,29 +898,30 @@ summary, and the panel says how to get one.
 
 ### Model
 
-Defaults to `openrouter/free`, OpenRouter's free router, which hands each
-request to one of its free models. Override with `OPENROUTER_MODEL`, using
-OpenRouter's slugs (`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
+Defaults to `openai/gpt-5-mini`, chosen for its Hebrew: about $2 a month for
+74 assets in both languages every day. Override with `OPENROUTER_MODEL` (a
+repository variable for the scheduled workflow), using OpenRouter's slugs
+(`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
 
-Free comes with limits, and the mentor is built around them:
+It is a reasoning model, and the hidden reasoning is billed as output. The
+engine has already done the thinking, so each request asks for brief
+reasoning (`reasoning: {effort: "low", exclude: true}`); models that do not
+reason ignore it.
 
-- **20 requests a minute.** Calls to a free model are spaced 3.2 seconds apart,
-  and a 429 waits for its `Retry-After` (or 5, 15, then 30 seconds) before
-  trying again.
-- **50 requests a day**, or 1,000 once the account has bought $10 of credits.
-  A refresh of 74 assets in two languages wants 148. When the day's allowance
-  runs out the refresh stops asking for notes and carries on without them:
-  every signal still refreshes, and the assets after that point have no note
-  until the next run. With credits on the account, all of them get one.
-- **A different model each time.** Some answer a Hebrew prompt in English. A
-  Hebrew note with no Hebrew letters in it is rejected and asked for again, up
-  to three attempts, and after that the asset has no Hebrew note (the panel
-  falls back to the English one).
+Whatever the model, a note is refused and asked for again if it uses a
+forbidden word, reads as the model's own working, is outside 8–70 words, or —
+for Hebrew — has no Hebrew in it. After three refusals the asset has no AI
+note that day, and the mentor card builds one from the analysis instead.
 
-The paid option that was measured is `anthropic/claude-haiku-4.5`: 16 clean
-summaries out of 16 across eight assets in both languages, at about $0.00085
-each, with no daily cap. Set `OPENROUTER_MODEL` to it (a repository variable
-for the scheduled workflow) to switch back.
+Alternatives that were measured:
+
+- `anthropic/claude-haiku-4.5`: 16 clean notes out of 16 across eight assets
+  in both languages, about $0.00085 a note (~$5 a month).
+- `openrouter/free`: costs nothing, but usable Hebrew for only 54 of 74
+  assets on its first strict run, some with wrong terms ("ריבוע החמש"), and
+  a refresh took two hours. Free models allow 20 requests a minute and 50 a
+  day (1,000 with $10 of credits bought); the mentor spaces its calls and
+  stops asking once the day's allowance is spent.
 
 If you would rather call Anthropic directly and skip OpenRouter's margin,
 `_request` in `gann/mentor.py` is the only function that needs replacing.

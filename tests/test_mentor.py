@@ -146,13 +146,13 @@ def test_model_is_chosen_explicit_then_env_then_default(monkeypatch):
     assert seen == [mentor.DEFAULT_MODEL, "vendor/from-env", "vendor/explicit"]
 
 
-def test_the_default_model_is_the_free_router():
-    """The mentor is meant to cost nothing. A change of default to a paid model
-    is a change to what the app costs to run, so it should be deliberate."""
-    assert mentor.DEFAULT_MODEL == "openrouter/free"
-    assert mentor.is_free(mentor.DEFAULT_MODEL)
+def test_the_default_model_is_chosen_for_its_hebrew():
+    """A change of default is a change to what the app costs to run and to
+    what every Hebrew reader sees, so it should be deliberate."""
+    assert mentor.DEFAULT_MODEL == "openai/gpt-5-mini"
+    assert not mentor.is_free(mentor.DEFAULT_MODEL)
+    assert mentor.is_free("openrouter/free")
     assert mentor.is_free("qwen/qwen3.8-27b:free")
-    assert not mentor.is_free("anthropic/claude-haiku-4.5")
 
 
 # --- The free tier: rate limits, the daily cap, and the wrong language -------
@@ -209,8 +209,8 @@ def test_free_models_are_spaced_under_twenty_a_minute(openrouter):
     queue, sleeps = openrouter
     queue += [completion("TEST sits above its balance line, with support holding at 98."), completion("TEST sits above its balance line, with support holding at 98.")]
 
-    summarise(analysis())
-    summarise(analysis())
+    summarise(analysis(), model="openrouter/free")
+    summarise(analysis(), model="openrouter/free")
 
     # The second call waited out most of the interval; the first did not wait.
     assert len(sleeps) == 1
@@ -322,3 +322,21 @@ def test_a_model_that_keeps_breaking_the_brief_gives_no_note(openrouter):
 
     with pytest.raises(MentorError, match="forbidden"):
         summarise(analysis())
+
+
+def test_the_request_asks_the_default_model_to_reason_briefly(monkeypatch):
+    sent = []
+
+    def urlopen(request, timeout):
+        sent.append(json.loads(request.data))
+        return completion("TEST sits above its balance line, with support holding at 98.")
+
+    monkeypatch.setattr(mentor.urllib.request, "urlopen", urlopen)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+
+    summarise(analysis(), language="en")
+
+    assert sent[0]["model"] == "openai/gpt-5-mini"
+    # Brief, and kept out of the reply so it can never be stored as the note.
+    assert sent[0]["reasoning"] == {"effort": "low", "exclude": True}

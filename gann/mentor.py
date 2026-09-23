@@ -32,20 +32,25 @@ def api_url() -> str:
 # Slugs are OpenRouter's ("anthropic/claude-haiku-4.5", not "claude-haiku-4.5").
 # Override with OPENROUTER_MODEL.
 #
-# The default is OpenRouter's free router, which picks one of its free models
-# per request, so the mentor costs nothing. What that buys and costs:
+# The default is OpenAI's GPT-5 mini, chosen for its Hebrew. The free router
+# cost nothing but wrote usable Hebrew for only 54 of 74 assets on its first
+# strict run, and some of what passed was wrong ("ריבוע החמש" for the Square of
+# Nine). At about 148 notes a day this is roughly $2 a month.
 #
-# - A cap. Free models allow 20 requests a minute and 50 a day (1,000 a day
-#   once the account has bought $10 of credits). A refresh of 74 assets in two
-#   languages wants 148, so on the base allowance most assets go without a
-#   note; the refresh stops asking once the day's allowance is spent.
-# - A different model per call. Some answer a Hebrew prompt in English, so a
-#   Hebrew note without Hebrew in it is rejected and asked for again.
+# It is a reasoning model, and its hidden reasoning is billed as output. The
+# engine has already done the thinking; the model only has to put a handful
+# of numbers into two sentences, so the request asks it to reason briefly
+# (REASONING below).
 #
-# The paid alternative that was measured: anthropic/claude-haiku-4.5 wrote 16
-# clean summaries out of 16 across eight assets in both languages, at about
-# $0.00085 each. Set OPENROUTER_MODEL to it to go back.
-DEFAULT_MODEL = "openrouter/free"
+# Set OPENROUTER_MODEL to override: "openrouter/free" to pay nothing (the
+# rate limits and refusals below then apply), or anthropic/claude-haiku-4.5,
+# which wrote 16 clean notes out of 16 in both languages when measured.
+DEFAULT_MODEL = "openai/gpt-5-mini"
+
+#: Sent with every request. Models that do not reason ignore it; for those that
+#: do, a short pass is plenty for two sentences, and the reasoning text is kept
+#: out of the reply so it can never be stored as the note.
+REASONING = {"effort": "low", "exclude": True}
 
 #: Retried; anything else fails fast.
 RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
@@ -257,12 +262,12 @@ def _request(
                 {"role": "user", "content": prompt},
             ],
             # Two sentences; the cap is a backstop, not the shaping mechanism.
-            # Generous because the free router can hand the prompt to a
-            # reasoning model, whose thinking counts against the cap too; at
-            # 300 it could run out before writing a word, which would read as
-            # an empty completion.
-            "max_tokens": 1200,
+            # Generous because a reasoning model's thinking counts against the
+            # cap too; at 300 it could run out before writing a word, which
+            # would read as an empty completion. Only tokens used are billed.
+            "max_tokens": 2000,
             "temperature": 0.3,
+            "reasoning": REASONING,
         }
     ).encode("utf-8")
 
