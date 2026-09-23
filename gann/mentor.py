@@ -32,20 +32,23 @@ def api_url() -> str:
 # Slugs are OpenRouter's ("anthropic/claude-haiku-4.5", not "claude-haiku-4.5").
 # Override with OPENROUTER_MODEL.
 #
-# The default is OpenAI's GPT-5 mini, chosen for its Hebrew. The free router
-# cost nothing but wrote usable Hebrew for only 54 of 74 assets on its first
-# strict run, and some of what passed was wrong ("ריבוע החמש" for the Square of
-# Nine). At about 148 notes a day this is roughly $2 a month.
+# The default is OpenRouter's free router, which hands each request to one of
+# its free models, so the mentor costs nothing. What that costs instead:
 #
-# It is a reasoning model, and its hidden reasoning is billed as output. The
-# engine has already done the thinking; the model only has to put a handful
-# of numbers into two sentences, so the request asks it to reason briefly
-# (REASONING below).
+# - A cap. Free models allow 20 requests a minute and 50 a day (1,000 a day
+#   once the account has bought $10 of credits). The mentor spaces its calls
+#   and stops asking once the day's allowance is spent.
+# - Refusals. Some replies are empty, English, the model's own working or a
+#   safety classifier's verdict; they are refused and asked for again, and an
+#   asset left without a note gets one built from the analysis on screen. On
+#   the first strict run 54 of 74 assets got an AI note in Hebrew.
+# - Speed: a full refresh takes about two hours.
 #
-# Set OPENROUTER_MODEL to override: "openrouter/free" to pay nothing (the
-# rate limits and refusals below then apply), or anthropic/claude-haiku-4.5,
-# which wrote 16 clean notes out of 16 in both languages when measured.
-DEFAULT_MODEL = "openai/gpt-5-mini"
+# Set OPENROUTER_MODEL to override. Measured alternatives: openai/gpt-5-mini
+# wrote Hebrew for every asset it reached (about $2 a month, ~40 seconds a
+# call); anthropic/claude-haiku-4.5 wrote 16 clean notes out of 16 in both
+# languages (about $5 a month).
+DEFAULT_MODEL = "openrouter/free"
 
 #: Sent with every request. Models that do not reason ignore it; for those that
 #: do, a short pass is plenty for two sentences, and the reasoning text is kept

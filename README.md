@@ -17,7 +17,7 @@ Everything here is virtual money and educational content — not financial advic
 | Charts | Lightweight Charts (TradingView) |
 | Market data | Yahoo Finance (no key), behind a proxy |
 | Gann engine | Python 3 (standard library only) |
-| AI mentor | OpenRouter (GPT-5 mini by default) |
+| AI mentor | OpenRouter (free router by default) |
 
 ## Getting started
 
@@ -876,8 +876,8 @@ It runs **inside the refresh job**, not in the browser and not in an edge
 function. The analysis is already in hand at that point, the API key sits
 alongside the service role key rather than in a second place, and the result is
 cached in `gann_signals.ai_summary` — so it costs one model call per asset per
-refresh instead of one per page view. On the default model that is about $2 a
-month.
+refresh instead of one per page view. On the default free router it costs
+nothing.
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...
@@ -898,30 +898,36 @@ summary, and the panel says how to get one.
 
 ### Model
 
-Defaults to `openai/gpt-5-mini`, chosen for its Hebrew: about $2 a month for
-74 assets in both languages every day. Override with `OPENROUTER_MODEL` (a
-repository variable for the scheduled workflow), using OpenRouter's slugs
-(`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
+Defaults to `openrouter/free`, OpenRouter's free router, which hands each
+request to one of its free models: the mentor costs nothing. Override with
+`OPENROUTER_MODEL` (a repository variable for the scheduled workflow), using
+OpenRouter's slugs (`anthropic/claude-haiku-4.5`, not `claude-haiku-4.5`).
 
-It is a reasoning model, and the hidden reasoning is billed as output. The
-engine has already done the thinking, so each request asks for brief
-reasoning (`reasoning: {effort: "low", exclude: true}`); models that do not
-reason ignore it.
+Free comes with limits, and the mentor is built around them:
 
-Whatever the model, a note is refused and asked for again if it uses a
-forbidden word, reads as the model's own working, is outside 8–70 words, or —
-for Hebrew — has no Hebrew in it. After three refusals the asset has no AI
-note that day, and the mentor card builds one from the analysis instead.
+- **20 requests a minute.** Calls to a free model are spaced 3.2 seconds
+  apart, and a 429 waits for its `Retry-After` (or 5, 15, then 30 seconds).
+- **50 requests a day**, or 1,000 once the account has bought $10 of credits.
+  When the day's allowance runs out the refresh stops asking for notes;
+  every signal still refreshes.
+- **Refusals.** A note is refused and asked for again if it uses a forbidden
+  word, reads as the model's own working, is outside 8–70 words, or — for
+  Hebrew — has no Hebrew in it. After three refusals the asset has no AI note
+  that day, and the mentor card builds one from the analysis instead. On the
+  first strict run 54 of 74 assets got an AI note in Hebrew.
+- **Speed.** A full refresh takes about two hours.
 
-Alternatives that were measured:
+Hebrew notes are asked for in the Hebrew terms the app's panels and glossary
+use (ריבוע התשע, קו האיזון, תמיכה…), with dates in words.
 
+Paid alternatives that were measured:
+
+- `openai/gpt-5-mini`: Hebrew for every asset it reached, about $2 a month,
+  but about 40 seconds a call. A reasoning model; each request asks for
+  brief reasoning (`reasoning: {effort: "low", exclude: true}`), which models
+  that do not reason ignore.
 - `anthropic/claude-haiku-4.5`: 16 clean notes out of 16 across eight assets
-  in both languages, about $0.00085 a note (~$5 a month).
-- `openrouter/free`: costs nothing, but usable Hebrew for only 54 of 74
-  assets on its first strict run, some with wrong terms ("ריבוע החמש"), and
-  a refresh took two hours. Free models allow 20 requests a minute and 50 a
-  day (1,000 with $10 of credits bought); the mentor spaces its calls and
-  stops asking once the day's allowance is spent.
+  in both languages, about $5 a month.
 
 If you would rather call Anthropic directly and skip OpenRouter's margin,
 `_request` in `gann/mentor.py` is the only function that needs replacing.

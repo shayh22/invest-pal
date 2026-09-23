@@ -146,13 +146,13 @@ def test_model_is_chosen_explicit_then_env_then_default(monkeypatch):
     assert seen == [mentor.DEFAULT_MODEL, "vendor/from-env", "vendor/explicit"]
 
 
-def test_the_default_model_is_chosen_for_its_hebrew():
-    """A change of default is a change to what the app costs to run and to
-    what every Hebrew reader sees, so it should be deliberate."""
-    assert mentor.DEFAULT_MODEL == "openai/gpt-5-mini"
-    assert not mentor.is_free(mentor.DEFAULT_MODEL)
-    assert mentor.is_free("openrouter/free")
+def test_the_default_model_is_the_free_router():
+    """The mentor is meant to cost nothing. A change of default to a paid model
+    is a change to what the app costs to run, so it should be deliberate."""
+    assert mentor.DEFAULT_MODEL == "openrouter/free"
+    assert mentor.is_free(mentor.DEFAULT_MODEL)
     assert mentor.is_free("qwen/qwen3.8-27b:free")
+    assert not mentor.is_free("openai/gpt-5-mini")
 
 
 # --- The free tier: rate limits, the daily cap, and the wrong language -------
@@ -324,7 +324,7 @@ def test_a_model_that_keeps_breaking_the_brief_gives_no_note(openrouter):
         summarise(analysis())
 
 
-def test_the_request_asks_the_default_model_to_reason_briefly(monkeypatch):
+def test_the_request_asks_for_brief_reasoning(monkeypatch):
     sent = []
 
     def urlopen(request, timeout):
@@ -337,7 +337,7 @@ def test_the_request_asks_the_default_model_to_reason_briefly(monkeypatch):
 
     summarise(analysis(), language="en")
 
-    assert sent[0]["model"] == "openai/gpt-5-mini"
+    assert sent[0]["model"] == mentor.DEFAULT_MODEL
     # Brief, and kept out of the reply so it can never be stored as the note.
     assert sent[0]["reasoning"] == {"effort": "low", "exclude": True}
 
