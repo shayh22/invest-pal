@@ -17,7 +17,9 @@ the app or bundled into the build.
 
 The screenshots are real captures of the deployed app on a 360×640 viewport at
 3× density, taken against production with an account that holds a position —
-not mockups. Recapture them with `screenshots.mjs` after any visual change, or
+not mockups. Five per language, in listing order: dashboard, markets, the Gann
+scanner, portfolio, and the menu open on its settings (appearance, colour, text
+size, language, reduce motion). Recapture them with `screenshots.mjs` after any visual change, or
 the listing will show an app that no longer exists.
 
 ## Building the APK
