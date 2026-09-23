@@ -69,6 +69,7 @@ jobs:
       - name: Check what is configured
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -76,7 +77,13 @@ jobs:
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           missing=""
-          for name in VERCEL_TOKEN SUPABASE_DB_URL SUPABASE_URL SUPABASE_ANON_KEY \
+          # Either route to the database will do: the Management API with an
+          # access token, or a Postgres URL. Only when neither is set is one
+          # of them reported missing.
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] && [ -z "$SUPABASE_DB_URL" ]; then
+            missing="SUPABASE_ACCESS_TOKEN"
+          fi
+          for name in VERCEL_TOKEN SUPABASE_URL SUPABASE_ANON_KEY \
                       VERCEL_ORG_ID VERCEL_PROJECT_ID; do
             # An `if` rather than `[ ... ] && ...`: the short form returns
             # non-zero when the variable *is* set, and steps run under `bash
@@ -107,8 +114,13 @@ jobs:
       # only; everything else in a connection string is not secret.
       - name: Check the database URL
         env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "Migrating through the Management API; the database URL is not used."
+            exit 0
+          fi
           python3 - <<'PY'
           import os, sys
           from urllib.parse import urlsplit, unquote
@@ -178,8 +190,20 @@ jobs:
       # ---------------------------------------------------------------------
       # 1. The schema, first
       # ---------------------------------------------------------------------
+      # Preferred route: the Management API, over HTTPS with an access token.
+      # A direct Postgres connection from a runner has failed four ways — the
+      # direct host is IPv6-only, the pooler needs its own user format, and a
+      # password has to survive URL encoding and match the one the dashboard
+      # last saved. The API has none of those, and it is the route every
+      # migration in this project has actually been applied through so far.
+      #
+      # The Postgres URL still works when no token is set. Either way every
+      # file runs every time: they are written to be re-applied, with
+      # `if not exists` and `drop ... if exists` guards throughout.
       - name: Apply migrations
         env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           PGSSLMODE: require
           # Through the environment, never pasted into the script: an
           # expression is substituted into the shell text before bash runs,
@@ -187,12 +211,67 @@ jobs:
           # the shell — and failed as a wrong password.
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          for f in supabase/migrations/*.sql; do
-            echo "--- $f"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
-          done
-          echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations." \
-            >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            python3 - <<'PY'
+          import glob, json, os, re, sys, urllib.error, urllib.request
+
+          token = os.environ["SUPABASE_ACCESS_TOKEN"].strip()
+          match = re.match(r"https://([a-z0-9]+)\.supabase\.co", os.environ.get("SUPABASE_URL", ""))
+          if not match:
+              print("PROBLEM: SUPABASE_URL is not https://<project-ref>.supabase.co, "
+                    "so the project to migrate cannot be worked out from it.")
+              sys.exit(1)
+          ref = match.group(1)
+          endpoint = f"https://api.supabase.com/v1/projects/{ref}/database/query"
+
+          files = sorted(glob.glob("supabase/migrations/*.sql"))
+          for path in files:
+              request = urllib.request.Request(
+                  endpoint,
+                  data=json.dumps({"query": open(path, encoding="utf-8").read()}).encode(),
+                  method="POST",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                      # The API sits behind a bot filter that turns away urllib's
+                      # default user agent with an HTML page instead of an answer.
+                      "User-Agent": "invest-pal-deploy",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=180):
+                      pass
+              except urllib.error.HTTPError as error:
+                  body = error.read().decode("utf-8", "replace")
+                  try:
+                      detail = json.loads(body).get("message", body)
+                  except ValueError:
+                      detail = body
+                  hint = {
+                      401: "the token is not valid: revoked, expired, or pasted incompletely",
+                      403: "the token belongs to an account that cannot manage this project",
+                      404: f"no project '{ref}' is visible to this token",
+                  }.get(error.code, "the database rejected this migration")
+                  print(f"--- {path}: HTTP {error.code}, {hint}")
+                  print(str(detail)[:2000])
+                  sys.exit(1)
+              print(f"--- {path}: applied")
+
+          print(f"Applied {len(files)} migrations to {ref} through the Management API.")
+          PY
+            # No pipe into tee above: under bash -e without pipefail, a failed
+            # migration would exit 0 through the pipe and the deploy would go
+            # ahead on a broken schema.
+            echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations through the Management API." \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            for f in supabase/migrations/*.sql; do
+              echo "--- $f"
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+            done
+            echo "Applied $(ls supabase/migrations/*.sql | wc -l) migrations." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # ---------------------------------------------------------------------
       # 2. The bundle
