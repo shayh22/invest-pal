@@ -110,7 +110,8 @@ export function AssetPicker({
           filter={(itemValue, search) => score(itemValue, search)}
         >
           <CommandInput placeholder={t('markets.searchAssets')} />
-          <CommandList>
+          {/* cmdk labels the list "Suggestions" unless told otherwise. */}
+          <CommandList label={t('markets.assetList')}>
             <CommandEmpty>{t('markets.noAssets')}</CommandEmpty>
             {groups.map((group) => {
               const rows = assets.filter((asset) => asset.type === group.type)

@@ -112,6 +112,51 @@ _DAILY_CAP = re.compile(r"per[-_ ]day", re.IGNORECASE)
 SCRIPT = {"he": re.compile(r"[\u05d0-\u05ea]")}
 
 
+class BrokeTheRules(Retryable):
+    """The note breaks the brief: advice or prediction, or it is not a note.
+
+    Retryable for the same reason as WrongLanguage. On the free router this
+    was not rare: the first run stored English notes saying "should" and
+    "predict" beside a Buy button, and notes that were the model's own
+    working ("Here's a thinking process: 1. Analyze User Input…").
+    """
+
+
+#: The words SYSTEM_PROMPT forbids. Whole words, so "shoulder" — as in head and
+#: shoulders — is not caught by "should".
+FORBIDDEN = re.compile(
+    r"\b(should|will|recommend\w*|expect\w*|predict\w*)\b", re.IGNORECASE
+)
+
+#: Signs that the reply is the model thinking aloud, or talking about the
+#: prompt, rather than the two sentences asked for.
+LEAKED = re.compile(
+    r"thinking process|user (input|safety)|\bwe need to\b|\bthe user\b"
+    r"|\btwo sentences\b|\bexactly two\b|\bwords total\b|\*\*",
+    re.IGNORECASE,
+)
+
+#: The prompt asks for at most 45 words. Well past that is not a longer note;
+#: it is something else. Well short of it is not a note either: the free router
+#: sometimes hands the prompt to a content-safety classifier, whose whole reply
+#: is "User Safety: safe", and six of those were stored on the first run.
+MAX_WORDS = 70
+MIN_WORDS = 8
+
+
+def rule_problem(text: str) -> str | None:
+    """Why `text` cannot be shown as a mentor note, or None if it can."""
+    words = len(text.split())
+    if words > MAX_WORDS or words < MIN_WORDS:
+        return f"{words} words, not two sentences"
+    if LEAKED.search(text):
+        return f"reads as the model's working: {text[:80]}"
+    forbidden = sorted({match.lower() for match in FORBIDDEN.findall(text)})
+    if forbidden:
+        return f"uses forbidden words {forbidden}"
+    return None
+
+
 def _rate_limited(message: str, retry_after: float | None = None) -> MentorError:
     if _DAILY_CAP.search(message):
         return QuotaExhausted(f"Daily free-model allowance spent: {message}")
@@ -319,6 +364,9 @@ def summarise(
                 raise WrongLanguage(
                     f"Asked for {LANGUAGE_NAMES[language]}, got: {text[:80]}"
                 )
+            problem = rule_problem(text)
+            if problem:
+                raise BrokeTheRules(problem)
             return text
         except EmptyCompletion as error:
             # Observed in practice: a completion arrives with finish_reason

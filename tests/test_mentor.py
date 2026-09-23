@@ -130,7 +130,7 @@ def test_model_is_chosen_explicit_then_env_then_default(monkeypatch):
 
     def record(prompt, *, api_key, model, timeout, language):
         seen.append(model)
-        return "First sentence. Second sentence."
+        return "TEST sits above its balance line, with support holding at 98."
 
     monkeypatch.setattr(mentor, "_request", record)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
@@ -207,7 +207,7 @@ def openrouter(monkeypatch):
 
 def test_free_models_are_spaced_under_twenty_a_minute(openrouter):
     queue, sleeps = openrouter
-    queue += [completion("One. Two."), completion("One. Two.")]
+    queue += [completion("TEST sits above its balance line, with support holding at 98."), completion("TEST sits above its balance line, with support holding at 98.")]
 
     summarise(analysis())
     summarise(analysis())
@@ -219,7 +219,7 @@ def test_free_models_are_spaced_under_twenty_a_minute(openrouter):
 
 def test_paid_models_are_not_slowed_down(openrouter):
     queue, sleeps = openrouter
-    queue += [completion("One. Two."), completion("One. Two.")]
+    queue += [completion("TEST sits above its balance line, with support holding at 98."), completion("TEST sits above its balance line, with support holding at 98.")]
 
     summarise(analysis(), model="anthropic/claude-haiku-4.5")
     summarise(analysis(), model="anthropic/claude-haiku-4.5")
@@ -248,10 +248,10 @@ def test_a_per_minute_429_waits_as_told_and_retries(openrouter):
     queue, sleeps = openrouter
     queue += [
         FakeHTTPError(429, "slow down", {"Retry-After": "7"}),
-        completion("One. Two."),
+        completion("TEST sits above its balance line, with support holding at 98."),
     ]
 
-    assert summarise(analysis()) == "One. Two."
+    assert summarise(analysis()) == "TEST sits above its balance line, with support holding at 98."
     assert 7.0 in sleeps
 
 
@@ -259,18 +259,18 @@ def test_a_429_in_the_body_is_treated_like_one_in_the_status(openrouter):
     queue, sleeps = openrouter
     queue += [
         FakeResponse({"error": {"code": 429, "message": "upstream busy"}}),
-        completion("One. Two."),
+        completion("TEST sits above its balance line, with support holding at 98."),
     ]
 
-    assert summarise(analysis()) == "One. Two."
+    assert summarise(analysis()) == "TEST sits above its balance line, with support holding at 98."
     assert mentor.BACKOFF_SECONDS[0] in sleeps
 
 
 def test_a_hebrew_note_written_in_english_is_asked_for_again(openrouter):
     queue, _ = openrouter
     queue += [
-        completion("TEST sits above its balance line. Momentum is steady."),
-        completion("TEST נמצא מעל קו האיזון. המומנטום יציב."),
+        completion("TEST sits above its balance line, with support holding at 98."),
+        completion("TEST נמצא מעל קו האיזון של גאן, והתמיכה מחזיקה ב-98."),
     ]
 
     assert summarise(analysis(), language="he").startswith("TEST נמצא")
@@ -278,7 +278,47 @@ def test_a_hebrew_note_written_in_english_is_asked_for_again(openrouter):
 
 def test_a_model_that_never_writes_hebrew_gives_no_note(openrouter):
     queue, _ = openrouter
-    queue += [completion("English again.")] * 3
+    queue += [completion("TEST sits above its balance line, with support holding at 98.")] * 3
 
     with pytest.raises(MentorError, match="Hebrew"):
         summarise(analysis(), language="he")
+
+
+# --- Notes that break the brief ----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        # Each of these was stored by the first run on the free router.
+        "NVDA should hold above its 1x1 line. We predict a move to 190.",
+        "Here's a thinking process: 1. **Analyze User Input:** - Asset: ADBE",
+        "User Safety: safe",
+        "We need to produce exactly two sentences, no more than 45 words total.",
+        " ".join(["word"] * 80),
+        "Neutral.",
+    ],
+)
+def test_a_note_that_breaks_the_brief_is_asked_for_again(openrouter, bad):
+    queue, _ = openrouter
+    queue += [completion(bad), completion("TEST sits above its balance line, with support holding at 98.")]
+
+    assert summarise(analysis()).startswith("TEST sits above")
+    assert queue == []
+
+
+def test_the_brief_is_not_broken_by_ordinary_words():
+    from gann.mentor import rule_problem
+
+    # "shoulder" is not "should", and a Hebrew note has no English to trip on.
+    assert rule_problem("A head and shoulders shape sits under the 1x1 line.") is None
+    assert rule_problem("המחיר נמצא מעל קו האיזון של גאן. התמיכה ב-329.84.") is None
+    assert rule_problem("Price is expected to rise.") is not None
+
+
+def test_a_model_that_keeps_breaking_the_brief_gives_no_note(openrouter):
+    queue, _ = openrouter
+    queue += [completion("TEST should keep rising above its balance line from here.")] * 3
+
+    with pytest.raises(MentorError, match="forbidden"):
+        summarise(analysis())

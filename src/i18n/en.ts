@@ -13,6 +13,7 @@ export const en = {
   // ----- shared -----
   'common.appName': 'invest-pal',
   'common.refresh': 'Refresh',
+  'common.notifications': 'Notifications',
   'common.tryAgain': 'Try again',
   'common.close': 'Close',
   'common.closing': 'Closing…',
@@ -207,6 +208,7 @@ export const en = {
   'markets.toggleFan': 'Gann fan',
   'markets.toggleLevels': 'Sq9 levels',
   'markets.layers': 'Chart layers',
+  'markets.assetList': 'Assets',
   'markets.modules': 'Sections',
   'markets.tabLearn': 'Learn',
   'markets.tabTrade': 'Trade',
@@ -235,6 +237,10 @@ export const en = {
   'gann.balanceHeading': 'Balance line (1x1)',
   'gann.balanceBody':
     'The 1x1 sits at {value}, and price is {side} it. Gann read price above its own 1x1 as strength and below as weakness.',
+  'gann.noteNoPivot': 'No confirmed swing pivot in this window, so no Gann fan was drawn.',
+  'gann.noteNoPrice': 'Square of Nine needs a positive price, so it was skipped.',
+  'gann.noteNarrow': 'At this price level the Square of Nine\'s turns are less than {percent} apart, so these levels sit very close together.',
+  'gann.noteNoCycles': 'No pivot spacing repeated often enough in this window to call a cycle.',
   'gann.above': 'above',
   'gann.below': 'below',
   'gann.fanAnchor': 'Fan drawn from the {kind} of {price} on {date}.',
@@ -261,7 +267,11 @@ export const en = {
   'mentor.disclaimer':
     'Written by an AI from the Gann numbers on this page. An explanation, not a recommendation.',
   'mentor.missing':
-    'No mentor note for this signal. Set OPENROUTER_API_KEY and re-run python -m gann.refresh.',
+    'No mentor note for this asset today. The Gann reading below still applies.',
+  'mentor.fallbackAbove': 'Price is above the Gann 1x1 balance line at {value}, which Gann read as strength.',
+  'mentor.fallbackBelow': 'Price is below the Gann 1x1 balance line at {value}, which Gann read as weakness.',
+  'mentor.fallbackLevels': 'The nearest Square of Nine support is {support}, and the nearest resistance is {resistance}.',
+  'mentor.fallbackCaption': 'Put together from the Gann numbers on this page: today\'s AI note for this asset did not come through in this language. An explanation, not a recommendation.',
 
   // ----- order confirmation -----
   'confirm.cancel': 'Cancel',
@@ -605,6 +615,10 @@ export const en = {
   'settings.paletteTeal': 'Teal',
   'settings.paletteViolet': 'Violet',
   'settings.paletteAmber': 'Amber',
+  'settings.background': 'Background',
+  'settings.bgMoving': 'Moving',
+  'settings.bgStill': 'Still',
+  'settings.bgOff': 'Off',
   'settings.textSize': 'Text size',
   'settings.language': 'Language',
   'settings.reduceMotion': 'Reduce motion',

@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import {
+  Ban,
   CandlestickChart,
   Home,
+  Image,
   Hourglass,
   Languages,
   LayoutDashboard,
@@ -12,6 +14,7 @@ import {
   Moon,
   Palette,
   Shield,
+  Sparkles,
   Sun,
   Type,
   Wallet,
@@ -33,11 +36,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from '@/hooks/useTranslation'
 import { LANGUAGES, type Language, type TranslationKey } from '@/i18n'
 import {
+  BACKGROUNDS,
   PALETTES,
   THEME_MODES,
   rememberAppearance,
   storedAppearance,
   type Appearance,
+  type Background,
   type Palette as PaletteName,
   type ThemeMode,
 } from '@/lib/appearance'
@@ -104,6 +109,18 @@ const PALETTE_LABEL: Record<PaletteName, TranslationKey> = {
   teal: 'settings.paletteTeal',
   violet: 'settings.paletteViolet',
   amber: 'settings.paletteAmber',
+}
+
+const BACKGROUND_LABEL: Record<Background, TranslationKey> = {
+  moving: 'settings.bgMoving',
+  still: 'settings.bgStill',
+  off: 'settings.bgOff',
+}
+
+const BACKGROUND_ICON: Record<Background, typeof Sun> = {
+  moving: Sparkles,
+  still: Image,
+  off: Ban,
 }
 
 const TEXT_SIZE_LABEL: Record<TextSize, TranslationKey> = {
@@ -321,6 +338,26 @@ export function AppMenu() {
                 />
               ),
             })}
+          />
+
+          <OptionRow
+            label={t('settings.background')}
+            icon={BACKGROUND_ICON[appearance.background]}
+            options={BACKGROUNDS}
+            value={appearance.background}
+            onChange={(background) => updateAppearance({ background })}
+            render={(background) => {
+              const Icon = BACKGROUND_ICON[background]
+              return {
+                label: t(BACKGROUND_LABEL[background]),
+                content: (
+                  <>
+                    <Icon className="size-3.5 shrink-0" />
+                    <span>{t(BACKGROUND_LABEL[background])}</span>
+                  </>
+                ),
+              }
+            }}
           />
 
           <OptionRow

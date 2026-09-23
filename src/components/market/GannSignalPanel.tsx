@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { translateEngineNote } from '@/lib/mentor-fallback'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatSignalDate } from '@/lib/format'
 import { balanceReading } from '@/lib/gann-overlay'
@@ -191,7 +192,7 @@ export function GannSignalPanel({
             <Alert key={note}>
               <Info className="size-4" />
               <AlertTitle>{t('gann.noteTitle')}</AlertTitle>
-              <AlertDescription>{note}</AlertDescription>
+              <AlertDescription>{translateEngineNote(note, t)}</AlertDescription>
             </Alert>
           ))}
 

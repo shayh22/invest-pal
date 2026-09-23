@@ -14,6 +14,7 @@ export const he: Record<TranslationKey, string> = {
   // ----- משותף -----
   'common.appName': 'invest-pal',
   'common.refresh': 'רענון',
+  'common.notifications': 'התראות',
   'common.tryAgain': 'נסו שוב',
   'common.close': 'סגירה',
   'common.closing': 'סוגר…',
@@ -208,6 +209,7 @@ export const he: Record<TranslationKey, string> = {
   'markets.toggleFan': 'מניפת גאן',
   'markets.toggleLevels': 'רמות ריבוע התשע',
   'markets.layers': 'שכבות בגרף',
+  'markets.assetList': 'נכסים',
   'markets.modules': 'מקטעים',
   'markets.tabLearn': 'לימוד',
   'markets.tabTrade': 'מסחר',
@@ -236,6 +238,10 @@ export const he: Record<TranslationKey, string> = {
   'gann.balanceHeading': 'קו האיזון (1x1)',
   'gann.balanceBody':
     'קו ה-1x1 נמצא ב-{value}, והמחיר {side}. גאן ראה במחיר שמעל קו ה-1x1 שלו סימן לחוזק, ומתחתיו סימן לחולשה.',
+  'gann.noteNoPivot': 'אין בחלון הזה נקודת מפנה מאושרת, ולכן לא שורטטה מניפת גאן.',
+  'gann.noteNoPrice': 'ריבוע התשע דורש מחיר חיובי, ולכן דולג.',
+  'gann.noteNarrow': 'ברמת המחיר הזו הסיבובים של ריבוע התשע רחוקים זה מזה פחות מ-{percent}, ולכן הרמות צמודות מאוד זו לזו.',
+  'gann.noteNoCycles': 'אף מרווח בין נקודות מפנה לא חזר מספיק פעמים בחלון הזה כדי לקבוע מחזור.',
   'gann.above': 'מעליו',
   'gann.below': 'מתחתיו',
   'gann.fanAnchor': 'המניפה משורטטת מ{kind} של {price} בתאריך {date}.',
@@ -262,7 +268,11 @@ export const he: Record<TranslationKey, string> = {
   'mentor.disclaimer':
     'נכתב על ידי בינה מלאכותית מתוך נתוני גאן שבדף הזה. הסבר, לא המלצה.',
   'mentor.missing':
-    'אין הערת מנטור לאיתות הזה. הגדירו OPENROUTER_API_KEY והריצו שוב את python -m gann.refresh.',
+    'אין היום הערת מנטור לנכס הזה. קריאת גאן שלמטה עדיין תקפה.',
+  'mentor.fallbackAbove': 'המחיר נמצא מעל קו האיזון 1x1 של גאן, שעומד על {value}, וגאן ראה בזה סימן לחוזק.',
+  'mentor.fallbackBelow': 'המחיר נמצא מתחת לקו האיזון 1x1 של גאן, שעומד על {value}, וגאן ראה בזה סימן לחולשה.',
+  'mentor.fallbackLevels': 'התמיכה הקרובה בריבוע התשע היא {support}, וההתנגדות הקרובה היא {resistance}.',
+  'mentor.fallbackCaption': 'הורכב מנתוני גאן שבדף הזה: הערת ה-AI של היום לנכס הזה לא הגיעה בשפה הזו. הסבר, לא המלצה.',
 
   // ----- אישור פקודה -----
   'confirm.cancel': 'ביטול',
@@ -604,6 +614,10 @@ export const he: Record<TranslationKey, string> = {
   'settings.paletteTeal': 'טורקיז',
   'settings.paletteViolet': 'סגול',
   'settings.paletteAmber': 'ענבר',
+  'settings.background': 'רקע',
+  'settings.bgMoving': 'בתנועה',
+  'settings.bgStill': 'סטטי',
+  'settings.bgOff': 'ללא',
   'settings.textSize': 'גודל הטקסט',
   'settings.language': 'שפה',
   'settings.reduceMotion': 'הפחתת תנועה',
