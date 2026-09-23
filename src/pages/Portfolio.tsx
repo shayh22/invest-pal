@@ -13,7 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { StatCard } from '@/components/layout/StatCard'
+import { AccountSummary } from '@/components/layout/AccountSummary'
+import { SignedValue } from '@/components/layout/SignedValue'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -46,43 +47,10 @@ function decimalsFor(price: number): number {
   return price >= 1 ? 2 : 6
 }
 
-/** Signed value with an explicit sign, so direction never rests on colour. */
-function SignedValue({
-  value,
-  decimals,
-  suffix = '',
-}: {
-  value: number
-  decimals: number
-  suffix?: string
-}) {
-  // Rounds to zero at the displayed precision, so "+0.00" is not painted as a
-  // gain — flat is flat, and it reads as neutral text.
-  const rounded = Number(value.toFixed(decimals))
-  const flat = rounded === 0
-
-  return (
-    <span
-      className="tabular-nums"
-      style={
-        flat
-          ? undefined
-          : { color: rounded > 0 ? 'var(--chart-up)' : 'var(--chart-down)' }
-      }
-    >
-      {ltr(
-        `${flat ? '' : rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(
-          decimals,
-        )}${suffix}`,
-      )}
-    </span>
-  )
-}
-
 export function Portfolio() {
   const { portfolio, refreshAccount } = useAuth()
   const { assets } = useAssets()
-  const { t, tCount } = useTranslation()
+  const { t } = useTranslation()
   const positions = usePositions(portfolio?.id ?? null)
   const orders = usePendingOrders(portfolio?.id ?? null)
 
@@ -166,11 +134,10 @@ export function Portfolio() {
     (total, position) => total + position.openFee + position.closeFee,
     0,
   )
-  // Return against what the account was actually funded with — the number is
-  // meaningless without it, which is why starting_balance is recorded.
+  // Return is measured against what the account was actually funded with —
+  // the number is meaningless without it, which is why starting_balance is
+  // recorded. AccountSummary works it out from this.
   const startingBalance = portfolio?.startingBalance ?? 0
-  const totalReturnPct =
-    startingBalance > 0 ? ((equity - startingBalance) / startingBalance) * 100 : 0
 
   async function handleClose(position: Transaction) {
     const mark = markFor(position)
@@ -228,78 +195,64 @@ export function Portfolio() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('portfolio.title')}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {t('portfolio.subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t('portfolio.title')}
+        </h1>
+        {/* Icons with labels for assistive tech and a tooltip, rather than
+            two worded buttons that pushed the title onto a row of its own. */}
+        <div className="flex items-center gap-1">
           <Button
-            size="sm"
-            variant="outline"
+            size="icon"
+            variant="ghost"
+            aria-label={t('common.refresh')}
+            title={t('common.refresh')}
             onClick={() => {
               positions.reload()
               void refreshAccount()
             }}
           >
             <RefreshCw className="size-4" />
-            {t('common.refresh')}
           </Button>
           <Button
-            size="sm"
-            variant="outline"
+            size="icon"
+            variant="ghost"
+            aria-label={t('reset.button')}
+            title={t('reset.button')}
             onClick={() => setConfirmingReset(true)}
             disabled={!portfolio}
           >
             <RotateCcw className="size-4" />
-            {t('reset.button')}
           </Button>
         </div>
       </div>
 
-      {/* Two across on a phone. Six of these stacked full width was about
-          twelve hundred pixels of scrolling before the first position — the
-          thing the page is actually for. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
-        <StatCard
-          label={t('portfolio.accountValue')}
-          value={portfolio ? formatUsd(equity) : <Skeleton className="h-6 w-24" />}
-          hint={t('portfolio.accountValueHint')}
-        />
-        <StatCard
-          label={t('portfolio.cash')}
-          value={portfolio ? formatUsd(cash) : <Skeleton className="h-6 w-24" />}
-          hint={t('portfolio.cashHint')}
-        />
-        <StatCard
-          label={t('portfolio.unrealised')}
-          value={<SignedValue value={openPnl} decimals={2} />}
-          hint={tCount('portfolio.openCount', positions.open.length)}
-        />
-        <StatCard
-          label={t('portfolio.realised')}
-          value={<SignedValue value={realisedPnl} decimals={2} />}
-          hint={t('portfolio.closedCount', { count: positions.closed.length })}
-        />
-        <StatCard
-          label={t('portfolio.totalReturn')}
-          value={<SignedValue value={totalReturnPct} decimals={2} suffix="%" />}
-          hint={
-            portfolio
-              ? t('portfolio.startedWith', { amount: formatUsd(startingBalance) })
-              : ''
-          }
-        />
-        <StatCard
-          label={t('portfolio.costsPaid')}
-          value={formatUsd(costsPaid)}
-          hint={t('portfolio.costsPaidHint')}
-        />
-      </div>
+      <AccountSummary
+        equity={portfolio ? equity : null}
+        cash={cash}
+        startingBalance={startingBalance}
+        openCount={positions.open.length}
+        details={[
+          {
+            label: t('portfolio.unrealised'),
+            value: <SignedValue value={openPnl} decimals={2} />,
+          },
+          {
+            label: t('portfolio.realised'),
+            value: <SignedValue value={realisedPnl} decimals={2} />,
+            hint: t('portfolio.closedCount', { count: positions.closed.length }),
+          },
+          {
+            label: t('portfolio.costsPaid'),
+            value: formatUsd(costsPaid),
+            hint: t('portfolio.costsPaidHint'),
+          },
+          {
+            label: t('portfolio.startingBalance'),
+            value: portfolio ? formatUsd(startingBalance) : '—',
+          },
+        ]}
+      />
 
       {cash < 0 && (
         <Alert variant="destructive">
@@ -328,6 +281,7 @@ export function Portfolio() {
           <TabsTrigger value="orders">
             {t('orders.tab', { count: orders.waiting.length })}
           </TabsTrigger>
+          <TabsTrigger value="costs">{t('portfolio.tabCosts')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="open" className="mt-4">
@@ -702,9 +656,12 @@ export function Portfolio() {
             </>
           )}
         </TabsContent>
+        {/* A setting, not a figure: it was a long card under every tab,
+            read once and then scrolled past on each visit. */}
+        <TabsContent value="costs" className="mt-4">
+          <CommissionPicker />
+        </TabsContent>
       </Tabs>
-
-      <CommissionPicker />
 
       {portfolio && (
         <ResetAccountDialog

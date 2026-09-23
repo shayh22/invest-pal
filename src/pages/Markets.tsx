@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw, Star, TrendingDown, TrendingUp } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  BarChart3,
+  Bell,
+  GraduationCap,
+  Layers,
+  RefreshCw,
+  Star,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 
 import { CandlestickChart } from '@/components/market/CandlestickChart'
 import { AlertPanel } from '@/components/trade/AlertPanel'
@@ -19,8 +29,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAssets } from '@/hooks/useAssets'
 import { useAlerts } from '@/hooks/useAlerts'
 import { useWatchlist } from '@/hooks/useWatchlist'
@@ -46,6 +62,22 @@ const RANGES: { value: ChartRange; label: string }[] = [
   { value: '1y', label: '1Y' },
   { value: '5y', label: '5Y' },
 ]
+
+/**
+ * What sits under the chart, one at a time.
+ *
+ * The page used to stack all of it — mentor note, five figures, the Gann
+ * reading, the order ticket and the alerts — so on a phone the chart was the
+ * only thing on the first screen and the ticket was four screens down. Each is
+ * a job of its own; showing the one you are doing is what keeps the screen
+ * readable. Learn comes first because that is what the app is for.
+ */
+const MODULES = ['learn', 'trade', 'alerts', 'stats'] as const
+type Module = (typeof MODULES)[number]
+
+function isModule(value: string | null): value is Module {
+  return MODULES.includes(value as Module)
+}
 
 /** Crypto trades at finer precision than equities. */
 function decimalsFor(price: number): number {
@@ -82,6 +114,20 @@ export function Markets() {
     searchParams.get('symbol'),
   )
   const [range, setRange] = useState<ChartRange>('6mo')
+  // In the URL, so a link can open the ticket directly and the back button
+  // returns to the section you were reading.
+  const tabParam = searchParams.get('tab')
+  const activeModule: Module = isModule(tabParam) ? tabParam : 'learn'
+  function updateParams(patch: Record<string, string>) {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        for (const [key, value] of Object.entries(patch)) next.set(key, value)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [showAngles, setShowAngles] = useState(true)
   const [showLevels, setShowLevels] = useState(true)
 
@@ -186,16 +232,20 @@ export function Markets() {
   const decimals = quote ? decimalsFor(quote.price) : 2
   const rising = (quote?.change ?? 0) >= 0
 
+  const assetAlerts = alerts.alerts.filter(
+    (alert) => alert.assetId === selectedAsset?.id,
+  )
+  const holding =
+    // One open position per asset since migration 0006, so this is the
+    // holding rather than the first of several.
+    positions.open.find((position) => position.assetId === selectedAsset?.id) ??
+    null
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t('markets.title')}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {t('markets.subtitle')}
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      {/* The picker names the page well enough on screen; the heading stays
+          for anyone navigating by headings. */}
+      <h1 className="sr-only">{t('markets.title')}</h1>
 
       {assetsError && (
         <Alert variant="destructive">
@@ -204,24 +254,23 @@ export function Markets() {
         </Alert>
       )}
 
-      {/* Filters above the chart. Every group here wraps: a row that cannot
-          wrap sets a floor on the page width, and with the text scaled up —
-          which plenty of people do — that floor exceeds a phone screen and
-          pushes the whole layout sideways. */}
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-3">
-        <AssetPicker
-          assets={assets}
-          value={activeSymbol}
-          disabled={assetsLoading || assets.length === 0}
-          onChange={(next) => {
-            setSymbol(next)
-            setSearchParams({ symbol: next }, { replace: true })
-          }}
-        />
+      <div className="flex w-full min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <AssetPicker
+            assets={assets}
+            value={activeSymbol}
+            disabled={assetsLoading || assets.length === 0}
+            onChange={(next) => {
+              setSymbol(next)
+              updateParams({ symbol: next })
+            }}
+          />
+        </div>
 
         <Button
           variant={isWatched ? 'secondary' : 'outline'}
           size="icon"
+          className="shrink-0"
           aria-pressed={isWatched}
           aria-label={t(isWatched ? 'watchlist.unfollow' : 'watchlist.follow')}
           title={t(isWatched ? 'watchlist.unfollow' : 'watchlist.follow')}
@@ -230,60 +279,6 @@ export function Markets() {
         >
           <Star className={isWatched ? 'size-4 fill-current' : 'size-4'} />
         </Button>
-
-        <div
-          className="flex flex-wrap items-center gap-1"
-          role="group"
-          aria-label={t('markets.range')}
-        >
-          {RANGES.map((option) => (
-            <Button
-              key={option.value}
-              size="sm"
-              variant={range === option.value ? 'secondary' : 'ghost'}
-              aria-pressed={range === option.value}
-              onClick={() => setRange(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:ms-auto">
-          {gann.signal && (
-            <>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="show-angles"
-                  checked={showAngles}
-                  onCheckedChange={setShowAngles}
-                />
-                <Label htmlFor="show-angles" className="text-xs font-normal">
-                  {t('markets.toggleFan')}
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="show-levels"
-                  checked={showLevels}
-                  onCheckedChange={setShowLevels}
-                />
-                <Label htmlFor="show-levels" className="text-xs font-normal">
-                  {t('markets.toggleLevels')}
-                </Label>
-              </div>
-            </>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={reload}
-            disabled={loading || !activeSymbol}
-          >
-            <RefreshCw className="size-4" />
-            {t('common.refresh')}
-          </Button>
-        </div>
       </div>
 
       <Card>
@@ -296,7 +291,14 @@ export function Markets() {
                   <Badge variant="outline">{selectedAsset.type}</Badge>
                 )}
               </CardTitle>
-              <CardDescription>
+              {/* A company name is Latin, and its trailing full stop has no
+                  direction of its own: in Hebrew it moved to the front and
+                  "Apple Inc." read ".Apple Inc". The placeholder is
+                  translated, so it keeps the page's direction. */}
+              <CardDescription
+                dir={quote?.name ?? selectedAsset?.name ? 'ltr' : undefined}
+                className="rtl:text-end"
+              >
                 {quote?.name ?? selectedAsset?.name ?? t('markets.selectAsset')}
               </CardDescription>
             </div>
@@ -325,15 +327,85 @@ export function Markets() {
                     {rising ? t('chart.up') : t('chart.down')}
                   </span>
                 </span>
-                <span className="text-muted-foreground text-xs">
-                  {t('markets.latestSession')}
-                </span>
               </div>
             )}
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="flex flex-col gap-3">
+          {/* The chart's own controls live on the chart. The range wraps
+              rather than scrolls: a row that cannot wrap sets a floor on the
+              page width, and at the largest text size that floor is wider
+              than a phone. */}
+          <div className="flex flex-wrap items-center gap-1">
+            <div
+              className="flex flex-wrap items-center gap-0.5"
+              role="group"
+              aria-label={t('markets.range')}
+            >
+              {RANGES.map((option) => (
+                <Button
+                  key={option.value}
+                  size="sm"
+                  variant={range === option.value ? 'secondary' : 'ghost'}
+                  aria-pressed={range === option.value}
+                  onClick={() => setRange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="ms-auto flex items-center gap-0.5">
+              {gann.signal && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={t('markets.layers')}
+                      title={t('markets.layers')}
+                    >
+                      <Layers className="size-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="flex w-auto flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="show-angles"
+                        checked={showAngles}
+                        onCheckedChange={setShowAngles}
+                      />
+                      <Label htmlFor="show-angles" className="text-xs font-normal">
+                        {t('markets.toggleFan')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="show-levels"
+                        checked={showLevels}
+                        onCheckedChange={setShowLevels}
+                      />
+                      <Label htmlFor="show-levels" className="text-xs font-normal">
+                        {t('markets.toggleLevels')}
+                      </Label>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={t('common.refresh')}
+                title={t('common.refresh')}
+                onClick={reload}
+                disabled={loading || !activeSymbol}
+              >
+                <RefreshCw className={loading ? 'size-4 animate-spin' : 'size-4'} />
+              </Button>
+            </div>
+          </div>
+
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>{t('markets.pricesError')}</AlertTitle>
@@ -358,97 +430,140 @@ export function Markets() {
         </CardContent>
       </Card>
 
-      <MentorNote
-        summary={mentorSummary}
-        loading={gann.loading}
-        hasSignal={gann.signal !== null}
-      />
+      <Tabs
+        value={activeModule}
+        onValueChange={(next) => updateParams({ tab: next })}
+      >
+        {/* Wraps rather than overflows: at 320px with the text turned up,
+            four labelled tabs are wider than the screen, and a strip that
+            cannot wrap pushes the whole page sideways. */}
+        <TabsList
+          aria-label={t('markets.modules')}
+          className="w-full flex-wrap group-data-horizontal/tabs:h-auto"
+        >
+          <TabsTrigger value="learn">
+            <GraduationCap aria-hidden />
+            {t('markets.tabLearn')}
+          </TabsTrigger>
+          <TabsTrigger value="trade">
+            <ArrowLeftRight aria-hidden />
+            {t('markets.tabTrade')}
+            {holding && (
+              // A dot, not a number: one position per asset, so the only
+              // thing worth saying is that there is one.
+              <>
+                <span aria-hidden className="bg-primary size-1.5 rounded-full" />
+                <span className="sr-only">{t('markets.holdingDot')}</span>
+              </>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="alerts">
+            <Bell aria-hidden />
+            {t('markets.tabAlerts')}
+            {assetAlerts.length > 0 && (
+              <span className="text-muted-foreground tabular-nums">
+                {assetAlerts.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="stats">
+            <BarChart3 aria-hidden />
+            {t('markets.tabStats')}
+          </TabsTrigger>
+        </TabsList>
 
-      {quote && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatTile
-            label={t('markets.previousClose')}
-            value={formatPrice(quote.previousClose, quote.currency, decimals)}
+        <TabsContent value="learn" className="mt-3 flex flex-col gap-4">
+          <MentorNote
+            summary={mentorSummary}
+            loading={gann.loading}
+            hasSignal={gann.signal !== null}
           />
-          <StatTile
-            label={t('markets.rangeChange', { range: activeRangeLabel })}
-            value={
-              data
-                ? ltr(
-                    `${data.rangeChange >= 0 ? '+' : '−'}${Math.abs(
-                      data.rangeChange,
-                    ).toFixed(decimals)} (${formatPercent(data.rangeChangePercent)})`,
-                  )
-                : '—'
-            }
+          <GannSignalPanel
+            signal={gann.signal}
+            loading={gann.loading}
+            error={gann.error}
+            decimals={decimals}
           />
-          <StatTile
-            label={t('markets.dayRange')}
-            value={
-              quote.dayLow != null && quote.dayHigh != null
-                ? `${quote.dayLow.toFixed(decimals)} – ${quote.dayHigh.toFixed(decimals)}`
-                : '—'
-            }
-          />
-          <StatTile
-            label={t('markets.weekRange')}
-            value={
-              quote.fiftyTwoWeekLow != null && quote.fiftyTwoWeekHigh != null
-                ? `${quote.fiftyTwoWeekLow.toFixed(decimals)} – ${quote.fiftyTwoWeekHigh.toFixed(decimals)}`
-                : '—'
-            }
-          />
-          <StatTile
-            label={t('markets.candlesLoaded')}
-            value={String(data?.candles.length ?? 0)}
-          />
-        </div>
-      )}
+        </TabsContent>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <GannSignalPanel
-          signal={gann.signal}
-          loading={gann.loading}
-          error={gann.error}
-          decimals={decimals}
-        />
-        <div className="flex flex-col gap-4">
-        <TradePanel
-          asset={selectedAsset}
-          price={quote?.price ?? null}
-          decimals={decimals}
-          holding={
-            // One open position per asset since migration 0006, so this is the
-            // holding rather than the first of several.
-            positions.open.find(
-              (position) => position.assetId === selectedAsset?.id,
-            ) ?? null
-          }
-          onTraded={positions.reload}
-        />
+        <TabsContent value="trade" className="mt-3">
+          <TradePanel
+            asset={selectedAsset}
+            price={quote?.price ?? null}
+            decimals={decimals}
+            holding={holding}
+            onTraded={positions.reload}
+          />
+        </TabsContent>
 
-        <AlertPanel
-          asset={selectedAsset}
-          price={quote?.price ?? null}
-          decimals={decimals}
-          alerts={alerts.alerts.filter(
-            (alert) => alert.assetId === selectedAsset?.id,
-          )}
-          onChanged={alerts.reload}
-        />
-        </div>
-      </div>
+        <TabsContent value="alerts" className="mt-3">
+          <AlertPanel
+            asset={selectedAsset}
+            price={quote?.price ?? null}
+            decimals={decimals}
+            alerts={assetAlerts}
+            onChanged={alerts.reload}
+          />
+        </TabsContent>
+
+        <TabsContent value="stats" className="mt-3">
+          <Card>
+            <CardContent>
+              {quote ? (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+                  <StatTile
+                    label={t('markets.previousClose')}
+                    value={formatPrice(quote.previousClose, quote.currency, decimals)}
+                  />
+                  <StatTile
+                    label={t('markets.rangeChange', { range: activeRangeLabel })}
+                    value={
+                      data
+                        ? ltr(
+                            `${data.rangeChange >= 0 ? '+' : '−'}${Math.abs(
+                              data.rangeChange,
+                            ).toFixed(decimals)} (${formatPercent(data.rangeChangePercent)})`,
+                          )
+                        : '—'
+                    }
+                  />
+                  <StatTile
+                    label={t('markets.dayRange')}
+                    value={
+                      quote.dayLow != null && quote.dayHigh != null
+                        ? ltr(`${quote.dayLow.toFixed(decimals)} – ${quote.dayHigh.toFixed(decimals)}`)
+                        : '—'
+                    }
+                  />
+                  <StatTile
+                    label={t('markets.weekRange')}
+                    value={
+                      quote.fiftyTwoWeekLow != null && quote.fiftyTwoWeekHigh != null
+                        ? ltr(`${quote.fiftyTwoWeekLow.toFixed(decimals)} – ${quote.fiftyTwoWeekHigh.toFixed(decimals)}`)
+                        : '—'
+                    }
+                  />
+                  <StatTile
+                    label={t('markets.candlesLoaded')}
+                    value={String(data?.candles.length ?? 0)}
+                  />
+                </dl>
+              ) : (
+                <Skeleton className="h-24 w-full" />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="text-lg tabular-nums">{value}</CardTitle>
-      </CardHeader>
-    </Card>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
+    </div>
   )
 }

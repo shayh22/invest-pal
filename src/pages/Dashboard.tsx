@@ -1,4 +1,10 @@
-import { BellRing, Star, TrendingDown, TrendingUp } from 'lucide-react'
+import {
+  BellRing,
+  ChevronRight,
+  Star,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { OpportunityScanner } from '@/components/market/OpportunityScanner'
@@ -11,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { StatCard } from '@/components/layout/StatCard'
+import { AccountSummary } from '@/components/layout/AccountSummary'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,7 +26,7 @@ import { useAlerts } from '@/hooks/useAlerts'
 import { useWatchlist } from '@/hooks/useWatchlist'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useQuotes } from '@/hooks/useQuotes'
-import { formatPercent, formatUsd } from '@/lib/format'
+import { formatPercent } from '@/lib/format'
 import { accountEquity } from '@/lib/trading'
 import { acknowledgeAlerts } from '@/services/alerts'
 import { requireSupabase } from '@/services/supabase'
@@ -74,62 +80,26 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        {/* wrap-anywhere still stands: a display name can be one long word
-            too, and without it that word sets the page width. */}
-        <h1 className="text-xl font-semibold tracking-tight wrap-anywhere sm:text-2xl">
-          {t('dashboard.greeting', { name: greetingName })}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {t('dashboard.subtitle')}
-        </p>
-      </div>
+      {/* wrap-anywhere: a display name can be one long word, and without it
+          that word sets the page width. */}
+      <h1 className="text-xl font-semibold tracking-tight wrap-anywhere sm:text-2xl">
+        {t('dashboard.greeting', { name: greetingName })}
+      </h1>
 
-      {/* Two across on a phone, not one. Stacked full width these four cards
-          were eight hundred pixels of scrolling before anything you could act
-          on, and the portfolio's six were worse. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard
-          label={t('dashboard.accountValue')}
-          value={portfolio ? formatUsd(equity) : <Skeleton className="h-6 w-24" />}
-          hint={t('dashboard.accountValueHint')}
-        />
-        <StatCard
-          label={t('dashboard.cash')}
-          value={
-            portfolio ? (
-              formatUsd(portfolio.cashBalance)
-            ) : (
-              <Skeleton className="h-6 w-24" />
-            )
-          }
-          hint={t('dashboard.cashHint')}
-        />
-        <StatCard
-          label={t('dashboard.openPositions')}
-          value={
-            positions.loading ? (
-              <Skeleton className="h-6 w-8" />
-            ) : (
-              positions.open.length
-            )
-          }
-          hint={t('dashboard.closedCount', { count: positions.closed.length })}
-        />
-        <StatCard
-          label={t('dashboard.experience')}
-          value={
-            profile ? (
-              <span className="capitalize">
-                {t(`experience.${profile.experienceLevel}`)}
-              </span>
-            ) : (
-              <Skeleton className="h-6 w-20" />
-            )
-          }
-          hint={t('dashboard.experienceHint')}
-        />
-      </div>
+      <AccountSummary
+        equity={portfolio ? equity : null}
+        cash={portfolio?.cashBalance ?? 0}
+        startingBalance={portfolio?.startingBalance ?? 0}
+        openCount={positions.open.length}
+        action={
+          <Button asChild size="sm" variant="ghost" className="shrink-0">
+            <Link to="/portfolio">
+              {t('summary.openPortfolio')}
+              <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+            </Link>
+          </Button>
+        }
+      />
 
       {alerts.unread.length > 0 && (
         <Card>
