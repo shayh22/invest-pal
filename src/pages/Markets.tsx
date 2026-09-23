@@ -54,6 +54,7 @@ import { settleAlerts } from '@/services/alerts'
 import { settleOrders } from '@/services/orders'
 import { setWatched } from '@/services/watchlist'
 import { requireSupabase, supabase } from '@/services/supabase'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 const RANGES: { value: ChartRange; label: string }[] = [
   { value: '1d', label: '1D' },
@@ -571,7 +572,7 @@ export function Markets() {
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dt className="text-muted-foreground text-xs"><GlossaryText>{label}</GlossaryText></dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   )

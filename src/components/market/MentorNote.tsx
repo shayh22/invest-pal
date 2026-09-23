@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/hooks/useTranslation'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 interface MentorNoteProps {
   /** The AI note in the reader's language, if there is one. */
@@ -73,7 +74,7 @@ export function MentorNote({
           <CardDescription>{t('mentor.heading')}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          <p className="text-sm leading-relaxed">{fallback}</p>
+          <p className="text-sm leading-relaxed"><GlossaryText>{fallback}</GlossaryText></p>
           {/* Said plainly, because the card is titled "AI mentor" and this
               paragraph was not written by one. */}
           <p className="text-muted-foreground text-xs">
@@ -109,7 +110,7 @@ export function MentorNote({
         <CardDescription>{t('mentor.heading')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <p className="text-sm leading-relaxed">{summary}</p>
+        <p className="text-sm leading-relaxed"><GlossaryText>{summary}</GlossaryText></p>
         <p className="text-muted-foreground text-xs">{t('mentor.disclaimer')}</p>
       </CardContent>
     </Card>

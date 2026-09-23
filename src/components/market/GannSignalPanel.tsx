@@ -23,6 +23,7 @@ import { useTranslation } from '@/hooks/useTranslation'
 import { formatSignalDate } from '@/lib/format'
 import { balanceReading } from '@/lib/gann-overlay'
 import type { GannSignal } from '@/types/gann'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 interface GannSignalPanelProps {
   signal: GannSignal | null
@@ -89,7 +90,7 @@ export function GannSignalPanel({
           <CardDescription>{t('gann.noSignalTitle')}</CardDescription>
         </CardHeader>
         <CardContent className="text-muted-foreground flex flex-col gap-2 text-sm">
-          <p>{t('gann.noSignalBody')}</p>
+          <p><GlossaryText>{t('gann.noSignalBody')}</GlossaryText></p>
           <code className="bg-muted text-foreground rounded-md px-2 py-1 text-xs">
             python -m gann.refresh
           </code>
@@ -128,7 +129,7 @@ export function GannSignalPanel({
             </div>
           </div>
           <CardDescription>
-            {t('gann.computedFrom', { timeframe: payload.timeframe })}
+            <GlossaryText>{t('gann.computedFrom', { timeframe: payload.timeframe })}</GlossaryText>
           </CardDescription>
         </CardHeader>
 
@@ -136,24 +137,24 @@ export function GannSignalPanel({
           {balance && (
             <div className="flex flex-col gap-1">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                {t('gann.balanceHeading')}
+                <GlossaryText>{t('gann.balanceHeading')}</GlossaryText>
               </span>
               <p>
-                {t('gann.balanceBody', {
+                <GlossaryText>{t('gann.balanceBody', {
                   value: formatLevel(balance.angle.current_price, decimals),
                   side: balance.above ? t('gann.above') : t('gann.below'),
-                })}
+                })}</GlossaryText>
               </p>
               {payload.fan_anchor && (
                 <p className="text-muted-foreground text-xs">
-                  {t('gann.fanAnchor', {
+                  <GlossaryText>{t('gann.fanAnchor', {
                     kind:
                       payload.fan_anchor.kind === 'LOW'
                         ? t('gann.anchorLow')
                         : t('gann.anchorHigh'),
                     price: formatLevel(payload.fan_anchor.price, decimals),
                     date: formatDate(payload.fan_anchor.time),
-                  })}
+                  })}</GlossaryText>
                 </p>
               )}
             </div>
@@ -162,7 +163,7 @@ export function GannSignalPanel({
           {payload.cycles.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-muted-foreground text-xs uppercase tracking-wide">
-                {t('gann.cyclesHeading')}
+                <GlossaryText>{t('gann.cyclesHeading')}</GlossaryText>
               </span>
               <ul className="flex flex-col gap-1">
                 {payload.cycles.map((cycle) => (
@@ -172,7 +173,7 @@ export function GannSignalPanel({
                   >
                     <CalendarClock className="text-muted-foreground size-4 shrink-0" />
                     <span>
-                      {t('gann.cycleLine', {
+                      <GlossaryText>{t('gann.cycleLine', {
                         bars: cycle.length_bars,
                         kind:
                           cycle.anchor_kind === 'HIGH'
@@ -180,7 +181,7 @@ export function GannSignalPanel({
                             : t('gann.cycleLows'),
                         count: cycle.occurrences,
                         date: formatDate(cycle.projected_time),
-                      })}
+                      })}</GlossaryText>
                     </span>
                   </li>
                 ))}
@@ -192,14 +193,14 @@ export function GannSignalPanel({
             <Alert key={note}>
               <Info className="size-4" />
               <AlertTitle>{t('gann.noteTitle')}</AlertTitle>
-              <AlertDescription>{translateEngineNote(note, t)}</AlertDescription>
+              <AlertDescription><GlossaryText>{translateEngineNote(note, t)}</GlossaryText></AlertDescription>
             </Alert>
           ))}
 
           <Alert>
             <TriangleAlert className="size-4" />
             <AlertTitle>{t('gann.disclaimerTitle')}</AlertTitle>
-            <AlertDescription>{t('gann.disclaimerBody')}</AlertDescription>
+            <AlertDescription><GlossaryText>{t('gann.disclaimerBody')}</GlossaryText></AlertDescription>
           </Alert>
         </CardContent>
       </Card>
@@ -208,11 +209,11 @@ export function GannSignalPanel({
           as values and not only as lines. */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('gann.levelsTitle')}</CardTitle>
+          <CardTitle className="text-base"><GlossaryText>{t('gann.levelsTitle')}</GlossaryText></CardTitle>
           <CardDescription>
-            {t('gann.levelsSubtitle', {
+            <GlossaryText>{t('gann.levelsSubtitle', {
               anchor: formatLevel(payload.square_of_nine_anchor, decimals),
-            })}
+            })}</GlossaryText>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,8 +221,8 @@ export function GannSignalPanel({
             <TableHeader>
               <TableRow>
                 <TableHead>{t('gann.turn')}</TableHead>
-                <TableHead className="text-end">{t('gann.resistance')}</TableHead>
-                <TableHead className="text-end">{t('gann.support')}</TableHead>
+                <TableHead className="text-end"><GlossaryText>{t('gann.resistance')}</GlossaryText></TableHead>
+                <TableHead className="text-end"><GlossaryText>{t('gann.support')}</GlossaryText></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
