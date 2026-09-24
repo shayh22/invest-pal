@@ -1,10 +1,11 @@
-import { Fragment, useId, useState, type ReactNode } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 import { SignedValue } from '@/components/layout/SignedValue'
 import { useBackgroundMood } from '@/contexts/background-mood'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useSessionState } from '@/hooks/useSessionState'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatUsd } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -39,6 +40,10 @@ interface AccountSummaryProps {
  * every visit wants — value and return — stay in view; the rest are one tap
  * away under Details, where the page that needs them passes them in.
  */
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean'
+}
+
 export function AccountSummary({
   equity,
   cash,
@@ -48,7 +53,7 @@ export function AccountSummary({
   action,
 }: AccountSummaryProps) {
   const { t, tCount } = useTranslation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useSessionState('summary.details', false, isBoolean)
   const detailsId = useId()
 
   const totalReturnPct =

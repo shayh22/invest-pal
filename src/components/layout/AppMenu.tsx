@@ -78,8 +78,14 @@ interface NavItem {
   end?: boolean
 }
 
+// The glossary sits with the destinations rather than down by the privacy
+// link: it is somewhere a beginner goes on purpose, and like the other pages
+// it is highlighted while open.
+const glossaryNav: NavItem = { to: '/glossary', labelKey: 'nav.glossary', icon: BookOpen }
+
 const signedOutNav: NavItem[] = [
   { to: '/', labelKey: 'nav.overview', icon: Home, end: true },
+  glossaryNav,
 ]
 
 const signedInNav: NavItem[] = [
@@ -87,6 +93,7 @@ const signedInNav: NavItem[] = [
   { to: '/markets', labelKey: 'nav.markets', icon: CandlestickChart },
   { to: '/portfolio', labelKey: 'nav.portfolio', icon: Wallet },
   { to: '/time-machine', labelKey: 'nav.timeMachine', icon: Hourglass },
+  glossaryNav,
 ]
 
 const MODE_ICON: Record<ThemeMode, typeof Sun> = {
@@ -423,15 +430,6 @@ export function AppMenu() {
             follow the settings on a short one, rather than pinning them over
             the content. */}
         <div className="mt-auto flex flex-col gap-0.5">
-          <Link
-            to="/glossary"
-            onClick={() => setOpen(false)}
-            className={cn(itemClass, quietItemClass)}
-          >
-            <BookOpen className="size-4 shrink-0" />
-            <span>{t('nav.glossary')}</span>
-          </Link>
-
           <Link
             to="/privacy"
             onClick={() => setOpen(false)}

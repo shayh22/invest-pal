@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ArrowRight, Compass, TrendingDown, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useOpportunities } from '@/hooks/useOpportunities'
+import { useSessionState } from '@/hooks/useSessionState'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatSignalDate } from '@/lib/format'
 import type { RankedOpportunity } from '@/services/gann'
@@ -59,9 +59,15 @@ function daysUntil(iso: string): number {
  * every scored asset, and a ranked list of things to buy should be something
  * you went looking for, not something the app greets you with.
  */
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean'
+}
+
 export function OpportunityScanner() {
   const { t } = useTranslation()
-  const [scanning, setScanning] = useState(false)
+  // Remembered, so returning to the dashboard shows the pick again rather
+  // than the button that produced it.
+  const [scanning, setScanning] = useSessionState('scanner.open', false, isBoolean)
   const { ranked, loading, error } = useOpportunities(scanning)
 
   const [top, ...rest] = ranked.slice(0, SHORTLIST)

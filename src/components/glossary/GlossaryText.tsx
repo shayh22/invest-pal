@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 
+import { writeSessionState } from '@/hooks/useSessionState'
 import { useTranslation } from '@/hooks/useTranslation'
 import { linkTerms } from '@/lib/glossary'
 import { cn } from '@/lib/utils'
@@ -14,13 +15,25 @@ export function Term({
   id,
   children,
   className,
+  onFollow,
 }: {
   id: string
   children: React.ReactNode
   className?: string
+  /** Called on click, for a page that holds the search in its own state. */
+  onFollow?: () => void
 }) {
   return (
-    <Link to={`/glossary#${id}`} className={cn(TERM_LINK_CLASS, className)}>
+    <Link
+      to={`/glossary#${id}`}
+      className={cn(TERM_LINK_CLASS, className)}
+      // A search remembered from the last visit could hide the very entry
+      // this link is for, so following a term starts the list unfiltered.
+      onClick={() => {
+        writeSessionState('glossary.query', '')
+        onFollow?.()
+      }}
+    >
       {children}
     </Link>
   )

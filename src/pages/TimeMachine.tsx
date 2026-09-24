@@ -25,6 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAssets } from '@/hooks/useAssets'
 import { useAuth } from '@/hooks/useAuth'
+import { readSessionState, writeSessionState } from '@/hooks/useSessionState'
 import { useBackgroundMood } from '@/contexts/background-mood'
 import { useTranslation } from '@/hooks/useTranslation'
 import type { TranslationKey } from '@/i18n'
@@ -51,6 +52,42 @@ import type { Asset } from '@/types'
 import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 type Phase = 'loading' | 'choosing' | 'playing' | 'done' | 'error'
+
+/**
+ * The round on screen, kept for the tab's session so leaving for the
+ * glossary or a chart and coming back finds the same round, the same call
+ * and the same confidence rather than a new mystery.
+ */
+interface Snapshot {
+  loaded: Loaded
+  phase: 'choosing' | 'playing' | 'done'
+  call: Call | null
+  confidence: Confidence | null
+}
+
+function isSnapshot(value: unknown): value is Snapshot {
+  if (!value || typeof value !== 'object') return false
+  const snapshot = value as Snapshot
+  return (
+    ['choosing', 'playing', 'done'].includes(snapshot.phase) &&
+    typeof snapshot.loaded?.asset?.ticker === 'string' &&
+    Array.isArray(snapshot.loaded?.round?.history) &&
+    Array.isArray(snapshot.loaded?.round?.future)
+  )
+}
+
+function entryFor(loaded: Loaded, call: Call, confidence: Confidence): PlayedRound {
+  const { round } = loaded
+  return {
+    ticker: loaded.asset.ticker,
+    asOf: round.history.at(-1)!.time,
+    call,
+    confidence,
+    result: round.outcome.result,
+    points: scoreCall(confidence, call === round.outcome.result),
+    playedAt: new Date().toISOString(),
+  }
+}
 
 interface Loaded {
   asset: Asset
@@ -112,11 +149,25 @@ export function TimeMachine() {
   const { assets } = useAssets()
   const { t, tCount, locale } = useTranslation()
 
-  const [phase, setPhase] = useState<Phase>('loading')
-  const [loaded, setLoaded] = useState<Loaded | null>(null)
-  const [call, setCall] = useState<Call | null>(null)
-  const [confidence, setConfidence] = useState<Confidence | null>(null)
-  const [revealedCount, setRevealedCount] = useState(0)
+  const snapshotKey = `tm.round.${user?.id ?? 'anonymous'}`
+  // A reload in the middle of a replay cannot be finished honestly, since
+  // part of the future was on screen, so it comes back as the call it was
+  // about to make and plays again. Leaving the page mid-replay (the usual
+  // case) settles the round on the way out instead; see below.
+  const [restored] = useState(() =>
+    readSessionState<Snapshot | null>(snapshotKey, null, isSnapshot),
+  )
+  const [phase, setPhase] = useState<Phase>(() =>
+    !restored ? 'loading' : restored.phase === 'playing' ? 'choosing' : restored.phase,
+  )
+  const [loaded, setLoaded] = useState<Loaded | null>(restored?.loaded ?? null)
+  const [call, setCall] = useState<Call | null>(restored?.call ?? null)
+  const [confidence, setConfidence] = useState<Confidence | null>(
+    restored?.confidence ?? null,
+  )
+  const [revealedCount, setRevealedCount] = useState(() =>
+    restored?.phase === 'done' ? restored.loaded.round.future.length : 0,
+  )
   // Read once, when the page opens: ProtectedRoute has already waited for
   // the account, so the user is known by the first render.
   const [history, setHistory] = useState<PlayedRound[]>(() =>
@@ -126,7 +177,7 @@ export function TimeMachine() {
   const timer = useRef<number | null>(null)
   const requestId = useRef(0)
   // The last asset played, so the next round is a different one.
-  const lastTicker = useRef<string | null>(null)
+  const lastTicker = useRef<string | null>(restored?.loaded.asset.ticker ?? null)
 
   const startRound = useCallback(async () => {
     if (assets.length === 0) return
@@ -147,18 +198,51 @@ export function TimeMachine() {
     }
   }, [assets])
 
-  // The first round, once the asset list arrives.
-  const started = useRef(false)
+  // The first round, once the asset list arrives — unless one was restored.
+  const started = useRef(restored !== null)
   useEffect(() => {
     if (started.current || assets.length === 0) return
     started.current = true
     void startRound()
   }, [assets, startRound])
 
+  // Keep the round for the session. A round still loading is not kept: the
+  // next visit simply starts one.
+  useEffect(() => {
+    if (loaded && (phase === 'choosing' || phase === 'playing' || phase === 'done')) {
+      writeSessionState(snapshotKey, { loaded, phase, call, confidence })
+    } else if (phase === 'loading') {
+      writeSessionState(snapshotKey, undefined)
+    }
+  }, [snapshotKey, loaded, phase, call, confidence])
+
+  // Leaving mid-replay settles the round: the reader has seen part of what
+  // happened, so coming back to choose again would not be a blind call. The
+  // result is written straight to storage, since the page is going away.
+  const live = useRef({ phase, loaded, call, confidence })
+  useEffect(() => {
+    live.current = { phase, loaded, call, confidence }
+  })
   useEffect(
     () => () => {
       if (timer.current !== null) window.clearInterval(timer.current)
+      const { phase: lastPhase, loaded: lastLoaded, call: lastCall, confidence: lastConfidence } =
+        live.current
+      if (lastPhase !== 'playing' || !lastLoaded || !lastCall || !lastConfidence || !user) return
+      const storage = window.localStorage
+      saveHistory(storage, user.id, [
+        ...loadHistory(storage, user.id),
+        entryFor(lastLoaded, lastCall, lastConfidence),
+      ])
+      writeSessionState(snapshotKey, {
+        loaded: lastLoaded,
+        phase: 'done',
+        call: lastCall,
+        confidence: lastConfidence,
+      })
     },
+    // Runs on unmount only; the ref carries the latest values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
 
@@ -179,16 +263,7 @@ export function TimeMachine() {
     setRevealedCount(round.future.length)
     setPhase('done')
 
-    const correct = settledCall === round.outcome.result
-    const entry: PlayedRound = {
-      ticker: loaded.asset.ticker,
-      asOf: round.history.at(-1)!.time,
-      call: settledCall,
-      confidence: settledConfidence,
-      result: round.outcome.result,
-      points: scoreCall(settledConfidence, correct),
-      playedAt: new Date().toISOString(),
-    }
+    const entry = entryFor(loaded, settledCall, settledConfidence)
     setHistory((previous) => {
       const next = [...previous, entry]
       if (user) saveHistory(window.localStorage, user.id, next)
