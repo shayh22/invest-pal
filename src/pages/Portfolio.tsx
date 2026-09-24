@@ -30,6 +30,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePendingOrders } from '@/hooks/usePendingOrders'
 import { usePositions } from '@/hooks/usePositions'
 import { useQuotes } from '@/hooks/useQuotes'
+import { useSessionState } from '@/hooks/useSessionState'
 import { useTranslation } from '@/hooks/useTranslation'
 import { formatPercent, formatQuantity, formatUsd, ltr } from '@/lib/format'
 import {
@@ -46,6 +47,12 @@ import { GlossaryText } from '@/components/glossary/GlossaryText'
 
 function decimalsFor(price: number): number {
   return price >= 1 ? 2 : 6
+}
+
+const PORTFOLIO_TABS = ['open', 'closed', 'orders', 'costs']
+
+function isPortfolioTab(value: unknown): value is string {
+  return PORTFOLIO_TABS.includes(value as string)
 }
 
 export function Portfolio() {
@@ -75,6 +82,8 @@ export function Portfolio() {
     null,
   )
   const [confirmingReset, setConfirmingReset] = useState(false)
+  // Remembered, so coming back from a chart reopens the list you were on.
+  const [tab, setTab] = useSessionState('portfolio.tab', 'open', isPortfolioTab)
   const [resetting, setResetting] = useState(false)
 
   const assetById = new Map<string, Asset>(
@@ -269,7 +278,7 @@ export function Portfolio() {
         </Alert>
       )}
 
-      <Tabs defaultValue="open">
+      <Tabs value={tab} onValueChange={setTab}>
         {/* Three tabs with counts do not fit a narrow phone on one line, and
             a tab strip that overflows hides the tab on the end. */}
         <TabsList className="group-data-horizontal/tabs:h-auto flex-wrap">

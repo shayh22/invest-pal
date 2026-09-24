@@ -43,6 +43,11 @@ import { useWatchlist } from '@/hooks/useWatchlist'
 import { usePositions } from '@/hooks/usePositions'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
+import {
+  readSessionState,
+  useSessionState,
+  writeSessionState,
+} from '@/hooks/useSessionState'
 import { useBackgroundMood } from '@/contexts/background-mood'
 import { useGannSignal } from '@/hooks/useGannSignal'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
@@ -78,8 +83,20 @@ const RANGES: { value: ChartRange; label: string }[] = [
 const MODULES = ['learn', 'trade', 'alerts', 'stats'] as const
 type Module = (typeof MODULES)[number]
 
-function isModule(value: string | null): value is Module {
+function isModule(value: unknown): value is Module {
   return MODULES.includes(value as Module)
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0
+}
+
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean'
+}
+
+function isRange(value: unknown): value is ChartRange {
+  return RANGES.some((option) => option.value === value)
 }
 
 /** Crypto trades at finer precision than equities. */
@@ -111,16 +128,28 @@ export function Markets() {
   const { assets, loading: assetsLoading, error: assetsError } = useAssets()
   const { t, tCount, language } = useTranslation()
   // The dashboard links here with ?symbol=, so arriving from the watchlist
-  // opens the asset you tapped rather than the first one in the list.
+  // opens the asset you tapped rather than the first one in the list. With no
+  // link to follow, the page reopens where the reader left it: the asset,
+  // the section, the range and the chart layers are remembered for the tab's
+  // session, so a trip to the portfolio does not send Markets back to AAPL
+  // and the Learn section.
   const [searchParams, setSearchParams] = useSearchParams()
-  const [symbol, setSymbol] = useState<string | null>(
-    searchParams.get('symbol'),
-  )
-  const [range, setRange] = useState<ChartRange>('6mo')
+  const [remembered] = useState(() => ({
+    symbol: readSessionState<string | null>('markets.symbol', null, isText),
+    tab: readSessionState<Module>('markets.tab', 'learn', isModule),
+  }))
+  const symbol = searchParams.get('symbol') ?? remembered.symbol
+  const [range, setRange] = useSessionState<ChartRange>('markets.range', '6mo', isRange)
   // In the URL, so a link can open the ticket directly and the back button
   // returns to the section you were reading.
   const tabParam = searchParams.get('tab')
-  const activeModule: Module = isModule(tabParam) ? tabParam : 'learn'
+  const activeModule: Module = isModule(tabParam) ? tabParam : remembered.tab
+  useEffect(() => {
+    if (symbol) writeSessionState('markets.symbol', symbol)
+  }, [symbol])
+  useEffect(() => {
+    writeSessionState('markets.tab', activeModule)
+  }, [activeModule])
   function updateParams(patch: Record<string, string>) {
     setSearchParams(
       (current) => {
@@ -131,8 +160,8 @@ export function Markets() {
       { replace: true },
     )
   }
-  const [showAngles, setShowAngles] = useState(true)
-  const [showLevels, setShowLevels] = useState(true)
+  const [showAngles, setShowAngles] = useSessionState('markets.fan', true, isBoolean)
+  const [showLevels, setShowLevels] = useSessionState('markets.levels', true, isBoolean)
 
   // Default to the first asset once the list arrives.
   const activeSymbol = symbol ?? assets[0]?.ticker ?? null
@@ -268,7 +297,6 @@ export function Markets() {
             value={activeSymbol}
             disabled={assetsLoading || assets.length === 0}
             onChange={(next) => {
-              setSymbol(next)
               updateParams({ symbol: next })
             }}
           />
@@ -479,7 +507,9 @@ export function Markets() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="learn" className="mt-3 flex flex-col gap-4">
+        {/* forceMount keeps each section alive while another is shown, so a
+            half-typed order or alert is still there after a look at Learn. */}
+        <TabsContent value="learn" forceMount className="data-[state=inactive]:hidden mt-3 flex flex-col gap-4">
           <MentorNote
             summary={mentorSummary}
             fallback={
@@ -496,7 +526,7 @@ export function Markets() {
           />
         </TabsContent>
 
-        <TabsContent value="trade" className="mt-3">
+        <TabsContent value="trade" forceMount className="data-[state=inactive]:hidden mt-3">
           <TradePanel
             asset={selectedAsset}
             price={quote?.price ?? null}
@@ -506,7 +536,7 @@ export function Markets() {
           />
         </TabsContent>
 
-        <TabsContent value="alerts" className="mt-3">
+        <TabsContent value="alerts" forceMount className="data-[state=inactive]:hidden mt-3">
           <AlertPanel
             asset={selectedAsset}
             price={quote?.price ?? null}
@@ -516,7 +546,7 @@ export function Markets() {
           />
         </TabsContent>
 
-        <TabsContent value="stats" className="mt-3">
+        <TabsContent value="stats" forceMount className="data-[state=inactive]:hidden mt-3">
           <Card>
             <CardContent>
               {quote ? (

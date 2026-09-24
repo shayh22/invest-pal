@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Search } from 'lucide-react'
 
@@ -6,6 +6,7 @@ import { GlossaryText, Term } from '@/components/glossary/GlossaryText'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useSessionState } from '@/hooks/useSessionState'
 import { useTranslation } from '@/hooks/useTranslation'
 import { GLOSSARY, glossaryEntry } from '@/lib/glossary'
 import { cn } from '@/lib/utils'
@@ -21,23 +22,29 @@ import { cn } from '@/lib/utils'
  * Outside the sign-in wall, like the privacy page: a store reviewer or a
  * curious visitor can read it without an account.
  */
+function isText(value: unknown): value is string {
+  return typeof value === 'string'
+}
+
 export function Glossary() {
   const { t, tCount, language } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
+  // Remembered while the reader goes back and forth; a term link clears it.
+  const [query, setQuery] = useSessionState('glossary.query', '', isText)
   const target = decodeURIComponent(location.hash.replace(/^#/, ''))
 
   const entries = useMemo(() => {
     const needle = query.trim().toLowerCase()
     return GLOSSARY.filter((entry) => {
-      if (!needle) return true
+      // The entry a link asked for is always shown, whatever the search.
+      if (!needle || entry.id === target) return true
       const text = entry[language]
       return [text.term, text.short, ...text.aliases].some((value) =>
         value.toLowerCase().includes(needle),
       )
     }).sort((a, b) => a[language].term.localeCompare(b[language].term, language))
-  }, [query, language])
+  }, [query, language, target])
 
   // Scroll to the entry a link asked for. After paint, so the list exists.
   useEffect(() => {
@@ -116,7 +123,7 @@ export function Glossary() {
                       {entry.related.map((id) => {
                         const related = glossaryEntry(id)
                         return related ? (
-                          <Term key={id} id={id}>
+                          <Term key={id} id={id} onFollow={() => setQuery('')}>
                             {related[language].term}
                           </Term>
                         ) : null
