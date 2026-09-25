@@ -84,6 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: input.email,
       password: input.password,
       options: {
+        // Back to the address the reader signed up on — the app's domain or
+        // the vercel.app one — rather than whichever one Supabase has as its
+        // Site URL. Both are on Supabase's allow list (scripts/custom_domain.py).
+        emailRedirectTo: `${window.location.origin}/`,
         // Read by the on_auth_user_created trigger to fill in the profile.
         data: {
           display_name: input.displayName ?? '',

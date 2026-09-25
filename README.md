@@ -397,7 +397,7 @@ key and only reveals its fingerprint once the app exists in the console.
 2. Copy the **app signing key** SHA-256 fingerprint — not the upload key, which
    is a different key and the wrong one
 3. Replace the placeholder, and `package_name` if it is not `app.investpal.twa`
-4. Deploy, then `curl -s https://invest-pal.vercel.app/.well-known/assetlinks.json`
+4. Deploy, then `curl -s https://invest-pal.birkat-hanasi.com/.well-known/assetlinks.json`
 
 Android caches the verification, so a device that checked before the file was
 right may need the app reinstalled.

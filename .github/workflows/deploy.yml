@@ -277,6 +277,21 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed $url" >> "$GITHUB_STEP_SUMMARY"
 
+      # The app's own address. Attaching it again is a no-op, so this runs on
+      # every deploy rather than once by hand. The DNS record is added in
+      # Cloudflare, which this cannot reach: until it exists this warns and
+      # names the record, rather than failing every deploy over it. Sign-in
+      # emails switch to the domain only once it serves the app.
+      - name: Custom domain
+        env:
+          APP_DOMAIN: invest-pal.birkat-hanasi.com
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: python3 scripts/custom_domain.py
+
       # ---------------------------------------------------------------------
       # 3. Proof that it works, against the thing that is now live
       # ---------------------------------------------------------------------
