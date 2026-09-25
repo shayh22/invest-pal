@@ -59,4 +59,4 @@ finance, education, stock market, trading simulator, technical analysis
 Set VITE_CONTACT_EMAIL in Vercel and use the same address here.
 
 ## Privacy policy
-https://invest-pal.vercel.app/privacy
+https://invest-pal.birkat-hanasi.com/privacy

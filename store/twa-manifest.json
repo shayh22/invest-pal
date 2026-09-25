@@ -1,6 +1,6 @@
 {
   "packageId": "app.investpal.twa",
-  "host": "invest-pal.vercel.app",
+  "host": "invest-pal.birkat-hanasi.com",
   "name": "invest-pal",
   "launcherName": "invest-pal",
   "display": "standalone",
@@ -14,8 +14,8 @@
   "backgroundColor": "#0b1120",
   "enableNotifications": false,
   "startUrl": "/",
-  "iconUrl": "https://invest-pal.vercel.app/icons/icon-512.png",
-  "maskableIconUrl": "https://invest-pal.vercel.app/icons/icon-maskable-512.png",
+  "iconUrl": "https://invest-pal.birkat-hanasi.com/icons/icon-512.png",
+  "maskableIconUrl": "https://invest-pal.birkat-hanasi.com/icons/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
@@ -25,14 +25,14 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://invest-pal.vercel.app/manifest.webmanifest",
+  "webManifestUrl": "https://invest-pal.birkat-hanasi.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": { "enabled": false },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://invest-pal.vercel.app/",
+  "fullScopeUrl": "https://invest-pal.birkat-hanasi.com/",
   "minSdkVersion": 21,
   "appVersion": "1.0.0"
 }

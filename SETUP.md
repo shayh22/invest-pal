@@ -242,6 +242,37 @@ In Supabase, **Authentication → URL Configuration**, set the Site URL to your
 Vercel domain and add `https://<your-app>.vercel.app/**` to the redirect
 allow-list. Without this, email confirmation links point at localhost.
 
+With a custom domain the deploy workflow keeps this up to date itself (below).
+
+### Custom domain
+
+The app's own address is `invest-pal.birkat-hanasi.com`, set as `APP_DOMAIN`
+in the **Custom domain** step of `.github/workflows/deploy.yml`. On every
+deploy, `scripts/custom_domain.py`:
+
+1. adds the domain to the Vercel project (a no-op once it is there);
+2. adds it, and the vercel.app address, to Supabase's redirect allow-list;
+3. once the domain serves the app, makes it Supabase's Site URL, the address
+   confirmation emails link to.
+
+The one part it cannot do is the DNS record, which lives in Cloudflare. In the
+`birkat-hanasi.com` zone, **DNS → Records → Add record**:
+
+| Type | Name | Target | Proxy status |
+|---|---|---|---|
+| CNAME | `invest-pal` | `cname.vercel-dns.com` | **DNS only** (grey cloud) |
+
+DNS only, not proxied: Vercel issues the certificate itself and needs to see
+requests for the domain directly. Behind Cloudflare's proxy the certificate is
+never issued, or the two loop on redirects.
+
+Until the record exists the step warns and the deploy summary names the record
+to add. If Vercel also wants to verify ownership, the summary lists a TXT
+record too. After adding it, re-run **Deploy** from the Actions tab, or wait
+for the next one.
+
+The vercel.app address keeps working, so earlier installs and links do too.
+
 ### 5. Gann signals
 
 The refresh job is not part of the deployment — it writes to Supabase, which

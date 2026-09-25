@@ -50,4 +50,4 @@ Education
 הגדירו VITE_CONTACT_EMAIL ב-Vercel והשתמשו באותה כתובת גם כאן.
 
 ## מדיניות פרטיות
-https://invest-pal.vercel.app/privacy
+https://invest-pal.birkat-hanasi.com/privacy

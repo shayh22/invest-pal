@@ -35,7 +35,7 @@ Then:
 
 ```bash
 npm install -g @bubblewrap/cli
-bubblewrap init --manifest=https://invest-pal.vercel.app/manifest.webmanifest
+bubblewrap init --manifest=https://invest-pal.birkat-hanasi.com/manifest.webmanifest
 # or, to use the committed configuration:
 cp store/twa-manifest.json ./twa-manifest.json && bubblewrap build
 ```
@@ -47,7 +47,7 @@ cp store/twa-manifest.json ./twa-manifest.json && bubblewrap build
 
 - **Category: Education.** It is a teaching tool with imaginary money, which is
   both true and the lower-friction claim for a finance-adjacent app.
-- **Privacy policy URL:** `https://invest-pal.vercel.app/privacy`
+- **Privacy policy URL:** `https://invest-pal.birkat-hanasi.com/privacy`
 - **Data safety:** email, display name, experience level and the virtual
   portfolio. No analytics, no advertising, no location, no third-party sharing,
   no payments. The privacy page is written from an audit of the schema, so it
